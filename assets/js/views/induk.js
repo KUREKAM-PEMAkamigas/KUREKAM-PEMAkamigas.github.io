@@ -1,6 +1,6 @@
 /* KUREKAM · Data induk dan pengaturan: prodi dan kelas, dosen, parameter, impor/ekspor, basis data, log */
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, uid, saveSettings, addLog, resetData, replaceData } from '../app.js';
-import { DB, getFirebaseConfig, saveFirebaseConfig } from '../db.js';
+import { DB, getFirebaseConfig, saveFirebaseConfig, buatTautanFirebase } from '../db.js';
 import { PARAM_DEFAULT, KELOMPOK, KAT_IABEE, GRUP, APP } from '../config.js';
 import { param, fmt, KMAP, kelasOf } from '../rules.js';
 import { head, formDrawer, prodiTag, ro, tanya, unduh, loadXLSX } from './ui.js';
@@ -345,9 +345,9 @@ function tDb(el, ed, adm) {
       <div class="pform" style="margin-top:12px"><label class="pfrow"><span>Tampilkan pita "Mode demo" di atas setiap halaman</span><input type="checkbox" id="b-demo" ${S.settings.demo !== false ? 'checked' : ''} ${adm ? '' : 'disabled'}><small>matikan setelah data asli diisi</small></label></div>
       <div class="drawer-act"><button class="btn danger" id="b-reset" ${adm ? '' : 'disabled'}>${icon('loop')} Muat ulang data contoh</button></div></div>
     <div class="card">${head('Hubungkan ke Firebase', 'Pakai proyek Firebase yang sama dengan SIMANTAP agar satu ekosistem', 'link', '#0ea5e9')}
-      <p class="small">Tempel konfigurasi Web App Firebase (objek <code>firebaseConfig</code>). Koleksi KUREKAM diberi awalan <code>kur_</code> sehingga tidak bercampur dengan koleksi SIMANTAP. Konfigurasi disimpan di peramban ini, atau tulis permanen di <code>assets/js/config.js</code>.</p>
+      <p class="small">Tempel konfigurasi Web App Firebase (objek <code>firebaseConfig</code>). Koleksi KUREKAM diberi awalan <code>kur_</code> sehingga tidak bercampur dengan koleksi SIMANTAP. Konfigurasi disimpan di peramban ini saja. Untuk HP atau laptop lain pakai tombol <b>Salin tautan</b> (buka tautannya sekali di perangkat tujuan, lalu hapus pesannya karena memuat kunci akses web), atau tulis permanen di <code>assets/js/config.js</code>.</p>
       <textarea class="inp" id="b-cfg" rows="8" style="width:100%;font-family:ui-monospace,monospace;font-size:12px" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "...", "appId": "..." }' ${adm ? '' : 'disabled'}>${cfg ? esc(JSON.stringify({ ...cfg, apiKey: cfg.apiKey ? '••• tersimpan •••' : '' }, null, 2)) : ''}</textarea>
-      <div class="drawer-act"><button class="btn ghost" id="b-off" ${adm && cfg ? '' : 'disabled'}>Putuskan</button><div class="sp"></div><button class="btn pri" id="b-on" ${adm ? '' : 'disabled'}>${icon('check')} Simpan dan muat ulang</button></div>
+      <div class="drawer-act"><button class="btn ghost" id="b-off" ${adm && cfg ? '' : 'disabled'}>Putuskan</button><button class="btn" id="b-link" ${adm && cfg ? '' : 'disabled'}>${icon('link')} Salin tautan untuk HP atau perangkat lain</button><div class="sp"></div><button class="btn pri" id="b-on" ${adm ? '' : 'disabled'}>${icon('check')} Simpan dan muat ulang</button></div>
       <p class="note">Saat pertama terhubung, koleksi kosong diisi data contoh. Atur Firestore Security Rules agar hanya akun terdaftar yang dapat menulis.</p></div>
   </div>`;
   if (!adm) return;
@@ -358,6 +358,7 @@ function tDb(el, ed, adm) {
     if (!o.projectId || !o.apiKey || /tersimpan/.test(o.apiKey)) { toast('apiKey dan projectId wajib diisi'); return; }
     saveFirebaseConfig(o); location.reload();
   };
+  el.querySelector('#b-link').onclick = async () => { const u = buatTautanFirebase(); if (!u) return; try { await navigator.clipboard.writeText(u); toast('Tautan disalin. Kirim ke diri sendiri, lalu buka di HP'); } catch (e) { window.prompt('Salin tautan ini', u); } };
   el.querySelector('#b-off').onclick = () => { saveFirebaseConfig(null); location.reload(); };
   void APP;
 }

@@ -30,6 +30,21 @@ export function saveFirebaseConfig(cfg) {
   try { cfg ? localStorage.setItem(LS_FBCFG, JSON.stringify(cfg)) : localStorage.removeItem(LS_FBCFG); } catch (e) { /* abaikan */ }
 }
 
+/** Tautan pengaturan untuk perangkat lain: ?fb=<konfigurasi>. Disimpan di peramban lalu dihapus dari alamat. */
+export function buatTautanFirebase() {
+  const c = getFirebaseConfig(); if (!c) return '';
+  const b = btoa(unescape(encodeURIComponent(JSON.stringify(c))));
+  return `${location.origin}${location.pathname}?fb=${encodeURIComponent(b)}#beranda`;
+}
+export function terimaTautanFirebase() {
+  try {
+    const q = new URLSearchParams(location.search), v = q.get('fb'); if (!v) return false;
+    const c = JSON.parse(decodeURIComponent(escape(atob(v))));
+    if (c && c.projectId && c.apiKey) { saveFirebaseConfig(c); q.delete('fb'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); return true; }
+  } catch (e) { console.warn('Tautan pengaturan tidak valid'); }
+  return false;
+}
+
 async function initFirebase(cfg) {
   await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`);
   await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-firestore-compat.js`);

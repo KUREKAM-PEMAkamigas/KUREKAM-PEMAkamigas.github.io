@@ -1,6 +1,6 @@
 /* KUREKAM PEM Akamigas · Aplikasi utama: state, peran, router, dan utilitas bersama. */
 import { APP, PERAN } from './config.js';
-import { DB } from './db.js';
+import { terimaTautanFirebase, DB } from './db.js';
 import { buildSeed } from './seed.js';
 import { icon } from './icons.js';
 import { disposeAll, tilt } from './charts.js';
@@ -185,6 +185,7 @@ function loginForm() {
 }
 
 async function boot() {
+  terimaTautanFirebase();
   const demo = new URLSearchParams(location.search).has('demo');
   if (demo) DB.useLocal(); else await DB.init();
   if (DB.needLogin) await loginForm();

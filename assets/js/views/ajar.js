@@ -1,6 +1,7 @@
 /* KUREKAM · CPMK, Sub-CPMK, RPS, dan SAP */
 import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, toast } from '../app.js';
 import { APP } from '../config.js';
+import { tombolUnggahRps } from '../rpsimpor.js';
 import { detect, badge } from '../bloom.js';
 import { INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
 import { head, formDrawer, ro, prodiName, short, statusTag, bar, pctColor, opts } from './ui.js';
@@ -57,7 +58,7 @@ function blankRps(m) {
   return { id: m.id, mk: m.id, prodi: m.prodi, deskripsi: '', pustaka: '', penelitian: '', pkm: '', status: 'draf', pertemuan: Array.from({ length: 16 }, (_, i) => { const w = i + 1; if (w === 8 || w === 16) return { m: w, ujian: w === 8 ? 'UTS' : 'UAS', sub: ss.map(s => s.id), materi: w === 8 ? 'Ujian Tengah Semester' : 'Ujian Akhir Semester', metode: prak ? 'Ujian praktik' : 'Ujian tertulis', asesmen: prak ? 'Unjuk kerja' : 'Tes tertulis', bobot: w === 8 ? 20 : 25, sap: {} }; return { m: w, sub: [], materi: '', metode: '', asesmen: '', bobot: 0, integ: '', integUraian: '', sap: {} }; }) };
 }
 export function rpsView(el) {
-  el.innerHTML = `<div class="grid g-12"><div class="card" id="left"></div><div id="right"></div></div>`;
+  el.innerHTML = `<div class="filters" id="rps-unggah" style="margin-bottom:12px"></div><div class="grid g-12"><div class="card" id="left"></div><div id="right"></div></div>`;
   const draw = () => {
     mkList(el.querySelector('#left'), draw, m => { const r = rpsOf(S, m.id); return statusTag(r ? r.status : ''); });
     const m = S.mk.find(x => x.id === sel); const R = el.querySelector('#right');
@@ -81,11 +82,11 @@ export function rpsView(el) {
       </tbody></table></div></div>`;
     const q = (s) => R.querySelector(s);
     if (ed) {
-      q('#ed-info').onclick = () => formDrawer({ title: 'Deskripsi dan pustaka', sub: m.nama, obj: r, fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 4 }, { k: 'pustaka', label: 'Pustaka utama dan pendukung', type: 'textarea', rows: 4 }, { k: 'penelitian', label: 'Penelitian dosen yang diintegrasikan (judul, skema, tahun)', type: 'textarea', rows: 2, ph: 'Contoh: Optimasi gas lift sumur tua, Penelitian Terapan 2026' }, { k: 'pkm', label: 'PKM yang diintegrasikan (judul, mitra, tahun)', type: 'textarea', rows: 2, ph: 'Contoh: Pendampingan K3 bengkel mitra, PKM 2026' }], onSave: async (o) => { await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw(); } });
+      q('#ed-info').onclick = () => formDrawer({ title: 'Deskripsi dan pustaka', sub: m.nama, obj: r, fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 4 }, { k: 'bahan', label: 'Bahan kajian', type: 'textarea', rows: 3 }, { k: 'syarat', label: 'Mata kuliah syarat', type: 'textarea', rows: 1 }, { k: 'pustaka', label: 'Pustaka utama dan pendukung', type: 'textarea', rows: 5 }, { k: 'penelitian', label: 'Penelitian dosen yang diintegrasikan (judul, skema, tahun)', type: 'textarea', rows: 2, ph: 'Contoh: Optimasi gas lift sumur tua, Penelitian Terapan 2026' }, { k: 'pkm', label: 'PKM yang diintegrasikan (judul, mitra, tahun)', type: 'textarea', rows: 2, ph: 'Contoh: Pendampingan K3 bengkel mitra, PKM 2026' }], onSave: async (o) => { await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw(); } });
       R.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => {
         const i = +tr.dataset.i, p = r.pertemuan[i]; const flat = { ...p, ...Object.fromEntries(Object.entries(p.sap || {}).map(([k, v]) => ['sap_' + k, v])) };
         formDrawer({ title: `Pertemuan ${p.m}${p.ujian ? ' · ' + p.ujian : ''}`, sub: `${m.nama} · durasi tatap muka ${m.T ? m.T * P.menitTeori + ' menit teori' : ''}${m.T && m.P ? ' + ' : ''}${m.P ? m.P * durasi(m, P) + ' menit praktik' : ''}`, obj: flat, wide: true,
-          fields: [{ k: 'sub', label: 'Sub-CPMK yang dicapai', type: 'multi', opts: subs.map(s => ({ v: s.id, t: s.kode.replace('Sub-CPMK', 'S'), title: s.teks })) }, { k: 'materi', label: 'Bahan kajian / materi', type: 'textarea', rows: 2 }, { k: 'metode', label: 'Metode dan bentuk pembelajaran', full: true }, { k: 'asesmen', label: 'Bentuk asesmen' }, { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
+          fields: [{ k: 'sub', label: 'Sub-CPMK yang dicapai', type: 'multi', opts: subs.map(s => ({ v: s.id, t: s.kode.replace('Sub-CPMK', 'S'), title: s.teks })) }, { k: 'materi', label: 'Bahan kajian / materi', type: 'textarea', rows: 2 }, { k: 'metode', label: 'Metode dan bentuk pembelajaran', full: true }, { k: 'indikator', label: 'Indikator penilaian', type: 'textarea', rows: 2 }, { k: 'asesmen', label: 'Kriteria dan teknik asesmen', type: 'textarea', rows: 2 }, { k: 'tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'textarea', rows: 2 }, { k: 'daring', label: 'Daring (bila ada)', type: 'textarea', rows: 2 }, { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
             ...(p.ujian ? [] : [{ k: 'integ', label: 'Integrasi penelitian dan PKM', type: 'select', opts: INTEG.map(v => ({ v, t: v || 'Tidak ada' })) }, { k: 'integUraian', label: 'Bentuk integrasi (hasil penelitian sebagai bahan ajar, studi kasus, keterlibatan mahasiswa di PKM)', type: 'textarea', rows: 2 }]),
             ...(p.ujian ? [] : [{ k: 'sap_pendahuluan', label: 'SAP · Pendahuluan', type: 'textarea', rows: 2 }, { k: 'sap_inti', label: 'SAP · Kegiatan inti', type: 'textarea', rows: 3 }, { k: 'sap_penutup', label: 'SAP · Penutup', type: 'textarea', rows: 2 }, { k: 'sap_media', label: 'SAP · Media dan alat', full: true }])],
           onSave: async (o) => { const sap = {}; Object.keys(o).filter(k => k.startsWith('sap_')).forEach(k => { sap[k.slice(4)] = o[k]; delete o[k]; }); r.pertemuan[i] = { ...o, sap, m: p.m, ujian: p.ujian }; if (r.status === 'disahkan') r.status = 'draf'; await save('rps', r, `Ubah RPS ${m.nama} pertemuan ${p.m}`); draw(); } });
@@ -96,6 +97,7 @@ export function rpsView(el) {
     const tl = q('#tolak'); if (tl) tl.onclick = async () => { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); draw(); };
     q('#print').onclick = () => cetakRps(m, r);
   };
+  tombolUnggahRps(el, draw);
   draw();
 }
 
@@ -112,7 +114,7 @@ function cetakRps(m, r) {
   <h4>Rencana 16 pertemuan</h4><table class="tbl"><thead><tr><th>Mg</th><th>Sub-CPMK</th><th>Materi</th><th>Metode</th><th>Asesmen</th><th>Penelitian/PKM</th><th>Bobot</th></tr></thead><tbody>${r.pertemuan.map(x => `<tr><td>${x.m}</td><td>${(x.sub || []).map(id => ((S.sub.find(s => s.id === id) || {}).kode || '').replace('Sub-CPMK', 'S')).join(', ')}</td><td>${esc(x.materi)}</td><td>${esc(x.metode)}</td><td>${esc(x.asesmen)}</td><td>${esc(x.integ || '')}</td><td>${fmt(x.bobot, 1)}%</td></tr>`).join('')}</tbody></table>
   <h4>Satuan Acara Perkuliahan</h4>${r.pertemuan.filter(x => x.sap && x.sap.inti).map(x => `<p><b>Pertemuan ${x.m}.</b> Pendahuluan: ${esc(x.sap.pendahuluan || '')}. Inti: ${esc(x.sap.inti)}. Penutup: ${esc(x.sap.penutup || '')}. Media: ${esc(x.sap.media || '')}.</p>`).join('') || '<p class="muted">SAP belum diisi.</p>'}
   <h4>Integrasi penelitian dan PKM</h4><p><b>Penelitian:</b> ${esc(r.penelitian) || '–'}<br><b>PKM:</b> ${esc(r.pkm) || '–'}</p>${r.pertemuan.filter(x => x.integ).map(x => `<p>Pertemuan ${x.m} (${x.integ}): ${esc(x.integUraian || '')}</p>`).join('')}
-  <h4>Pustaka</h4><p>${esc(r.pustaka)}</p>
+  <h4>Bahan kajian</h4><p>${esc(r.bahan || '')}</p><h4>Pustaka</h4><p style="white-space:pre-line">${esc(r.pustaka)}</p>
   <div class="ttd"><div><span>Dosen pengampu</span><b>${esc(peng[0] || '....................')}</b></div><div><span>Ketua Program Studi</span><b>....................</b></div></div></div>`, null, true);
   void closeDrawer;
 }

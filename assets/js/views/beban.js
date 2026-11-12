@@ -66,6 +66,25 @@ export default function bebanView(el) {
     chart(el.querySelector('#c-tp'), { tooltip: {}, series: [{ type: 'pie', radius: ['48%', '78%'], itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 3 }, label: { formatter: '{b}\n{d}%', fontSize: 11 }, data: [{ name: 'Teori', value: +act.reduce((a, r) => a + r.riilT, 0).toFixed(1), itemStyle: { color: '#0ea5e9' } }, { name: 'Praktik', value: +act.reduce((a, r) => a + r.riilP, 0).toFixed(1), itemStyle: { color: '#10b981' } }] }] });
     el.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => detail(rows.find(r => r.d.id === tr.dataset.d), P, par));
   } else if (tabB === 'tugas') bindTugas(el, par);
+  else el.querySelectorAll('tr[data-j]').forEach(tr => tr.onclick = () => detailJalan(tr.dataset.j, P));
+}
+
+/** Rincian MK, prodi, tingkat, kelas, dan jam per dosen dari daftar pengampu kurikulum berjalan. */
+function detailJalan(id, P) {
+  const d = S.dosen.find(x => x.id === id) || { nama: '(tidak dikenal)' }, dur = (g) => P.durasiPraktik[g] || P.durasiPraktik.MKK;
+  const rows = S.ajar.filter(a => a.dosen === id).slice().sort((a, b) => a.prodi.localeCompare(b.prodi) || a.smt - b.smt || a.kode.localeCompare(b.kode) || String(a.kelas).localeCompare(String(b.kelas)));
+  const h = (a) => ({ t: a.sT * P.menitTeori / 60, p: a.sP * dur(a.g) / 60 });
+  const tot = rows.reduce((o, a) => { const x = h(a); o.t += x.t; o.p += x.p; o.nom += a.sT + a.sP; return o; }, { t: 0, p: 0, nom: 0 });
+  const grp = (f) => { const m = {}; rows.forEach(a => { const x = h(a), k = f(a); m[k] = (m[k] || 0) + x.t + x.p; }); return Object.entries(m).map(([k, v]) => `<span class="tag">${esc(k)}: ${fmt(v, 1)}</span>`).join(' '); };
+  const tk = (a) => Math.ceil((a.smt || 1) / 2), riil = tot.t + tot.p, k = riil > P.bebanRiilMax ? 'bad' : riil < P.bebanRiilMin ? 'near' : 'ok';
+  openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#8b5cf6">${icon('user')}</span><div><h3>${esc(d.nama)}</h3><div class="sub">${esc(d.status || 'Dosen internal')} · homebase ${esc(d.homebase || '-')} · kurikulum berjalan, semester ganjil</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
+  <div class="grid g3 mini"><div><small>SKS kurikulum</small><b>${fmt(tot.nom, 1)}</b></div><div><small>Jam per minggu (SKS riil)</small><b>${fmt(riil, 1)}</b></div><div><small>Kelas diampu</small><b>${rows.length}</b></div></div>
+  <p class="small" style="margin-top:10px"><b>Per prodi (jam):</b> ${grp(a => a.prodi)}<br><b>Per tingkat (jam):</b> ${grp(a => 'Tingkat ' + tk(a))}</p>
+  <div class="tbl-wrap" style="margin-top:12px;max-height:420px"><table class="tbl"><thead><tr><th>Prodi</th><th class="num">Tingkat</th><th class="num">Smt</th><th>Kode</th><th>Mata kuliah</th><th>Kelas</th><th class="num">SKS T+P</th><th class="num">Jam teori</th><th class="num">Jam praktik</th><th class="num">SKS riil</th></tr></thead><tbody>
+  ${rows.map(a => { const x = h(a); return `<tr><td>${prodiTag(a.prodi)}</td><td class="num">${tk(a)}</td><td class="num">${a.smt}</td><td class="small">${esc(a.kode)}</td><td><b>${esc(short(a.nama, 44))}</b><div class="small muted">${esc(a.g)}${a.sP ? ` · praktik ${dur(a.g)} menit/SKS` : ''}</div></td><td>${esc(a.kelas || '-')}</td><td class="num">${a.sT}+${a.sP}</td><td class="num">${fmt(x.t, 1)}</td><td class="num">${fmt(x.p, 1)}</td><td class="num"><b>${fmt(x.t + x.p, 2)}</b></td></tr>`; }).join('')}
+  <tr><td colspan="6"><b>Total</b></td><td class="num"><b>${fmt(tot.nom, 1)}</b></td><td class="num"><b>${fmt(tot.t, 1)}</b></td><td class="num"><b>${fmt(tot.p, 1)}</b></td><td class="num"><b>${fmt(riil, 1)}</b></td></tr>
+  </tbody></table></div>
+  <div class="formula" style="margin-top:14px">SKS riil = sks teori × ${P.menitTeori}/60 + sks praktik × durasi/60, dijumlah untuk semua kelas<br>Batas wajar: <b>${P.bebanRiilMin}–${P.bebanRiilMax}</b> · Status: <b>${KL[k]}</b></div>`, null, true);
 }
 
 function detail(r, P, par) {
@@ -82,7 +101,7 @@ function jalanTab(P) {
   if (!S.ajar.length) return `<div class="card">${head('Beban kurikulum berjalan', 'Data pengampu per kelas dari berkas beban mengajar', 'user', '#8b5cf6')}<p class="empty">Belum ada data. Unggah berkas daftar pengampu di Data Induk & Pengaturan, tab Impor & ekspor, kartu "Impor pengampu MK kurikulum berjalan".</p></div>`;
   const dur = (g) => P.durasiPraktik[g] || P.durasiPraktik.MKK;
   const by = {};
-  S.ajar.forEach(a => { const r = by[a.dosen] || (by[a.dosen] = { d: S.dosen.find(x => x.id === a.dosen) || { nama: '(tidak dikenal)', homebase: '-' }, nom: 0, riil: 0, riilT: 0, riilP: 0, mk: new Set(), prodi: new Set(), kelas: 0 }); r.nom += a.sT + a.sP; r.riilT += a.sT * P.menitTeori / 60; r.riilP += a.sP * dur(a.g) / 60; r.riil = r.riilT + r.riilP; r.mk.add(a.prodi + a.kode); r.prodi.add(a.prodi); r.kelas++; });
+  S.ajar.forEach(a => { const r = by[a.dosen] || (by[a.dosen] = { id: a.dosen, d: S.dosen.find(x => x.id === a.dosen) || { nama: '(tidak dikenal)', homebase: '-' }, nom: 0, riil: 0, riilT: 0, riilP: 0, mk: new Set(), prodi: new Set(), kelas: 0 }); r.nom += a.sT + a.sP; r.riilT += a.sT * P.menitTeori / 60; r.riilP += a.sP * dur(a.g) / 60; r.riil = r.riilT + r.riilP; r.mk.add(a.prodi + a.kode); r.prodi.add(a.prodi); r.kelas++; });
   let list = Object.entries(by).filter(([id]) => ctx.role !== 'dosen' || id === ctx.dosen).map(([, r]) => r).filter(r => !fHome || r.d.homebase === fHome || r.prodi.has(fHome)).sort((a, b) => b.riil - a.riil);
   const all = Object.values(by), lin = all.filter(r => r.prodi.size > 1), luar = all.filter(r => r.d.status && /luar biasa|purna|capstone/i.test(r.d.status)), tot = all.reduce((a, r) => a + r.riil, 0), totLuar = luar.reduce((a, r) => a + r.riil, 0);
   const st = (r) => r.riil > P.bebanRiilMax ? 'bad' : r.riil < P.bebanRiilMin ? 'near' : 'ok';
@@ -92,9 +111,9 @@ function jalanTab(P) {
     ${kpi('Beban dosen luar biasa', tot ? totLuar / tot * 100 : 0, `% jam riil oleh ${luar.length} dosen luar biasa, purna, atau tim capstone`, '#f5a524', 'alert', 1)}
     ${kpi('Melebihi batas', all.filter(r => st(r) === 'bad').length, `di atas ${P.bebanRiilMax} SKS riil`, '#f0616d', 'alert')}
   </div>
-  <div class="card">${head('Beban riil kurikulum berjalan per dosen', 'SKS riil = sks teori × 60 menit + sks praktik × durasi praktik jenis MK, dibagi 60. Dihitung dari baris pengampu per kelas.', 'user', '#8b5cf6')}
+  <div class="card">${head('Beban riil kurikulum berjalan per dosen', 'SKS riil = sks teori × 60 menit + sks praktik × durasi praktik jenis MK, dibagi 60. Klik nama dosen untuk melihat MK, prodi, tingkat, kelas, dan jam.', 'user', '#8b5cf6')}
     <div class="tbl-wrap" style="max-height:640px"><table class="tbl"><thead><tr><th>Dosen</th><th>Status</th><th>Homebase</th><th>Mengajar di</th><th class="num">MK</th><th class="num">Kelas</th><th class="num">SKS kurikulum</th><th class="num">Jam teori</th><th class="num">Jam praktik</th><th class="num">SKS riil</th><th>Status beban</th></tr></thead><tbody>
-    ${list.map(r => `<tr><td><b>${esc(r.d.nama)}</b></td><td class="small">${esc(r.d.status || 'Dosen internal')}</td><td>${r.d.homebase === 'Bersama' ? '<span class="tag">Bersama</span>' : prodiTag(r.d.homebase)}</td><td>${Array.from(r.prodi).map(prodiTag).join(' ')}</td><td class="num">${r.mk.size}</td><td class="num">${r.kelas}</td><td class="num">${fmt(r.nom, 1)}</td><td class="num">${fmt(r.riilT, 1)}</td><td class="num">${fmt(r.riilP, 1)}</td><td class="num"><b>${fmt(r.riil, 1)}</b></td><td>${stTag(st(r), KL[st(r)])}</td></tr>`).join('')}
+    ${list.map(r => `<tr class="click" data-j="${r.id}"><td><b>${esc(r.d.nama)}</b></td><td class="small">${esc(r.d.status || 'Dosen internal')}</td><td>${r.d.homebase === 'Bersama' ? '<span class="tag">Bersama</span>' : prodiTag(r.d.homebase)}</td><td>${Array.from(r.prodi).map(prodiTag).join(' ')}</td><td class="num">${r.mk.size}</td><td class="num">${r.kelas}</td><td class="num">${fmt(r.nom, 1)}</td><td class="num">${fmt(r.riilT, 1)}</td><td class="num">${fmt(r.riilP, 1)}</td><td class="num"><b>${fmt(r.riil, 1)}</b></td><td>${stTag(st(r), KL[st(r)])}</td></tr>`).join('')}
     </tbody></table></div>${ctx.role === 'dosen' && !list.length ? '<p class="empty">Nama Anda belum tercatat sebagai pengampu pada berkas yang diimpor.</p>' : ''}<p class="note">Data satu semester ganjil dari berkas beban mengajar. Dosen luar biasa tidak dinilai terhadap batas dosen tetap, abaikan statusnya bila tidak relevan.</p></div>`;
 }
 

@@ -4,7 +4,7 @@ import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
 import { detect, badge } from '../bloom.js';
 import { INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
-import { head, formDrawer, ro, prodiName, short, statusTag, bar, pctColor, opts } from './ui.js';
+import { tanya, head, formDrawer, ro, prodiName, short, statusTag, bar, pctColor, opts } from './ui.js';
 
 const akad = (m) => !/magang|tugas akhir/i.test(m.kel);
 const hintOf = (m) => (+m.P > +m.T ? 'P' : 'C');
@@ -76,6 +76,7 @@ export function rpsView(el) {
         <button class="btn sm" id="print">${icon('download')} Cetak RPS</button>
         ${ed && r.status === 'draf' && can('rps', { prodi: m.prodi, mk: m.id }) ? `<button class="btn vio sm" id="aju">${icon('upload')} Ajukan ke kaprodi</button>` : ''}
         ${r.status === 'diajukan' && can('sahkanRps', m) ? `<button class="btn pri sm" id="sah">${icon('check')} Sahkan RPS</button><button class="btn sm danger" id="tolak">Kembalikan ke dosen</button>` : ''}
+        ${r.status === 'disahkan' && can('sahkanRps', m) ? `<button class="btn sm danger" id="batal">Batalkan pengesahan</button>` : ''}
         ${!ed ? ro() : ''}</div>
       <div class="tbl-wrap" style="max-height:560px;margin-top:8px"><table class="tbl"><thead><tr><th>Mg</th><th>Sub-CPMK</th><th>Bahan kajian / materi</th><th>Metode & bentuk</th><th>Asesmen</th><th>Penelitian / PKM</th><th class="num">Bobot</th><th>SAP</th></tr></thead><tbody>
       ${r.pertemuan.map((p, i) => `<tr class="${p.ujian ? 'locked' : ''} ${ed ? 'click' : ''}" data-i="${i}"><td class="num"><b>${p.m}</b></td><td class="small">${(p.sub || []).map(id => (S.sub.find(s => s.id === id) || {}).kode).filter(Boolean).map(k => k.replace('Sub-CPMK', 'S')).join(', ')}</td><td>${p.ujian ? `<span class="tag" style="--c:#8b5cf6">${p.ujian}</span> ` : ''}${esc(p.materi) || '<span class="st bad">belum diisi</span>'}</td><td class="small">${esc(p.metode)}</td><td class="small">${esc(p.asesmen)}</td><td class="small">${p.integ ? `<span class="tag" style="--c:${p.integ === 'PKM' ? '#f5a524' : p.integ === 'Penelitian' ? '#8b5cf6' : '#14b8a6'}">${p.integ}</span>` : '<span class="muted">–</span>'}</td><td class="num">${fmt(p.bobot, 1)}%</td><td>${p.ujian ? '–' : (p.sap && p.sap.inti ? '<span class="st ok">ada</span>' : '<span class="st na">kosong</span>')}</td></tr>`).join('')}
@@ -94,6 +95,7 @@ export function rpsView(el) {
     }
     const aju = q('#aju'); if (aju) aju.onclick = async () => { if (lk < 99) { toast('Lengkapi 16 pertemuan sebelum mengajukan.'); return; } r.status = 'diajukan'; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Ajukan RPS ${m.nama}`); draw(); };
     const sah = q('#sah'); if (sah) sah.onclick = async () => { r.status = 'disahkan'; r.oleh = 'Kaprodi ' + m.prodi; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Sahkan RPS ${m.nama}`); draw(); };
+    const bt = q('#batal'); if (bt) bt.onclick = async () => { if (!(await tanya(`Pengesahan RPS ${m.nama} dibatalkan dan statusnya kembali menjadi draf, sehingga dosen dapat merevisi. Lanjutkan?`, 'Batalkan pengesahan'))) return; r.status = 'draf'; r.oleh = ''; r.tgl = ''; await save('rps', r, `Batalkan pengesahan RPS ${m.nama}`); draw(); };
     const tl = q('#tolak'); if (tl) tl.onclick = async () => { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); draw(); };
     q('#print').onclick = () => cetakRps(m, r);
   };

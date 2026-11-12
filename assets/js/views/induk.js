@@ -37,7 +37,7 @@ function tProdi(el, ed) {
 /* ---------- dosen ---------- */
 const JAB_FUNGS = ['Tenaga Pengajar', 'Asisten Ahli', 'Lektor', 'Lektor Kepala', 'Guru Besar', 'Praktisi'];
 /** Prodi tempat dosen mengajar: homebase, prodi tambahan, dan prodi pada penugasan yang ada. */
-export const ajarDi = (d) => { const o = new Set(); if (d.homebase && d.homebase !== 'Bersama') o.add(d.homebase); (d.prodiAjar || []).forEach(x => o.add(x)); S.tugas.forEach(t => { if (t.dosen === d.id) o.add(t.prodi); }); return S.prodi.map(p => p.id).filter(x => o.has(x)); };
+export const ajarDi = (d) => { const o = new Set(); if (d.homebase && d.homebase !== 'Bersama') o.add(d.homebase); (d.prodiAjar || []).forEach(x => o.add(x)); S.tugas.forEach(t => { if (t.dosen === d.id) o.add(t.prodi); }); S.ajar.forEach(t => { if (t.dosen === d.id) o.add(t.prodi); }); return S.prodi.map(p => p.id).filter(x => o.has(x)); };
 function tDosen(el, ed) {
   const homes = ['Bersama'].concat(S.prodi.map(p => p.id));
   const list = S.dosen.filter(d => !fH || d.homebase === fH || (fH !== 'Bersama' && ajarDi(d).includes(fH)));
@@ -121,6 +121,9 @@ function tImpor(el, ed, adm) {
     <div class="card">${head('Impor penugasan dosen (Excel)', 'Dosen mengampu MK di prodi mana pun', 'book', '#14b8a6')}
       <p class="small">Kolom: ${TUGAS_HEAD.map(h => `<span class="tag">${h}</span>`).join(' ')}. Satu baris satu penugasan. Dosen dicocokkan lewat NIP, NIDN, atau nama, dan MK lewat kode atau nama pada prodi tersebut. Dosen yang sama boleh muncul di banyak prodi, dengan MK yang sama maupun berbeda. Penugasan yang sudah ada (dosen dan MK sama) diperbarui.</p>
       <div class="drawer-act"><button class="btn" id="i-ttpl">${icon('download')} Template penugasan</button><button class="btn pri" id="i-tgs" ${ed ? '' : 'disabled'}>${icon('upload')} Pilih berkas penugasan</button></div></div>
+    <div class="card">${head('Impor pengampu MK kurikulum berjalan (Excel)', 'Daftar beban mengajar dosen per kelas, semester ganjil', 'book', '#8b5cf6')}
+      <p class="small">Lembar "gasal" berkolom: ${AJAR_HEAD.map(h => `<span class="tag">${h}</span>`).join(' ')}. Satu baris satu dosen pada satu kelas, sehingga team teaching tercatat per dosen. Dosen dicocokkan dengan data dosen lewat nama. Dosen yang belum terdaftar (dosen luar biasa, purna, dan lainnya) ditambahkan otomatis. Hasilnya tampil di menu Beban Dosen, tab <b>Beban kurikulum berjalan</b>.</p>
+      <div class="drawer-act"><button class="btn pri" id="i-ajr" ${ed ? '' : 'disabled'}>${icon('upload')} Pilih berkas pengampu</button></div></div>
     <div class="card">${head('Cadangan seluruh data', 'Satu berkas JSON berisi semua koleksi KUREKAM', 'db', '#8b5cf6')}
       <p class="small">Unduh cadangan sebelum impor besar. Berkas cadangan dapat dipulihkan kembali oleh Admin.</p>
       <div class="drawer-act"><button class="btn" id="i-bak">${icon('download')} Unduh cadangan</button><button class="btn danger" id="i-res" ${adm ? '' : 'disabled'}>${icon('upload')} Pulihkan dari cadangan</button></div></div>
@@ -131,6 +134,7 @@ function tImpor(el, ed, adm) {
   el.querySelector('#i-mx').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporMatriks(X, wb); });
   el.querySelector('#i-lama').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporLama(X, wb); });
   el.querySelector('#i-dsn').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporDosen(X, wb); });
+  el.querySelector('#i-ajr').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporAjar(X, wb); });
   el.querySelector('#i-tgs').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporPenugasan(X, wb); });
   const tpl = async (head, contoh, lebar, nama, file) => { const X = await loadXLSX(); const wb = X.utils.book_new(); const ws = X.utils.aoa_to_sheet([head, ...contoh]); ws['!cols'] = lebar.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, nama); unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), file); };
   el.querySelector('#i-dtpl').onclick = () => tpl(DOSEN_HEAD, [['Contoh Dosen, S.T., M.T. (hapus baris ini)', '199001012015011001', '0001019001', 'Lektor', 'S2', 'TP', 'TP, TO', 'Teknik Perminyakan', '']], [34, 20, 14, 16, 12, 10, 14, 26, 16], 'DOSEN', 'Template_Dosen.xlsx');
@@ -270,6 +274,40 @@ async function imporDosen(X, wb) {
   }
   const per = S.prodi.map(p => `${p.id} ${docs.filter(d => d.homebase === p.id).length}`).join(', ');
   return `<b>Impor dosen selesai.</b> ${baru} dosen baru ditambahkan dan ${docs.length - baru} diperbarui (homebase: ${per}${docs.some(d => d.homebase === 'Bersama') ? `, Bersama ${docs.filter(d => d.homebase === 'Bersama').length}` : ''}${tubel ? `; ${tubel} tugas belajar` : ''}).${ket}${lewat.length ? '<br>Catatan: ' + lewat.map(esc).join('; ') : ''}<br>Dosen mana pun dapat ditugaskan di prodi lain pada menu Beban Dosen.`;
+}
+
+const AJAR_HEAD = ['Program Studi', 'Semester', 'Kode MK', 'Nama MK', 'Dosen Pengampu', 'Status Dosen', 'sks dosen Teori', 'sks dosen Praktik', 'Jenis MK'];
+const inti = (s) => norm(String(s || '').replace(/\r?\n.*/s, '').split(',')[0].replace(/\b(prof|dr|drs|dra|ir|h|hj)\b\.?/gi, ''));
+const STATUS_AJAR = (v) => { const s = norm(v); return /nonakademisi/.test(s) ? 'Dosen luar biasa (non akademisi)' : /akademisi/.test(s) ? 'Dosen luar biasa (akademisi)' : /purna/.test(s) ? 'Dosen purna' : /capstone|ta$/.test(s) ? 'Tim capstone/TA' : ''; };
+
+async function imporAjar(X, wb) {
+  const t = bacaTabel(X, wb, /^dosenpengampu/, /gasal|ganjil/i);
+  if (!t) throw new Error('Kolom "Dosen Pengampu" tidak ditemukan. Gunakan lembar daftar pengampu per kelas.');
+  const { h, rows, mulai } = t;
+  const c = { prodi: kol(h, /^programstudi/, /^prodi/), smt: kol(h, /^semester/), kode: kol(h, /^kodemk/, /^kode/), nama: kol(h, /^namamk/), dos: kol(h, /^dosenpengampu/), st: kol(h, /^statusdosen/), sT: kol(h, /^sksdosenteori/), sP: kol(h, /^sksdosenpraktik/), g: kol(h, /^jenismk/), kls: kol(h, /^kelas$/), kls2: h.map((x, i) => /^kelas$/.test(x) ? i : -1).filter(i => i >= 0).pop() };
+  if ([c.prodi, c.kode, c.dos, c.sT, c.sP].some(x => x < 0)) throw new Error('Kolom wajib belum lengkap (Program Studi, Kode MK, Dosen Pengampu, sks dosen Teori/Praktik).');
+  const G = { MKWU: 'MKU', MKU: 'MKU', MKKK: 'MKK', MKK: 'MKK', MBE: 'MBE', MBS: 'MBS' };
+  const docs = [], lewat = []; let tanpa = 0;
+  const idx = new Map(); S.dosen.forEach(d => { const k = inti(d.nama); if (k && !idx.has(k)) idx.set(k, d); });
+  const baru = new Map();
+  for (let r = mulai; r < rows.length; r++) {
+    const row = rows[r], nm = rapi(row[c.dos]), kode = rapi(row[c.kode]); if (!kode && !nm) continue;
+    const p = kodeProdi(row[c.prodi]); if (!p) { if (lewat.length < 5) lewat.push(`baris ${r + 1}: prodi tidak dikenali`); continue; }
+    if (!nm || nm === '0') { tanpa++; continue; }
+    const key = inti(nm); let d = idx.get(key) || baru.get(key);
+    const stt = STATUS_AJAR(c.st >= 0 ? row[c.st] : '');
+    if (!d) { d = { id: uid('D') + baru.size, nama: nm, nip: '', nidn: '', homebase: stt ? 'Bersama' : p, jabatan: '', pendidikan: '', bidang: '', status: stt || 'Belum ada di DUK', prodiAjar: [], _n: {} }; baru.set(key, d); }
+    if (d._n) d._n[p] = (d._n[p] || 0) + 1;
+    docs.push({ id: 'A' + String(docs.length + 1).padStart(4, '0'), prodi: p, smt: parseInt(row[c.smt], 10) || 0, kode, nama: rapi(row[c.nama]), kelas: rapi(c.kls2 >= 0 ? row[c.kls2] : ''), dosen: d.id, sT: Math.max(0, +row[c.sT] || 0), sP: Math.max(0, +row[c.sP] || 0), g: G[String(row[c.g] || '').toUpperCase().replace(/[^A-Z]/g, '')] || 'MKK', status: stt || (/internal/i.test(String(row[c.st])) ? 'Dosen internal' : '') });
+  }
+  if (!docs.length) throw new Error('Tidak ada baris pengampu yang valid. ' + lewat.join('; '));
+  if (S.ajar.length && !(await tanya(`Data pengampu kurikulum berjalan (${S.ajar.length} baris) akan diganti dengan ${docs.length} baris dari berkas. Lanjutkan?`, 'Ganti data'))) return '<b>Impor dibatalkan.</b>';
+  const tambah = Array.from(baru.values()).map(d => { const n = d._n; delete d._n; if (d.status === 'Belum ada di DUK') d.homebase = Object.keys(n).sort((a, b) => n[b] - n[a])[0]; return d; });
+  if (tambah.length) await saveMany('dosen', tambah, `Tambah ${tambah.length} dosen dari daftar pengampu`);
+  await DB.replaceAll('ajar', docs); S.ajar = docs; await addLog(`Impor pengampu kurikulum berjalan: ${docs.length} baris`);
+  const peng = new Set(docs.map(x => x.dosen)); const lin = Array.from(peng).filter(id => new Set(docs.filter(x => x.dosen === id).map(x => x.prodi)).size > 1).length;
+  const per = {}; tambah.forEach(d => { per[d.status] = (per[d.status] || 0) + 1; });
+  return `<b>Impor pengampu selesai.</b> ${docs.length} baris pengampu dari ${peng.size} dosen terbaca (${peng.size - tambah.length} cocok dengan data dosen, ${tambah.length} ditambahkan${tambah.length ? ': ' + Object.entries(per).map(([k, v]) => `${v} ${esc(k)}`).join(', ') : ''}). ${lin} dosen mengajar di lebih dari satu prodi.${tanpa ? ` ${tanpa} baris tanpa nama dosen dilewati.` : ''}${lewat.length ? '<br>Dilewati: ' + lewat.map(esc).join('; ') : ''}<br>Lihat hasilnya di menu Beban Dosen, tab Beban kurikulum berjalan.`;
 }
 
 async function imporPenugasan(X, wb) {

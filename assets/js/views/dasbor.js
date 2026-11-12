@@ -36,8 +36,8 @@ export function pimpinan(el) {
       ${S.prodi.filter(p => p.status === 'diajukan').map(p => `<div class="note-card">${prodiTag(p.id)} <b>Kurikulum ${esc(p.nama)}</b> diajukan untuk disahkan</div>`).join('')}
       ${S.revisi.filter(r => r.status === 'menunggu').map(r => `<div class="note-card">${prodiTag(r.prodi)} <b>${esc(r.uraian)}</b><div class="small muted">${esc(r.alasan)}</div></div>`).join('') || ''}
       ${tunggu ? '' : '<div class="empty small">Tidak ada yang menunggu.</div>'}</div>
-    <div class="card">${head('Ringkasan beban dosen', `Semester ${S.settings.paritas || 'ganjil'}, SKS riil mengikuti jam pelajaran nyata`, 'user', '#f5a524', `<button class="btn sm" data-go="beban">Buka</button>`)}
-      <div class="grid g3 mini"><div><small>Melebihi ${P.bebanRiilMax} SKS riil</small><b style="color:#b42335">${rows.filter(r => r.k === 'bad').length}</b></div><div><small>Wajar</small><b style="color:#047857">${rows.filter(r => r.k === 'ok' && r.items.length).length}</b></div><div><small>Di bawah ${P.bebanRiilMin}</small><b style="color:#b45309">${rows.filter(r => r.k === 'near').length}</b></div></div>
+    <div class="card">${head('Ringkasan beban dosen', `Semester ${S.settings.paritas || 'ganjil'}, JP total hasil konversi SKS ke jam pelajaran`, 'user', '#f5a524', `<button class="btn sm" data-go="beban">Buka</button>`)}
+      <div class="grid g3 mini"><div><small>Melebihi ${P.bebanRiilMax} JP total</small><b style="color:#b42335">${rows.filter(r => r.k === 'bad').length}</b></div><div><small>Wajar</small><b style="color:#047857">${rows.filter(r => r.k === 'ok' && r.items.length).length}</b></div><div><small>Di bawah ${P.bebanRiilMin}</small><b style="color:#b45309">${rows.filter(r => r.k === 'near').length}</b></div></div>
       <div class="chart sm" id="c-bb"></div></div>
   </div>`;
   animateCounts(el); jump(el);
@@ -86,7 +86,7 @@ export function mutu(el) {
   const P = param(S);
   chart(el.querySelector('#c-a'), { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, legend: { top: 0 }, grid: { left: 8, right: 8, top: 34, bottom: 8, containLabel: true }, xAxis: { type: 'category', data: A.map(x => x.p.id), ...AX }, yAxis: { type: 'value', max: 100, ...AX },
     series: [{ name: 'Muatan spesifik %', type: 'bar', barWidth: 16, data: A.map(x => +x.R.spesifik.toFixed(1)), itemStyle: { color: '#10b981', borderRadius: [6, 6, 0, 0] }, markLine: { symbol: 'none', data: [{ yAxis: P.muatanSpesifikMin, name: 'min spesifik' }], lineStyle: { color: '#10b981', type: 'dashed' } } },
-      { name: 'Jam praktik %', type: 'bar', barWidth: 16, data: A.map(x => +x.R.praktikJam.toFixed(1)), itemStyle: { color: '#0ea5e9', borderRadius: [6, 6, 0, 0] }, markLine: { symbol: 'none', data: [{ yAxis: P.praktikMin }, { yAxis: P.praktikMax }], lineStyle: { color: '#0ea5e9', type: 'dashed' } } },
+      { name: 'JP praktik %', type: 'bar', barWidth: 16, data: A.map(x => +x.R.praktikJam.toFixed(1)), itemStyle: { color: '#0ea5e9', borderRadius: [6, 6, 0, 0] }, markLine: { symbol: 'none', data: [{ yAxis: P.praktikMin }, { yAxis: P.praktikMax }], lineStyle: { color: '#0ea5e9', type: 'dashed' } } },
       { name: 'Pendidikan umum %', type: 'bar', barWidth: 16, data: A.map(x => +x.R.umum.toFixed(1)), itemStyle: { color: '#f5a524', borderRadius: [6, 6, 0, 0] }, markLine: { symbol: 'none', data: [{ yAxis: P.pendidikanUmumMax }], lineStyle: { color: '#f5a524', type: 'dashed' } } }] });
 }
 
@@ -107,7 +107,7 @@ export function akademik(el) {
   </div>
   <div class="grid g2" style="margin-top:18px">
     <div class="card">${head('Kebutuhan jam per prodi', `Jam tatap muka per minggu × kelas paralel, semester ${par}`, 'calendar', '#f5a524')}<div class="chart lg" id="c-j"></div></div>
-    <div class="card">${head('Dosen dengan beban tertinggi', 'SKS riil = jam pelajaran nyata per minggu', 'user', '#f0616d', `<button class="btn sm" data-go="beban">Rekap lengkap</button>`)}<div class="chart lg" id="c-top"></div></div>
+    <div class="card">${head('Dosen dengan beban tertinggi', 'JP total = konversi SKS ke jam pelajaran per minggu', 'user', '#f0616d', `<button class="btn sm" data-go="beban">Rekap lengkap</button>`)}<div class="chart lg" id="c-top"></div></div>
   </div>
   <div class="grid g2" style="margin-top:18px">
     <div class="card">${head('Kelas paralel per tingkat', 'Dasar perhitungan beban dosen dan jadwal', 'grid4', '#6366f1', `<button class="btn sm" data-go="induk">Ubah</button>`)}
@@ -120,5 +120,5 @@ export function akademik(el) {
     series: [['Teori', '#0ea5e9', m => m.T * P.menitTeori / 60], ['Praktik', '#10b981', m => jpOf(m, P) - m.T * P.menitTeori / 60]].map(([n, c, f]) => ({ name: n, type: 'bar', stack: 'a', barWidth: 34, data: S.prodi.map(p => +byProdi(S.mk, p.id).filter(m => sem.includes(m.smt)).reduce((a, m) => a + f(m) * kelasOf(S, p.id, m.smt), 0).toFixed(0)), itemStyle: { color: c, borderRadius: n === 'Praktik' ? [8, 8, 0, 0] : 0 } })) });
   const top = act.slice().sort((a, b) => b.riil - a.riil).slice(0, 12).reverse();
   chart(el.querySelector('#c-top'), { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, legend: { top: 0 }, grid: { left: 8, right: 30, top: 30, bottom: 8, containLabel: true }, xAxis: { type: 'value', ...AX }, yAxis: { type: 'category', data: top.map(r => r.d.nama), ...AX },
-    series: [{ name: 'Jam teori', type: 'bar', stack: 'a', barWidth: 14, data: top.map(r => +r.riilT.toFixed(1)), itemStyle: { color: '#0ea5e9' } }, { name: 'Jam praktik', type: 'bar', stack: 'a', data: top.map(r => +r.riilP.toFixed(1)), itemStyle: { color: '#10b981', borderRadius: [0, 6, 6, 0] }, markLine: { symbol: 'none', data: [{ xAxis: P.bebanRiilMax }], lineStyle: { color: '#f0616d', type: 'dashed' } } }] });
+    series: [{ name: 'JP teori', type: 'bar', stack: 'a', barWidth: 14, data: top.map(r => +r.riilT.toFixed(1)), itemStyle: { color: '#0ea5e9' } }, { name: 'JP praktik', type: 'bar', stack: 'a', data: top.map(r => +r.riilP.toFixed(1)), itemStyle: { color: '#10b981', borderRadius: [0, 6, 6, 0] }, markLine: { symbol: 'none', data: [{ xAxis: P.bebanRiilMax }], lineStyle: { color: '#f0616d', type: 'dashed' } } }] });
 }

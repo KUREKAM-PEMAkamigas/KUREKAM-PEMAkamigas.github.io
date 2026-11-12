@@ -220,8 +220,9 @@ export function bebanTugas(S, t, P = param(S)) {
   const m = S.mk.find(x => x.id === t.mk); if (!m) return null;
   const kls = +t.kelas || 0, pT = t.porsiT == null ? 1 : +t.porsiT, pP = t.porsiP == null ? 1 : +t.porsiP;
   const nominal = ((+m.T || 0) * pT + (+m.P || 0) * pP) * kls;
-  const riilT = (+m.T || 0) * pT * kls * P.menitTeori / 60;
-  const riilP = (+m.P || 0) * pP * kls * durasi(m, P) / 60;
+  const jp = (S.settings && S.settings.jp && +S.settings.jp.dur) || 60;   /* menit per 1 JP */
+  const riilT = (+m.T || 0) * pT * kls * P.menitTeori / jp;
+  const riilP = (+m.P || 0) * pP * kls * durasi(m, P) / jp;
   return { m, kls, pT, pP, nominal, riilT, riilP, riil: riilT + riilP, ganjil: m.smt % 2 === 1 };
 }
 export function beban(S, paritas = 'ganjil') {

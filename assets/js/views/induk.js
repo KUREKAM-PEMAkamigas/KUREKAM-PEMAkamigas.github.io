@@ -63,7 +63,7 @@ function tParam(el, ed, adm) {
   el.innerHTML = `
   ${adm ? '' : `<div class="ribbon info">${icon('info')} Parameter hanya dapat diubah oleh Admin setelah ditetapkan pimpinan. Peran lain melihat nilai yang berlaku.</div>`}
   <div class="grid g2">
-    <div class="card">${head('Konversi SKS ke jam pelajaran', 'Dasar perhitungan JP mahasiswa dan SKS riil dosen', 'calendar', '#f5a524')}
+    <div class="card">${head('Konversi SKS ke jam pelajaran', 'Dasar perhitungan JP mahasiswa dan JP total dosen', 'calendar', '#f5a524')}
       <div class="pform">
         <div class="pfrow"><span>1 SKS teori</span>${num('p-t', P.menitTeori, 5)}<small>menit per minggu</small></div>
         ${GK.map(g => `<div class="pfrow"><span>1 SKS praktik ${g} <small class="muted">${GRUP[g].nama}</small></span>${num('p-' + g, P.durasiPraktik[g], 5)}<small>menit per minggu</small></div>`).join('')}
@@ -71,10 +71,10 @@ function tParam(el, ed, adm) {
         <div class="pfrow"><span>JP per hari</span>${num('j-day', J.perDay)}<small>JP</small></div>
         <div class="pfrow"><span>Hari kuliah per minggu</span>${num('j-days', J.days)}<small>hari</small></div>
       </div></div>
-    <div class="card">${head('Batas beban dosen dan akreditasi', 'Beban dihitung dari jam pelajaran nyata (SKS riil)', 'user', '#f0616d')}
+    <div class="card">${head('Batas beban dosen dan akreditasi', 'Beban dihitung dari jam pelajaran nyata (JP total)', 'user', '#f0616d')}
       <div class="pform">
-        <div class="pfrow"><span>Batas bawah beban dosen</span>${num('p-bmin', P.bebanRiilMin, .5)}<small>SKS riil per semester</small></div>
-        <div class="pfrow"><span>Batas atas beban dosen</span>${num('p-bmax', P.bebanRiilMax, .5)}<small>SKS riil per semester</small></div>
+        <div class="pfrow"><span>Batas bawah beban dosen</span>${num('p-bmin', P.bebanRiilMin, .5)}<small>JP total per minggu</small></div>
+        <div class="pfrow"><span>Batas atas beban dosen</span>${num('p-bmax', P.bebanRiilMax, .5)}<small>JP total per minggu</small></div>
         <div class="pfrow"><span>Total SKS minimal</span>${num('p-sks', P.totalSksMin)}<small>Permendiktisaintek 39/2025</small></div>
         <div class="pfrow"><span>Jumlah MK per prodi</span><span class="duo">${num('p-mkmin', P.mkProdiMin)}${num('p-mkmax', P.mkProdiMax)}</span><small>minimal dan maksimal</small></div>
         <div class="pfrow"><span>Muatan spesifik minimal</span>${num('p-spes', P.muatanSpesifikMin)}<small>% (IABEE 2.1.1)</small></div>
@@ -88,7 +88,7 @@ function tParam(el, ed, adm) {
     ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<tr><td><b>Semester ${s}</b></td>${P.kerangka[s].map((v, i) => `<td class="num">${num(`k-${s}-${i}`, v)}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
     ${adm ? `<div class="drawer-act"><button class="btn danger" id="p-def">${icon('loop')} Kembalikan ke nilai pedoman</button><div class="sp"></div><button class="btn pri" id="p-save">${icon('check')} Simpan parameter</button></div>` : ''}
-    <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} SKS riil adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>`;
+    <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} JP total per minggu adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>`;
   if (!adm) return;
   const v = (id) => { const x = el.querySelector('#' + id).value; return x === '' ? null : +x; };
   el.querySelector('#p-save').onclick = async () => {

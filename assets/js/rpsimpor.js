@@ -95,15 +95,17 @@ function cariMk(o) {
 
 /** Menyusun CPMK, Sub-CPMK, dan RPS untuk MK terpilih (belum disimpan). */
 function susun(o, mk) {
+  const penuh = can('susun', mk), ada = S.cpmk.filter(c => c.mk === mk.id);
   const cplP = S.cpl.filter(c => c.prodi === mk.prodi), pes = [];
   const petaCpl = (k) => { const n = parseInt(String(k).replace(/\D/g, ''), 10); const x = cplP.find(c => norm(c.kode) === norm(k)) || cplP[n - 1]; return x ? x.id : null; };
   const cplIds = Array.from(new Set(o.cpl.map(c => petaCpl(c.kode)).filter(Boolean)));
   o.cpl.forEach(c => { if (!petaCpl(c.kode)) pes.push(`${c.kode} tidak ditemukan pada CPL prodi ${mk.prodi}. Hubungkan manual di menu CPMK.`); });
-  const cpmk = o.cpmk.map((c, i) => ({ id: `${mk.id}-C${i + 1}`, mk: mk.id, prodi: mk.prodi, kode: c.kode.replace(/^CPMK-?/, 'CPMK-'), teks: c.teks, cpl: cplIds }));
+  const cpmk = !penuh ? ada : o.cpmk.map((c, i) => ({ id: `${mk.id}-C${i + 1}`, mk: mk.id, prodi: mk.prodi, kode: c.kode.replace(/^CPMK-?/, 'CPMK-'), teks: c.teks, cpl: cplIds }));
   const noCp = (kodeSub) => { const k = o.korelasi.find(x => x.sub.includes(String(parseInt(kodeSub, 10)).padStart(2, '0')) || x.sub.includes(String(parseInt(kodeSub, 10)))); const c = k && cpmk.find(x => String(parseInt(x.kode.replace(/\D/g, ''), 10)) === String(parseInt(k.cpmk, 10))); return (c || cpmk[0] || {}).id; };
   const tot = {}; o.minggu.forEach(w => { const n = parseInt(w.subKode, 10); tot[n] = (tot[n] || 0) + w.bobot; }); const jum = Object.values(tot).reduce((a, b) => a + b, 0) || 1;
   const sub = o.sub.map((s, i) => { const n = parseInt(s.kode.replace(/\D/g, ''), 10); return { id: `${mk.id}-S${i + 1}`, cpmk: noCp(s.kode.replace(/\D/g, '')), mk: mk.id, prodi: mk.prodi, kode: s.kode, teks: s.teks, bobot: Math.round((tot[n] || 0) / jum * 1000) / 10, _n: n }; });
-  if (!cpmk.length) pes.push('CPMK tidak terbaca.');
+  if (!penuh) pes.push(ada.length ? 'Peran Dosen: hanya Sub-CPMK dan RPS yang diperbarui. CPMK dan CPL milik prodi tidak diubah. Sub-CPMK dikaitkan ke CPMK yang sudah ada, dan Tim Kurikulum Prodi dapat merevisinya.' : 'MK ini belum punya CPMK. Minta Tim Kurikulum Prodi menyusun atau mengunggah RPS-nya terlebih dahulu.');
+  else if (!cpmk.length) pes.push('CPMK tidak terbaca.');
   if (!sub.length) pes.push('Sub-CPMK tidak terbaca.');
   const sumB = sub.reduce((a, s) => a + s.bobot, 0); if (sub.length && Math.abs(sumB - 100) > 0.5) { const d = Math.round((100 - sumB) * 10) / 10; sub[sub.length - 1].bobot = Math.round((sub[sub.length - 1].bobot + d) * 10) / 10; }
   const semua = sub.map(s => s.id), subById = (n) => (sub.find(s => s._n === parseInt(n, 10)) || {}).id;
@@ -132,14 +134,14 @@ export function tombolUnggahRps(el, draw) {
 }
 
 function tinjau(hasil, draw) {
-  const boleh = S.mk.filter(m => can('susun', m) && m.smt <= 8);
+  const boleh = S.mk.filter(m => can('rps', { prodi: m.prodi, mk: m.id }) && m.smt <= 8);
   const kartu = (h, i) => {
     const o = h.o, opsi = boleh.filter(m => !h.prodi || m.prodi === h.prodi).sort((a, b) => a.smt - b.smt || a.nama.localeCompare(b.nama));
     const sem = h.mk ? susun(o, h.mk) : null; h.sem = sem;
     const ada = h.mk ? S.cpmk.filter(c => c.mk === h.mk.id).length : 0;
     return `<div class="card" data-k="${i}" style="margin-bottom:12px"><div class="filters" style="margin:0"><label class="cp ${h.mk && !h.gagal ? 'on' : ''}"><input type="checkbox" data-pakai ${h.mk && !h.gagal && boleh.includes(h.mk) ? 'checked' : ''} ${h.gagal ? 'disabled' : ''}>Simpan</label><b>${esc(o.nama || o.file)}</b> <span class="muted small">${esc(o.kode || '')} · ${esc(o.file)}</span></div>
-      ${h.gagal ? '' : `<div class="field" style="margin-top:8px"><label>Dicocokkan dengan MK rancangan ${h.cara ? `<span class="muted small">(lewat ${h.cara})</span>` : '<span class="st bad">belum cocok, pilih manual</span>'}${h.mk && !boleh.includes(h.mk) ? '<span class="st bad">peran Anda tidak berwenang menyusun MK ini. Ganti ke Admin atau Kaprodi ' + h.mk.prodi + '</span>' : ''}</label><select class="inp" data-mk><option value="">— pilih MK —</option>${opsi.map(m => `<option value="${m.id}" ${h.mk && h.mk.id === m.id ? 'selected' : ''}>${m.prodi} · S${m.smt} · ${esc(m.kode)} · ${esc(m.nama)}</option>`).join('')}</select></div>
-      <div class="small" style="margin:6px 0">${o.cpl.length} CPL · ${o.cpmk.length} CPMK · ${o.sub.length} Sub-CPMK · ${o.minggu.length + o.ujian.length} pertemuan ${sem ? '· ' + (sem.rps.pertemuan.reduce((a, p) => a + (+p.bobot || 0), 0)) + '% bobot' : ''}${ada ? `<br><span class="st near">MK ini sudah punya ${ada} CPMK. Menyimpan akan menggantikan CPMK, Sub-CPMK, dan RPS yang ada.</span>` : ''}</div>`}
+      ${h.gagal ? '' : `<div class="field" style="margin-top:8px"><label>Dicocokkan dengan MK rancangan ${h.cara ? `<span class="muted small">(lewat ${h.cara})</span>` : '<span class="st bad">belum cocok, pilih manual</span>'}${h.mk && !boleh.includes(h.mk) ? '<span class="st bad">peran Anda tidak berwenang atas RPS MK ini (dosen hanya untuk MK yang ditugaskan kepadanya). Ganti ke Admin atau Tim Kurikulum ' + h.mk.prodi + ', atau minta Kaprodi menugaskan Anda pada MK ini di menu Penugasan & Beban Dosen</span>' : ''}</label><select class="inp" data-mk><option value="">— pilih MK —</option>${opsi.map(m => `<option value="${m.id}" ${h.mk && h.mk.id === m.id ? 'selected' : ''}>${m.prodi} · S${m.smt} · ${esc(m.kode)} · ${esc(m.nama)}</option>`).join('')}</select></div>
+      <div class="small" style="margin:6px 0">${o.cpl.length} CPL · ${o.cpmk.length} CPMK · ${o.sub.length} Sub-CPMK · ${o.minggu.length + o.ujian.length} pertemuan ${sem ? '· ' + (sem.rps.pertemuan.reduce((a, p) => a + (+p.bobot || 0), 0)) + '% bobot' : ''}${ada ? `<br><span class="st near">MK ini sudah punya ${ada} CPMK. Menyimpan akan menggantikan ${can('susun', h.mk) ? 'CPMK, ' : ''}Sub-CPMK dan RPS yang ada.</span>` : ''}</div>`}
       ${[...(o.peringatan || []), ...((sem && sem.pes) || [])].map(p => `<div class="ribbon bad" style="margin:4px 0">${esc(p)}</div>`).join('')}
       ${sem ? `<details><summary class="small">Lihat hasil bacaan</summary><div class="small" style="margin-top:6px"><b>Deskripsi:</b> ${esc((o.deskripsi || '').slice(0, 260))}…<br>${o.cpmk.map(c => `<b>${esc(c.kode)}</b> ${esc(c.teks)}`).join('<br>')}<br>${o.sub.map(s => `<b>${esc(s.kode)}</b> ${esc(s.teks)}`).join('<br>')}<br><b>Pertemuan:</b> ${sem.rps.pertemuan.map(p => `${p.m}${p.ujian ? ' ' + p.ujian : ''}: ${esc(String(p.materi || '').replace(/^Materi Inti[^\n]*\n?/i, '').replace(/\s*\n\s*/g, ' ').slice(0, 60))}`).join(' · ')}</div></details>` : ''}</div>`;
   };
@@ -152,10 +154,13 @@ function tinjau(hasil, draw) {
       for (const [i, h] of hasil.entries()) {
         const kt = dr.querySelector(`[data-k="${i}"]`); if (!kt || !kt.querySelector('[data-pakai]').checked || !h.mk || !h.sem) continue;
         const s = h.sem, mk = h.mk;
-        for (const c of S.cpmk.filter(x => x.mk === mk.id)) await remove('cpmk', c.id);
+        if (!can('susun', mk) && !s.cpmk.length) continue;
+        if (can('susun', mk)) for (const c of S.cpmk.filter(x => x.mk === mk.id)) await remove('cpmk', c.id);
         for (const c of S.sub.filter(x => x.mk === mk.id)) await remove('sub', c.id);
-        await saveMany('cpmk', s.cpmk); await saveMany('sub', s.sub); await save('rps', s.rps);
-        if (s.cplIds.length) { mk.cpl = Array.from(new Set([...(mk.cpl || []), ...s.cplIds])); await save('mk', mk); }
+        if (can('susun', mk)) await saveMany('cpmk', s.cpmk);
+        s.sub.forEach(x => { if (!x.cpmk) x.cpmk = s.cpmk[0].id; });
+        await saveMany('sub', s.sub); await save('rps', s.rps);
+        if (can('susun', mk) && s.cplIds.length) { mk.cpl = Array.from(new Set([...(mk.cpl || []), ...s.cplIds])); await save('mk', mk); }
         n++;
       }
       await addLog(`Impor RPS Word: ${n} MK`); toast(`${n} RPS disimpan sebagai draf`);

@@ -203,6 +203,7 @@ export function buildSeed() {
         const s = ss[si % ss.length]; si++;
         const filled = !(pid === 'TI' && w > 12) && !(pid === 'TM' && w > 6);
         pert.push({ m: w, sub: [s.id], materi: filled ? `${m.nama}: ${s.teks.replace(/^Mampu /, '').replace(/\.$/, '')}` : '', metode: prak ? 'Demonstrasi dan praktik terbimbing di laboratorium' : 'Kuliah interaktif, diskusi kelompok, dan studi kasus', asesmen: prak ? 'Laporan praktik dan observasi' : (w % 2 ? 'Kuis' : 'Tugas'), bobot: Math.round(55 / 14 * 10) / 10,
+          ...((pid === 'TP' || pid === 'TO') && filled && (w === 5 || w === 12) ? (w === 5 ? { integ: 'Penelitian', integUraian: 'Hasil penelitian dosen (contoh) dipakai sebagai studi kasus dan bahan diskusi.' } : { integ: 'PKM', integUraian: 'Mahasiswa menyusun rekomendasi teknis untuk mitra PKM (contoh).' }) : {}),
           sap: pid === 'TP' && filled ? { pendahuluan: 'Apersepsi, briefing K3, dan penyampaian tujuan pertemuan (10 menit)', inti: prak ? 'Demonstrasi oleh dosen, praktik berkelompok, pengamatan dan pencatatan data' : 'Penjelasan konsep, contoh soal, diskusi kasus lapangan', penutup: 'Refleksi, kuis singkat, dan penugasan (10 menit)', media: prak ? 'Peralatan lab, lembar kerja, APD' : 'Proyektor, modul ajar, LMS' } : {} });
       }
       const status = pid === 'TP' ? (m.smt === 1 ? 'disahkan' : 'diajukan') : pid === 'TO' ? (idx % 3 === 0 ? 'diajukan' : 'draf') : 'draf';

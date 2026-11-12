@@ -66,6 +66,8 @@ export const PARAM_DEFAULT = {
   mkProdiMin: 60, mkProdiMax: 72,
   muatanSpesifikMin: 65, pendidikanUmumMax: 25, matSainsMin: 4,
   praktikMin: 50, praktikMax: 70,
+  /* RPS: jumlah pertemuan minimal yang memuat integrasi penelitian atau PKM */
+  integrasiMinPertemuan: 2,
   /* Beban dosen: SKS riil = SKS teori + SKS praktik x (durasi / 60), dikali kelas dan porsi. */
   bebanRiilMin: 9, bebanRiilMax: 16, jpMingguMax: 24
 };

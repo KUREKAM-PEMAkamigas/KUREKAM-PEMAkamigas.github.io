@@ -60,7 +60,7 @@ export function pimpinan(el) {
 export function mutu(el) {
   const A = all(), umpan = umpanSimantap();
   const putus = A.reduce((a, x) => a + x.t.cplNoMk.length + x.t.mkNoCpl.length + x.t.bkNoMk.length + x.t.cplNoBk.length, 0);
-  const grp = ['Total', 'Akreditasi', 'Keterlacakan'].concat([1, 2, 3, 4, 5, 6].map(s => 'Semester ' + s));
+  const grp = ['Total', 'Akreditasi', 'Keterlacakan', 'Pembelajaran'].concat([1, 2, 3, 4, 5, 6].map(s => 'Semester ' + s));
   el.innerHTML = `
   <div class="grid g4">
     ${kpi('Keterlacakan rata-rata', A.reduce((a, x) => a + x.t.skor, 0) / A.length, 'rantai visi sampai Sub-CPMK (%)', '#10b981', 'link', 1)}

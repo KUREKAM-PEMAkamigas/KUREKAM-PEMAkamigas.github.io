@@ -16,3 +16,11 @@ Kurikulum, Rancang, Evaluasi, Kawal Mutu. Aplikasi web statis untuk menyusun kur
 ## Data awal
 - Rancangan baru berisi data contoh yang mengikuti kerangka Buku Pedoman 2027. Ganti lewat impor Matriks_Kurikulum_D4_PEM_Akamigas.xlsx.
 - Kurikulum berjalan (395 MK) dimigrasikan dari Dashboard Evaluasi Beban Perkuliahan dan dapat diganti lewat impor lembar DATA.
+
+## Data dosen dan penugasan (Excel)
+
+Menu **Data Induk & Pengaturan > Impor & ekspor**:
+
+- **Impor data dosen**: membaca berkas DUK (lembar "DOSEN PER PRODI") atau Template_Dosen.xlsx. Hanya nama, NIP, NIDN, jabatan, pendidikan, bidang ilmu, dan prodi yang dibaca. Kolom pribadi (NIK, telepon, tanggal lahir, keluarga, gaji) tidak dibaca dan tidak disimpan. Berkas diproses di peramban, tidak dikirim ke mana pun.
+- **Impor penugasan**: dosen dapat mengampu MK di prodi mana pun (dosen milik UPPS). Homebase hanya penanda asal.
+- Jangan menaruh berkas DUK di repositori ini. Data dosen tersimpan di peramban (mode lokal) atau Firestore bila dihubungkan.

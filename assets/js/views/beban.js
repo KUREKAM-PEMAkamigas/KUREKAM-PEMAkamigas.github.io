@@ -16,13 +16,15 @@ export default function bebanView(el) {
   const kosong = mkTanpaPengampu(S, par);
   const avgN = act.reduce((a, r) => a + r.nominal, 0) / Math.max(1, act.length), avgR = act.reduce((a, r) => a + r.riil, 0) / Math.max(1, act.length);
   const homes = Array.from(new Set(S.dosen.map(d => d.homebase)));
+  const lintas = act.filter(r => r.prodi.size > 1 || (r.prodi.size === 1 && r.d.homebase !== 'Bersama' && !r.prodi.has(r.d.homebase)));
   el.innerHTML = `
   <div class="ribbon info">${icon('info')} <span><b>Beban realistis.</b> SKS riil = SKS teori + SKS praktik × (durasi praktik ÷ 60), dikalikan jumlah kelas dan porsi dosen. Satu SKS riil setara 60 menit tatap muka per minggu, sehingga beban dosen praktik tercermin sesuai jam pelajaran nyata (MKU/MBS ${P.durasiPraktik.MKU} menit, MBE/MKK ${P.durasiPraktik.MKK} menit per SKS praktik). Batas wajar ${P.bebanRiilMin}–${P.bebanRiilMax} SKS riil per semester dapat diubah di Data Induk.</span></div>
-  <div class="grid g4">
+  <div class="grid g5">
     ${kpi('Rata-rata SKS riil', avgR, `SKS kurikulum rata-rata ${fmt(avgN, 1)}`, '#10b981', 'pulse', 1)}
     ${kpi('Dosen melebihi batas', over.length, `di atas ${P.bebanRiilMax} SKS riil`, '#f0616d', 'alert')}
     ${kpi('Dosen di bawah batas', under.length, `di bawah ${P.bebanRiilMin} SKS riil`, '#f5a524', 'arrowDown')}
     ${kpi('MK tanpa pengampu', kosong.length, `semester ${par}`, '#8b5cf6', 'book')}
+    ${kpi('Dosen lintas prodi', lintas.length, `mengajar di prodi selain homebase atau di lebih dari satu prodi`, '#14b8a6', 'link')}
   </div>
   <div class="filters" style="margin-top:16px">
     <div class="seg"><button data-p="ganjil" class="${par === 'ganjil' ? 'on' : ''}">Semester ganjil</button><button data-p="genap" class="${par === 'genap' ? 'on' : ''}">Semester genap</button></div>
@@ -39,8 +41,8 @@ export default function bebanView(el) {
     </div>
   </div>
   <div class="card" style="margin-top:18px">${head('Rekap beban dosen', `Semester ${par} ${S.settings.tahunAkademik || ''} · klik baris untuk rincian`, 'user', '#f5a524')}
-    <div class="tbl-wrap" style="max-height:600px"><table class="tbl"><thead><tr><th>Dosen</th><th>Homebase</th><th class="num">MK</th><th class="num">Kelas</th><th class="num">SKS kurikulum</th><th class="num">Jam teori</th><th class="num">Jam praktik</th><th class="num">SKS riil = JP/mg</th><th>Terhadap batas</th><th>Status</th></tr></thead><tbody>
-    ${view.map(r => `<tr class="click" data-d="${r.d.id}"><td><b>${esc(r.d.nama)}</b><div class="small muted">${esc(r.d.bidang || '')}</div></td><td>${r.d.homebase === 'Bersama' ? '<span class="tag">Bersama</span>' : prodiTag(r.d.homebase)}</td><td class="num">${new Set(r.items.map(i => i.m.id)).size}</td><td class="num">${fmt(r.items.reduce((a, i) => a + i.kls, 0))}</td><td class="num">${fmt(r.nominal, 1)}</td><td class="num">${fmt(r.riilT, 1)}</td><td class="num">${fmt(r.riilP, 1)}</td><td class="num"><b>${fmt(r.riil, 1)}</b></td><td>${bar(r.riil / P.bebanRiilMax * 100, r.k === 'bad' ? '#f0616d' : r.k === 'near' ? '#f5a524' : '#10b981', '110px')}</td><td>${r.items.length ? stTag(r.k, KL[r.k]) : stTag('na', 'Belum ditugaskan')}</td></tr>`).join('')}
+    <div class="tbl-wrap" style="max-height:600px"><table class="tbl"><thead><tr><th>Dosen</th><th>Homebase</th><th>Mengajar di</th><th class="num">MK</th><th class="num">Kelas</th><th class="num">SKS kurikulum</th><th class="num">Jam teori</th><th class="num">Jam praktik</th><th class="num">SKS riil = JP/mg</th><th>Terhadap batas</th><th>Status</th></tr></thead><tbody>
+    ${view.map(r => `<tr class="click" data-d="${r.d.id}"><td><b>${esc(r.d.nama)}</b><div class="small muted">${esc(r.d.bidang || '')}</div></td><td>${r.d.homebase === 'Bersama' ? '<span class="tag">Bersama</span>' : prodiTag(r.d.homebase)}</td><td>${Array.from(r.prodi).map(prodiTag).join(' ') || '<span class="muted small">–</span>'}</td><td class="num">${new Set(r.items.map(i => i.m.id)).size}</td><td class="num">${fmt(r.items.reduce((a, i) => a + i.kls, 0))}</td><td class="num">${fmt(r.nominal, 1)}</td><td class="num">${fmt(r.riilT, 1)}</td><td class="num">${fmt(r.riilP, 1)}</td><td class="num"><b>${fmt(r.riil, 1)}</b></td><td>${bar(r.riil / P.bebanRiilMax * 100, r.k === 'bad' ? '#f0616d' : r.k === 'near' ? '#f5a524' : '#10b981', '110px')}</td><td>${r.items.length ? stTag(r.k, KL[r.k]) : stTag('na', 'Belum ditugaskan')}</td></tr>`).join('')}
     </tbody></table></div></div>` : tugasTab(par, P)}`;
 
   animateCounts(el);
@@ -87,7 +89,7 @@ function bindTugas(el, par) {
   const form = (x, m) => {
     const P = param(S);
     formDrawer({ title: x.id ? 'Ubah penugasan' : 'Tugaskan dosen', sub: `${m.nama} · ${m.T}T + ${m.P}P · ${kelasOf(S, m.prodi, m.smt)} kelas`, obj: x,
-      fields: [{ k: 'dosen', label: 'Dosen', type: 'select', opts: S.dosen.filter(d => d.homebase === m.prodi || d.homebase === 'Bersama').concat(S.dosen.filter(d => d.homebase !== m.prodi && d.homebase !== 'Bersama')).map(d => ({ v: d.id, t: `${d.nama} (${d.homebase})` })) },
+      fields: [{ k: 'dosen', label: 'Dosen', type: 'select', opts: S.dosen.filter(d => d.homebase === m.prodi || (d.prodiAjar || []).includes(m.prodi) || d.homebase === 'Bersama').concat(S.dosen.filter(d => d.homebase !== m.prodi && d.homebase !== 'Bersama' && !(d.prodiAjar || []).includes(m.prodi))).map(d => ({ v: d.id, t: `${d.nama} · ${d.homebase === m.prodi ? 'homebase ' + m.prodi : d.homebase === 'Bersama' ? 'Bersama' : (d.prodiAjar || []).includes(m.prodi) ? 'homebase ' + d.homebase + ', juga mengajar di ' + m.prodi : 'lintas prodi, homebase ' + d.homebase}` })) },
         { k: 'kelas', label: 'Jumlah kelas diampu', type: 'number' }, { k: 'porsiT', label: 'Porsi teori (0–1)', type: 'number', step: '0.05' }, { k: 'porsiP', label: 'Porsi praktik (0–1)', type: 'number', step: '0.05', live: () => { const d = document.querySelector('#fd'); if (!d) return ''; const t = { mk: m.id, kelas: d.querySelector('[name=kelas]').value, porsiT: d.querySelector('[name=porsiT]').value, porsiP: d.querySelector('[name=porsiP]').value }; const b = bebanTugas(S, t, P); return b ? `Beban penugasan ini: SKS kurikulum <b>${fmt(b.nominal, 2)}</b>, SKS riil <b>${fmt(b.riil, 2)}</b> (JP/minggu)` : ''; } }],
       onSave: async (o) => { o.id = o.id || uid('T-' + m.id); o.mk = m.id; o.prodi = m.prodi; o.kelas = +o.kelas || 0; o.porsiT = o.porsiT == null ? 1 : +o.porsiT; o.porsiP = o.porsiP == null ? 1 : +o.porsiP; if (!o.kelas) return 'Jumlah kelas wajib diisi.'; await save('tugas', o, `Tugaskan ${(S.dosen.find(d => d.id === o.dosen) || {}).nama} pada ${m.nama}`); rerender(); },
       onDelete: x.id ? async () => { await remove('tugas', x.id, `Hapus penugasan ${m.nama}`); rerender(); } : null });

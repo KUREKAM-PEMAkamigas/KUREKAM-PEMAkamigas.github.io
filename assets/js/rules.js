@@ -116,6 +116,7 @@ export function cekTrace(S, pid) {
     row('MK tanpa CPL', t.mkNoCpl, 'IABEE 2.1'),
     row('MK tanpa bahan kajian', t.mkNoBk, 'KPT OBE'),
     row('CPMK di luar CPL yang dibebankan', t.cpmkLuar, 'IABEE 2.2'),
+    ...cekIntegrasi(S, pid),
     { grp: 'Keterlacakan', label: 'Bobot Sub-CPMK tidak 100%', val: t.bobotSalah.length ? `${t.bobotSalah.length}: ${L(t.bobotSalah)}` : 'Tidak ada', target: '0', k: t.bobotSalah.length ? 'near' : 'ok', acuan: 'Pedoman RPS' }
   ];
 }
@@ -171,6 +172,15 @@ export function rpsLengkap(r) {
   if (!r || !r.pertemuan) return 0;
   const isi = r.pertemuan.filter(p => (p.materi || '').trim() || p.ujian).length;
   return isi / 16 * 100;
+}
+export const INTEG = ['', 'Penelitian', 'PKM', 'Penelitian dan PKM'];
+export const integrasiOf = (r) => r && r.pertemuan ? r.pertemuan.filter(p => !p.ujian && p.integ).length : 0;
+export function cekIntegrasi(S, pid) {
+  const P = param(S), min = P.integrasiMinPertemuan || 2;
+  const rp = S.rps.filter(r => r.prodi === pid && rpsLengkap(r) > 0);
+  const kurang = rp.filter(r => integrasiOf(r) < min).map(r => ({ kode: ((S.mk.find(m => m.id === r.mk) || {}).kode) || r.mk }));
+  const L = (a) => a.map(x => x.kode).slice(0, 6).join(', ') + (a.length > 6 ? ', …' : '');
+  return [{ grp: 'Pembelajaran', label: `RPS dengan integrasi penelitian atau PKM kurang dari ${min} pertemuan`, val: kurang.length ? `${kurang.length} dari ${rp.length}: ${L(kurang)}` : (rp.length ? 'Tidak ada' : 'Belum ada RPS'), target: '0', k: kurang.length ? 'near' : 'ok', acuan: 'SN Dikti (standar proses), LAM Teknik butir penelitian dan PkM' }];
 }
 export function sapLengkap(r) {
   if (!r || !r.pertemuan) return 0;

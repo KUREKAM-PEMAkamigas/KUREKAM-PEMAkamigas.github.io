@@ -191,6 +191,13 @@ async function boot() {
   let d = await DB.loadAll();
   const st = d.settings && d.settings[0];
   if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { d = buildSeed(); for (const c of Object.keys(d)) await DB.replaceAll(c, d[c]); }
+  /* migrasi ringan: RPS contoh mendapat isian integrasi penelitian dan PKM tanpa menghapus data pengguna */
+  if (st && !st.integ5 && d.rps.length && !d.rps.some(r => (r.pertemuan || []).some(p => p.integ))) {
+    const fresh = buildSeed(); let n = 0;
+    for (const r of d.rps) { const f = fresh.rps.find(x => x.id === r.id); if (!f || !(f.pertemuan || []).some(p => p.integ)) continue; r.penelitian = r.penelitian || f.penelitian || ''; r.pkm = r.pkm || f.pkm || ''; (r.pertemuan || []).forEach((p, i) => { const q = (f.pertemuan || [])[i]; if (q && q.integ && !p.integ) { p.integ = q.integ; p.integUraian = q.integUraian || ''; } }); n++; }
+    if (n) await DB.replaceAll('rps', d.rps);
+  }
+  if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
   window.addEventListener('hashchange', route_);
   route_();

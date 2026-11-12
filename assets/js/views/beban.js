@@ -83,7 +83,7 @@ function jalanTab(P) {
   const dur = (g) => P.durasiPraktik[g] || P.durasiPraktik.MKK;
   const by = {};
   S.ajar.forEach(a => { const r = by[a.dosen] || (by[a.dosen] = { d: S.dosen.find(x => x.id === a.dosen) || { nama: '(tidak dikenal)', homebase: '-' }, nom: 0, riil: 0, riilT: 0, riilP: 0, mk: new Set(), prodi: new Set(), kelas: 0 }); r.nom += a.sT + a.sP; r.riilT += a.sT * P.menitTeori / 60; r.riilP += a.sP * dur(a.g) / 60; r.riil = r.riilT + r.riilP; r.mk.add(a.prodi + a.kode); r.prodi.add(a.prodi); r.kelas++; });
-  let list = Object.values(by).filter(r => !fHome || r.d.homebase === fHome || r.prodi.has(fHome)).sort((a, b) => b.riil - a.riil);
+  let list = Object.entries(by).filter(([id]) => ctx.role !== 'dosen' || id === ctx.dosen).map(([, r]) => r).filter(r => !fHome || r.d.homebase === fHome || r.prodi.has(fHome)).sort((a, b) => b.riil - a.riil);
   const all = Object.values(by), lin = all.filter(r => r.prodi.size > 1), luar = all.filter(r => r.d.status && /luar biasa|purna|capstone/i.test(r.d.status)), tot = all.reduce((a, r) => a + r.riil, 0), totLuar = luar.reduce((a, r) => a + r.riil, 0);
   const st = (r) => r.riil > P.bebanRiilMax ? 'bad' : r.riil < P.bebanRiilMin ? 'near' : 'ok';
   return `<div class="grid g4" style="margin-bottom:16px">
@@ -95,7 +95,7 @@ function jalanTab(P) {
   <div class="card">${head('Beban riil kurikulum berjalan per dosen', 'SKS riil = sks teori × 60 menit + sks praktik × durasi praktik jenis MK, dibagi 60. Dihitung dari baris pengampu per kelas.', 'user', '#8b5cf6')}
     <div class="tbl-wrap" style="max-height:640px"><table class="tbl"><thead><tr><th>Dosen</th><th>Status</th><th>Homebase</th><th>Mengajar di</th><th class="num">MK</th><th class="num">Kelas</th><th class="num">SKS kurikulum</th><th class="num">Jam teori</th><th class="num">Jam praktik</th><th class="num">SKS riil</th><th>Status beban</th></tr></thead><tbody>
     ${list.map(r => `<tr><td><b>${esc(r.d.nama)}</b></td><td class="small">${esc(r.d.status || 'Dosen internal')}</td><td>${r.d.homebase === 'Bersama' ? '<span class="tag">Bersama</span>' : prodiTag(r.d.homebase)}</td><td>${Array.from(r.prodi).map(prodiTag).join(' ')}</td><td class="num">${r.mk.size}</td><td class="num">${r.kelas}</td><td class="num">${fmt(r.nom, 1)}</td><td class="num">${fmt(r.riilT, 1)}</td><td class="num">${fmt(r.riilP, 1)}</td><td class="num"><b>${fmt(r.riil, 1)}</b></td><td>${stTag(st(r), KL[st(r)])}</td></tr>`).join('')}
-    </tbody></table></div><p class="note">Data satu semester ganjil dari berkas beban mengajar. Dosen luar biasa tidak dinilai terhadap batas dosen tetap, abaikan statusnya bila tidak relevan.</p></div>`;
+    </tbody></table></div>${ctx.role === 'dosen' && !list.length ? '<p class="empty">Nama Anda belum tercatat sebagai pengampu pada berkas yang diimpor.</p>' : ''}<p class="note">Data satu semester ganjil dari berkas beban mengajar. Dosen luar biasa tidak dinilai terhadap batas dosen tetap, abaikan statusnya bila tidak relevan.</p></div>`;
 }
 
 function tugasTab(par, P) {

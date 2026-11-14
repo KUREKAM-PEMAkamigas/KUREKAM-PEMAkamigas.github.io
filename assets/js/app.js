@@ -207,7 +207,7 @@ export function route_() {
   renderSide(r.id); renderTop(r);
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
-  view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Mode demo: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
+  view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Data contoh: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
   if (dalamSimulasi()) view.innerHTML = `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <b>MODE SIMULASI.</b> Data contoh hanya ada di peramban ini. Perubahan di sini tidak disimpan ke Firebase dan tidak terlihat pengguna lain. Klik Keluar simulasi untuk kembali ke data asli.</div>`;
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah) view.innerHTML += `<div class="ribbon info">${icon('info')} Anda masih memakai kata sandi awal dari admin. Demi keamanan, ganti lewat tombol Kata sandi di kanan atas.</div>`;
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
@@ -274,7 +274,7 @@ export async function start() {
   if (dalamSimulasi()) DB.useLocal();
   let d = await DB.loadAll();
   const st = d.settings && d.settings[0];
-  if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { d = buildSeed(); for (const c of Object.keys(d)) await DB.replaceAll(c, d[c]); }
+  if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { const simpan = d.pengguna || []; d = buildSeed(); d.pengguna = simpan; for (const c of Object.keys(d)) { if (c !== 'pengguna') await DB.replaceAll(c, d[c]); } }
   /* migrasi ringan: RPS contoh mendapat isian integrasi penelitian dan PKM tanpa menghapus data pengguna */
   if (st && !st.integ5 && d.rps.length && !d.rps.some(r => (r.pertemuan || []).some(p => p.integ))) {
     const fresh = buildSeed(); let n = 0;

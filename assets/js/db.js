@@ -77,6 +77,9 @@ export const DB = {
     finally { try { await app2.auth().signOut(); } catch (e) { /* abaikan */ } }
   },
   useLocal() { mode = 'local'; },
+  /** Kembali ke Firestore setelah mode simulasi developer. Hanya bila Firebase sudah terhubung. */
+  useFirebase() { if (fs && auth) mode = 'firebase'; return mode; },
+  get tersambung() { return !!(fs && auth); },
   async init() {
     const cfg = getFirebaseConfig();
     if (cfg) {

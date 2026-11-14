@@ -44,6 +44,9 @@ export function bolehMenu(id) { const m = MENU_PERAN[ctx.role]; return !m || m.i
 /** Peran yang boleh dipilih akun ini. Tanpa daftar pengguna (masa penyiapan atau mode demo) semua peran bisa dicoba. */
 export function peranAkun() { return ctx.kunci ? (ctx.izin || []) : Object.keys(PERAN).filter(k => k !== 'developer'); }
 let sidikDev = false;
+const SIM_KEY = 'kurekam_sim';
+export const dalamSimulasi = () => { try { return sidikDev && sessionStorage.getItem(SIM_KEY) === '1'; } catch (e) { return false; } };
+export const bisaSimulasi = () => sidikDev && DB.tersambung;
 async function cekDeveloper() {
   sidikDev = false; const em = DB.user && DB.user.email ? DB.user.email.toLowerCase() : ''; if (!em || !window.crypto || !crypto.subtle) return;
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('kurekam:' + em)); sidikDev = DEVELOPER_SHA.includes(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('')); } catch (e) { /* abaikan */ }
@@ -166,7 +169,7 @@ function renderSide(cur) {
     if (r.sec !== sec) { sec = r.sec; h += `<div class="nav-sec">${sec}</div>`; }
     h += `<a href="#${r.id}" class="${r.id === cur ? 'on' : ''}" style="--c:${r.c}"><span class="chip">${icon(r.ic)}</span><span>${r.t}${r.sub ? `<small class="nsub">${r.sub}</small>` : ''}</span></a>`;
   });
-  h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${DB.mode === 'firebase' ? 'Firestore' : 'Mode demo lokal'}</div>`;
+  h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
   $('#side').innerHTML = h;
   $$('#side a').forEach(a => a.addEventListener('click', () => $('#side').classList.remove('open')));
 }
@@ -184,14 +187,16 @@ function renderTop(route) {
       <select class="inp" id="roleSel" aria-label="Peran">${peranAkun().map(k => `<option value="${k}" ${k === ctx.role ? 'selected' : ''}>${PERAN[k].nama}</option>`).join('')}</select>
       ${ctx.role === 'dosen' && (!ctx.kunci || sidikDev) ? `<select class="inp rl" id="dosenSel" aria-label="Dosen">${dosenOpts}</select>` : ''}
     </div>
+    ${bisaSimulasi() ? `<button class="btn ${dalamSimulasi() ? 'vio' : ''}" id="simBtn" title="Uji coba fitur dengan data contoh tanpa menyentuh Firebase">${icon('play')} ${dalamSimulasi() ? 'Keluar simulasi' : 'Simulasi'}</button>` : ''}
     ${DB.user ? `<button class="btn" id="sandiBtn" title="${esc(DB.user.email)}">${icon('gear')} Kata sandi</button>` : ''}
     ${DB.user ? `<button class="btn" id="logoutBtn">${icon('logout')} Keluar</button>` : ''}`;
   $('#menuBtn').onclick = () => $('#side').classList.toggle('open');
   $('#roleSel').onchange = e => { ctx.role = e.target.value; ctx.pilihDev = ctx.role; saveCtx(); route_(); };
   const gs = $('#sandiBtn'); if (gs) gs.onclick = formSandi;
+  const sm = $('#simBtn'); if (sm) sm.onclick = () => ubahSimulasi(!dalamSimulasi());
   const ps = $('#prodiSel'); if (ps) ps.onchange = e => { ctx.prodi = e.target.value; saveCtx(); route_(); };
   const ds = $('#dosenSel'); if (ds) ds.onchange = e => { ctx.dosen = e.target.value; saveCtx(); route_(); };
-  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { lo.disabled = true; closeDrawer(); disposeAll(); disposeHero(); $('#side').innerHTML = ''; $('#top').innerHTML = ''; $('#view').innerHTML = '<div class="empty">Keluar…</div>'; await DB.logout(); Object.keys(S).forEach(k => { S[k] = k === 'settings' ? {} : []; }); ctx.kunci = false; ctx.akun = null; ctx.izin = null; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } window.dispatchEvent(new Event('kurekam:keluar')); };
+  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { lo.disabled = true; closeDrawer(); disposeAll(); disposeHero(); $('#side').innerHTML = ''; $('#top').innerHTML = ''; $('#view').innerHTML = '<div class="empty">Keluar…</div>'; await DB.logout(); try { sessionStorage.removeItem(SIM_KEY); } catch (e) { /* abaikan */ } DB.useFirebase(); Object.keys(S).forEach(k => { S[k] = k === 'settings' ? {} : []; }); ctx.kunci = false; ctx.akun = null; ctx.izin = null; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } window.dispatchEvent(new Event('kurekam:keluar')); };
 }
 
 export function route_() {
@@ -203,6 +208,7 @@ export function route_() {
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
   view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Mode demo: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
+  if (dalamSimulasi()) view.innerHTML = `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <b>MODE SIMULASI.</b> Data contoh hanya ada di peramban ini. Perubahan di sini tidak disimpan ke Firebase dan tidak terlihat pengguna lain. Klik Keluar simulasi untuk kembali ke data asli.</div>`;
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah) view.innerHTML += `<div class="ribbon info">${icon('info')} Anda masih memakai kata sandi awal dari admin. Demi keamanan, ganti lewat tombol Kata sandi di kanan atas.</div>`;
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
   const holder = document.createElement('div'); view.appendChild(holder);
@@ -211,6 +217,16 @@ export function route_() {
   window.scrollTo({ top: 0 });
 }
 export const rerender = () => route_();
+
+/** Developer: beralih antara data asli (Firebase) dan data contoh di peramban ini, tanpa memuat ulang halaman. */
+async function ubahSimulasi(nyala) {
+  try {
+    if (nyala) sessionStorage.setItem(SIM_KEY, '1'); else { sessionStorage.removeItem(SIM_KEY); DB.useFirebase(); }
+    closeDrawer(); disposeAll(); disposeHero();
+    $('#view').innerHTML = `<div class="empty"><span class="spin"></span> ${nyala ? 'Menyiapkan data simulasi…' : 'Memuat data asli…'}</div>`;
+    await start();
+  } catch (e) { console.error(e); toast('Gagal berpindah mode: ' + e.message); }
+}
 
 function formSandi() {
   openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('gear')}</span><div><h3>Ganti kata sandi</h3><div class="sub">${esc(DB.user.email)} · alamat email hanya bisa diubah admin</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
@@ -254,6 +270,8 @@ function wajibGantiSandi() {
 /** Memuat data lalu menampilkan halaman. Dipanggil boot.js setelah pengguna masuk. */
 let pantau = false;
 export async function start() {
+  await cekDeveloper();
+  if (dalamSimulasi()) DB.useLocal();
   let d = await DB.loadAll();
   const st = d.settings && d.settings[0];
   if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { d = buildSeed(); for (const c of Object.keys(d)) await DB.replaceAll(c, d[c]); }
@@ -265,7 +283,6 @@ export async function start() {
   }
   if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
-  await cekDeveloper();
   terapkanAkun();
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
   if (!pantau) { pantau = true; window.addEventListener('hashchange', route_); }

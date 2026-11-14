@@ -1,5 +1,5 @@
 /* KUREKAM PEM Akamigas · Aplikasi utama: state, peran, router, dan utilitas bersama. */
-import { APP, PERAN, MENU_PERAN } from './config.js';
+import { APP, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
 import { terimaTautanFirebase, DB } from './db.js';
 import { buildSeed } from './seed.js';
 import { icon } from './icons.js';
@@ -41,12 +41,25 @@ export function userName() {
 /** Menu yang boleh dibuka peran aktif. */
 export function bolehMenu(id) { const m = MENU_PERAN[ctx.role]; return !m || m.includes(id); }
 /** Peran yang boleh dipilih akun ini. Tanpa daftar pengguna (masa penyiapan atau mode demo) semua peran bisa dicoba. */
-export function peranAkun() { return ctx.kunci ? (ctx.izin || []) : Object.keys(PERAN); }
+export function peranAkun() { return ctx.kunci ? (ctx.izin || []) : Object.keys(PERAN).filter(k => k !== 'developer'); }
+let sidikDev = false;
+async function cekDeveloper() {
+  sidikDev = false; const em = DB.user && DB.user.email ? DB.user.email.toLowerCase() : ''; if (!em || !window.crypto || !crypto.subtle) return;
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('kurekam:' + em)); sidikDev = DEVELOPER_SHA.includes(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('')); } catch (e) { /* abaikan */ }
+}
 function terapkanAkun() {
   ctx.kunci = false; ctx.tanpaPeran = false; ctx.izin = null; ctx.akun = null;
   const em = DB.user && DB.user.email ? DB.user.email.toLowerCase() : '';
-  if (!em || !S.pengguna.length) return;
+  if (!em) { if (ctx.role === 'developer') ctx.role = 'admin'; return; }
   const u = S.pengguna.find(x => (x.email || '').toLowerCase() === em);
+  if (sidikDev || (u && (u.peran || []).includes('developer'))) {
+    ctx.kunci = true; ctx.akun = u || null; ctx.izin = Object.keys(PERAN).sort((a, b) => (b === 'developer') - (a === 'developer'));
+    if (!ctx.izin.includes(ctx.role) || !ctx.pilihDev) ctx.role = ctx.pilihDev || 'developer';
+    if (u && u.dosen && !ctx.dosen) ctx.dosen = u.dosen;
+    return;
+  }
+  if (ctx.role === 'developer') ctx.role = 'dosen';
+  if (!S.pengguna.length) return;
   ctx.kunci = true;
   if (!u || !(u.peran || []).length) { ctx.tanpaPeran = true; ctx.izin = ['dosen']; ctx.role = 'dosen'; ctx.dosen = ''; return; }
   ctx.akun = u; ctx.izin = u.peran.filter(p => PERAN[p]);
@@ -59,7 +72,7 @@ export function muatUlangAkun() { terapkanAkun(); }
 /** Hak akses per peran. */
 export function can(action, obj = {}) {
   const r = ctx.role;
-  if (r === 'admin') return true;
+  if (r === 'admin' || r === 'developer') return true;
   switch (action) {
     case 'susun': return r === 'prodi' && (obj.prodi || ctx.prodi) === ctx.prodi;          // visi s.d. CPMK, penugasan
     case 'rps': {                                                                             // Sub-CPMK, RPS, SAP
@@ -168,11 +181,13 @@ function renderTop(route) {
     <div class="role-box">
       <span class="ico-badge" style="--c:${PERAN[ctx.role].c};width:32px;height:32px">${icon('user')}</span>
       <select class="inp" id="roleSel" aria-label="Peran">${peranAkun().map(k => `<option value="${k}" ${k === ctx.role ? 'selected' : ''}>${PERAN[k].nama}</option>`).join('')}</select>
-      ${ctx.role === 'dosen' && !ctx.kunci ? `<select class="inp rl" id="dosenSel" aria-label="Dosen">${dosenOpts}</select>` : ''}
+      ${ctx.role === 'dosen' && (!ctx.kunci || sidikDev) ? `<select class="inp rl" id="dosenSel" aria-label="Dosen">${dosenOpts}</select>` : ''}
     </div>
+    ${DB.user ? `<button class="btn" id="sandiBtn" title="${esc(DB.user.email)}">${icon('gear')} Kata sandi</button>` : ''}
     ${DB.user ? `<button class="btn" id="logoutBtn">${icon('logout')} Keluar</button>` : ''}`;
   $('#menuBtn').onclick = () => $('#side').classList.toggle('open');
-  $('#roleSel').onchange = e => { ctx.role = e.target.value; saveCtx(); route_(); };
+  $('#roleSel').onchange = e => { ctx.role = e.target.value; ctx.pilihDev = ctx.role; saveCtx(); route_(); };
+  const gs = $('#sandiBtn'); if (gs) gs.onclick = formSandi;
   const ps = $('#prodiSel'); if (ps) ps.onchange = e => { ctx.prodi = e.target.value; saveCtx(); route_(); };
   const ds = $('#dosenSel'); if (ds) ds.onchange = e => { ctx.dosen = e.target.value; saveCtx(); route_(); };
   const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { await DB.logout(); location.reload(); };
@@ -187,6 +202,7 @@ export function route_() {
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
   view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Mode demo: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
+  if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah) view.innerHTML += `<div class="ribbon info">${icon('info')} Anda masih memakai kata sandi awal dari admin. Demi keamanan, ganti lewat tombol Kata sandi di kanan atas.</div>`;
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
   const holder = document.createElement('div'); view.appendChild(holder);
   try { r.v(holder); } catch (e) { console.error(e); holder.innerHTML = `<div class="card empty">Terjadi kesalahan saat memuat halaman: ${esc(e.message)}</div>`; }
@@ -195,13 +211,37 @@ export function route_() {
 }
 export const rerender = () => route_();
 
+/* Kolom kata sandi dengan tombol lihat dan sembunyikan. */
+export const kolomSandi = (id, ph) => `<div style="position:relative"><input class="inp" id="${id}" type="password" placeholder="${ph}" required autocomplete="off" style="width:100%;padding-right:96px"><button type="button" class="btn ghost sm" data-mata="${id}" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">${icon('eye')} Lihat</button></div>`;
+export function pasangMata(root) { root.querySelectorAll('[data-mata]').forEach(b => b.onclick = () => { const i = root.querySelector('#' + b.dataset.mata), buka = i.type === 'password'; i.type = buka ? 'text' : 'password'; b.innerHTML = `${icon('eye')} ${buka ? 'Sembunyikan' : 'Lihat'}`; }); }
+function formSandi() {
+  openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('gear')}</span><div><h3>Ganti kata sandi</h3><div class="sub">${esc(DB.user.email)} · alamat email hanya bisa diubah admin</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
+    <form id="gs" style="display:grid;gap:10px;margin-top:12px">${kolomSandi('gs-l', 'Kata sandi sekarang')}${kolomSandi('gs-b', 'Kata sandi baru, minimal 8 karakter')}${kolomSandi('gs-u', 'Ulangi kata sandi baru')}<div class="muted small" id="gs-msg"></div>
+    <div class="drawer-act"><div class="sp"></div><button type="button" class="btn ghost" data-close>Batal</button><button class="btn pri" type="submit">${icon('check')} Simpan kata sandi</button></div></form>`, (dr) => {
+    pasangMata(dr);
+    dr.querySelector('#gs').onsubmit = async ev => {
+      ev.preventDefault(); const l = dr.querySelector('#gs-l').value, b = dr.querySelector('#gs-b').value, u = dr.querySelector('#gs-u').value, msg = dr.querySelector('#gs-msg');
+      if (b.length < 8) { msg.textContent = 'Kata sandi baru minimal 8 karakter.'; return; }
+      if (b !== u) { msg.textContent = 'Ulangan kata sandi baru tidak sama.'; return; }
+      if (b === l) { msg.textContent = 'Kata sandi baru harus berbeda dari yang sekarang.'; return; }
+      try { await DB.gantiSandi(l, b); } catch (e) { msg.textContent = /wrong-password|invalid-credential|invalid-login/.test(e.code || '') ? 'Kata sandi sekarang tidak cocok.' : 'Gagal mengganti: ' + e.message; return; }
+      const em = DB.user.email.toLowerCase(), a = S.pengguna.find(x => (x.email || '').toLowerCase() === em);
+      if (a) { a.sandiDiubah = new Date().toISOString(); await save('pengguna', a); }
+      await addLog('Mengganti kata sandi akun');
+      closeDrawer(); toast('Kata sandi berhasil diganti.'); route_();
+    };
+  });
+}
+
 function loginForm() {
   return new Promise(resolve => {
     const v = $('#view');
     v.innerHTML = `<div class="card" style="max-width:440px;margin:40px auto"><div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('db')}</span><div><h3>Masuk ke KUREKAM</h3><div class="sub">Akun sama dengan SIMANTAP (Firebase).</div></div></div>
-      <form id="lgn" style="display:grid;gap:10px;margin-top:12px"><input class="inp" id="lg-e" type="email" placeholder="Email" required><input class="inp" id="lg-p" type="password" placeholder="Kata sandi" required>
-      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><div class="small"><a href="#" id="lg-local">Buka mode demo lokal</a></div></form></div>`;
+      <form id="lgn" style="display:grid;gap:10px;margin-top:12px"><input class="inp" id="lg-e" type="email" placeholder="Email" required>${kolomSandi('lg-p', 'Kata sandi')}
+      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><div class="small"><a href="#" id="lg-lupa">Lupa kata sandi</a> · <a href="#" id="lg-local">Buka mode demo lokal</a></div></form></div>`;
     v.querySelector('#lgn').onsubmit = async ev => { ev.preventDefault(); try { await DB.login(v.querySelector('#lg-e').value.trim(), v.querySelector('#lg-p').value); resolve(); } catch (e) { v.querySelector('#lg-msg').textContent = 'Gagal masuk: ' + e.message; } };
+    pasangMata(v);
+    v.querySelector('#lg-lupa').onclick = async ev => { ev.preventDefault(); const em = v.querySelector('#lg-e').value.trim(), msg = v.querySelector('#lg-msg'); if (!em) { msg.textContent = 'Isi email lebih dulu, lalu klik Lupa kata sandi.'; return; } try { await DB.kirimReset(em); msg.textContent = 'Bila email terdaftar, tautan untuk membuat kata sandi baru sudah dikirim ke ' + em + '. Periksa juga folder spam.'; } catch (e) { msg.textContent = 'Gagal mengirim: ' + e.message; } };
     v.querySelector('#lg-local').onclick = ev => { ev.preventDefault(); DB.useLocal(); resolve(); };
   });
 }
@@ -222,6 +262,7 @@ async function boot() {
   }
   if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
+  await cekDeveloper();
   terapkanAkun();
   window.addEventListener('hashchange', route_);
   route_();

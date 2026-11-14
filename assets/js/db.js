@@ -62,6 +62,21 @@ export const DB = {
   get needLogin() { return mode === 'firebase' && !user; },
   async login(email, pass) { const r = await auth.signInWithEmailAndPassword(email, pass); user = r.user; return user; },
   async logout() { if (auth) await auth.signOut(); user = null; },
+  /** Ganti kata sandi akun yang sedang masuk. Kata sandi lama diminta ulang demi keamanan. */
+  async gantiSandi(lama, baru) {
+    const cred = window.firebase.auth.EmailAuthProvider.credential(user.email, lama);
+    await user.reauthenticateWithCredential(cred); await user.updatePassword(baru);
+  },
+  /** Firebase mengirim email berisi tautan untuk membuat kata sandi baru. */
+  async kirimReset(email) { await auth.sendPasswordResetEmail(email); },
+  /** Membuat akun masuk baru lewat aplikasi kedua agar sesi admin tidak tergantikan. */
+  async buatAkun(email, sandi) {
+    const fb = window.firebase, nama = 'kurekam-daftar';
+    const app2 = fb.apps.find(a => a.name === nama) || fb.initializeApp(fb.app().options, nama);
+    try { await app2.auth().createUserWithEmailAndPassword(email, sandi); return 'baru'; }
+    catch (e) { if (e.code === 'auth/email-already-in-use') return 'ada'; throw e; }
+    finally { try { await app2.auth().signOut(); } catch (e) { /* abaikan */ } }
+  },
   useLocal() { mode = 'local'; },
   async init() {
     const cfg = getFirebaseConfig();

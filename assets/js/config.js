@@ -78,8 +78,12 @@ export const PERAN = {
   wadir: { nama: 'Wakil Direktur I', c: '#8b5cf6' },
   spm: { nama: 'Unit SPM', c: '#f0616d' },
   akademik: { nama: 'Kasubbag Akademik', c: '#f5a524' },
-  admin: { nama: 'Admin', c: '#64748b' }
+  admin: { nama: 'Admin', c: '#64748b' },
+  developer: { nama: 'Developer', c: '#0f172a' }
 };
+/* Akun developer dikenali dari sidik SHA-256 'kurekam:' + email (huruf kecil), bukan dari alamat emailnya.
+   Developer setara admin, selalu bisa masuk walau belum ada di daftar pengguna, dan boleh meninjau tampilan semua peran. */
+export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51bbe36b9b1804a7b'];
 
 /* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
 export const MENU_PERAN = {
@@ -88,10 +92,11 @@ export const MENU_PERAN = {
   wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'peta', 'matriks', 'rps', 'beban', 'bebanprodi', 'periksa', 'revisi', 'laporan'],
   spm: ['beranda', 'mutu', 'visi', 'cpl', 'peta', 'matriks', 'cpmk', 'rps', 'periksa', 'bloom', 'revisi', 'laporan'],
   akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'laporan', 'induk'],
-  admin: null
+  admin: null,
+  developer: null
 };
 /* Halaman kerja utama tiap peran (tombol utama di Beranda). */
-export const RUMAH_PERAN = { dosen: ['rps', 'RPS mata kuliah saya'], prodi: ['asisten', 'Asisten kurikulum'], wadir: ['pimpinan', 'Dasbor pimpinan'], spm: ['mutu', 'Dasbor mutu'], akademik: ['akademik', 'Dasbor akademik'], admin: ['induk', 'Data induk dan pengguna'] };
+export const RUMAH_PERAN = { dosen: ['rps', 'RPS mata kuliah saya'], prodi: ['asisten', 'Asisten kurikulum'], wadir: ['pimpinan', 'Dasbor pimpinan'], spm: ['mutu', 'Dasbor mutu'], akademik: ['akademik', 'Dasbor akademik'], admin: ['induk', 'Data induk dan pengguna'], developer: ['induk', 'Data induk dan pengguna'] };
 
 export const ACUAN = [
   'Permendiktisaintek Nomor 39 Tahun 2025 tentang Penjaminan Mutu Pendidikan Tinggi (beserta perubahannya)',

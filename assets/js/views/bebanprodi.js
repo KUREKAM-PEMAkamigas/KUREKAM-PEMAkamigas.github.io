@@ -59,7 +59,7 @@ const namaSrc = (s) => s === 'lama' ? 'Kurikulum berjalan' : `Rancangan ${S.sett
 export default function bebanProdiView(el) {
   if (!sim) sim = resmi();
   const c = sim, J = jpCfg(), cap = J.perDay * J.days, off = resmi();
-  const ed = can('induk') || ctx.role === 'admin';
+  const ed = can('induk') || ['admin', 'developer'].includes(ctx.role);
   const simOn = !sameSim(c, off);
   el.innerHTML = `
   <div class="ribbon info">${icon('info')} <span><b>Beban perkuliahan prodi.</b> Halaman ini memindahkan gagasan Dashboard Evaluasi Beban Perkuliahan ke KUREKAM: durasi 1 SKS dapat disimulasikan, kebutuhan jam dibandingkan dengan kapasitas jadwal mingguan, dan kurikulum berjalan (${fmt(S.lama.length)} MK hasil migrasi) dapat disandingkan dengan rancangan baru.</span></div>
@@ -87,7 +87,7 @@ export default function bebanProdiView(el) {
       <button class="btn sm ghost" id="s-rst">${icon('loop')} Kembali ke parameter resmi</button>
       <div class="sp"></div>
       ${ed ? `<button class="btn sm" id="j-save">${icon('check')} Simpan kapasitas JP</button>` : ''}
-      ${ctx.role === 'admin' && simOn ? `<button class="btn sm danger" id="s-resmi">${icon('flag')} Jadikan parameter resmi</button>` : ''}
+      ${['admin', 'developer'].includes(ctx.role) && simOn ? `<button class="btn sm danger" id="s-resmi">${icon('flag')} Jadikan parameter resmi</button>` : ''}
     </div>
   </details>
   <div id="bp-body" style="margin-top:18px"></div>`;

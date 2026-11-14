@@ -29,7 +29,7 @@ function panelPeran() {
   const info = { wadir: ['Ruang kerja Wakil Direktur I', `${S.revisi.filter(x => x.status === 'menunggu').length} usulan revisi menunggu putusan · ${S.prodi.filter(p => p.status === 'diajukan').length} kurikulum prodi diajukan`, ['Pantau kemajuan lima prodi di <a href="#pimpinan"><b>Dasbor Pimpinan</b></a>.', 'Putuskan usulan revisi dan sahkan kurikulum di <a href="#revisi"><b>Revisi & Pengesahan</b></a>.', 'Lihat kecukupan dosen di Beban Dosen dan Beban Prodi.']],
     spm: ['Ruang kerja Unit SPM', 'Pemeriksaan kesesuaian terhadap LAM Teknik dan IABEE', ['Lihat kesesuaian tiap prodi di <a href="#mutu"><b>Dasbor Mutu</b></a>.', 'Telusuri temuan di Pemeriksa Kurikulum dan Taksonomi Bloom.', 'Tulis catatan mutu untuk prodi di Revisi & Pengesahan.']],
     akademik: ['Ruang kerja Kasubbag Akademik', 'Data induk, kelas, dosen, dan beban mengajar', ['Mutakhirkan prodi, kelas, dan dosen di <a href="#induk"><b>Data Induk</b></a>.', 'Impor data dosen, pengampu, dan matriks kurikulum dari Excel.', 'Pantau jadwal dan kapasitas di <a href="#akademik"><b>Dasbor Akademik</b></a>.']],
-    admin: ['Ruang kerja Admin', 'Semua menu terbuka', ['Daftarkan akun dan perannya di <a href="#induk"><b>Data Induk</b></a>, tab Pengguna & peran.', 'Atur parameter kurikulum dan basis data.', 'Unduh cadangan secara berkala.']] }[r];
+    admin: ['Ruang kerja Admin', 'Semua menu terbuka', ['Daftarkan akun dan perannya di <a href="#induk"><b>Data Induk</b></a>, tab Pengguna & peran.', 'Atur parameter kurikulum dan basis data.', 'Unduh cadangan secara berkala.']] }[r === 'developer' ? 'admin' : r];
   return `<div class="card" style="margin-top:18px">${kepala(info[0], info[1])}${langkah(info[2])}</div>`;
 }
 

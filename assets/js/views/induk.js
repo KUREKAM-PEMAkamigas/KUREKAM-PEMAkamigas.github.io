@@ -37,8 +37,8 @@ function tAkun(el, ed, adm) {
     fields: [{ k: 'email', label: 'Email akun', type: 'email' }, { k: 'nama', label: 'Nama' }, { k: 'peran', label: 'Peran (boleh lebih dari satu, misalnya dosen yang juga tim kurikulum)', type: 'multi', opts: Object.keys(PERAN).filter(k => k !== 'developer' || ctx.role === 'developer').map(k => ({ v: k, t: PERAN[k].nama })) },
       { k: 'prodi', label: 'Prodi (untuk Tim Kurikulum Prodi)', type: 'select', opts: [{ v: '', t: 'Tidak terikat prodi' }, ...S.prodi.map(p => ({ v: p.id, t: p.id + ' · ' + p.nama }))] },
       { k: 'dosen', label: 'Data dosen (untuk peran dosen)', type: 'select', opts: [{ v: '', t: 'Tidak ada' }, ...S.dosen.slice().sort((a, b) => a.nama.localeCompare(b.nama)).map(d => ({ v: d.id, t: d.nama }))] },
-      ...(u.id || DB.mode !== 'firebase' ? [] : [{ k: 'sandiBaru', label: 'Kata sandi awal (minimal 8 karakter). Kosongkan bila akun masuk sudah ada, misalnya akun SIMANTAP.', type: 'text', ph: 'Disampaikan admin ke pengguna, lalu pengguna menggantinya sendiri' }])],
-    extra: u.id && DB.mode === 'firebase' ? `<div class="filters" style="margin-top:10px"><button class="btn sm" id="u-reset">${icon('upload')} Kirim email atur ulang kata sandi</button><span class="small muted">Pengguna menerima email berisi tautan untuk membuat kata sandi baru.</span></div>` : '',
+],
+    extra: u.id && DB.mode === 'firebase' ? `<div class="filters" style="margin-top:10px"><button class="btn sm" id="u-akun">${icon('plus')} Buatkan akun masuk</button><button class="btn sm" id="u-reset">${icon('upload')} Kirim email atur ulang kata sandi</button></div><div class="small muted" style="margin-top:6px">Buatkan akun masuk dipakai untuk pengguna yang didaftarkan sebelum fitur ini ada. Kata sandi awalnya sama dengan alamat email. Akun yang sudah ada tidak diubah.</div>` : DB.mode === 'firebase' ? '<div class="ribbon info" style="margin-top:10px">Saat disimpan, akun masuk dibuat otomatis. Nama pengguna dan kata sandi awalnya sama, yaitu alamat email ini dalam huruf kecil. Pada login pertama pengguna wajib membuat kata sandi sendiri. Bila email sudah punya akun (misalnya akun SIMANTAP), kata sandinya tidak diubah.</div>' : '',
     onSave: async (o) => {
       o.email = (o.email || '').toLowerCase(); if (!/^\S+@\S+\.\S+$/.test(o.email)) return 'Email belum benar.';
       if (!(o.peran || []).length) return 'Pilih paling sedikit satu peran.';
@@ -48,15 +48,15 @@ function tAkun(el, ed, adm) {
       if (!o.id && S.pengguna.some(x => x.id === id)) return 'Email ini sudah terdaftar.';
       const nanti = S.pengguna.filter(x => x.id !== id).concat([{ ...o, id }]);
       if (!adaAdmin(nanti)) return 'Belum ada akun admin di daftar. Daftarkan akun admin (misalnya akun Anda sendiri) lebih dulu agar tidak terkunci.';
-      const sandi = o.sandiBaru || ''; delete o.sandiBaru; let ket = '';
-      if (sandi) {
-        if (sandi.length < 8) return 'Kata sandi awal minimal 8 karakter.';
-        try { const h = await DB.buatAkun(o.email, sandi); if (h === 'baru') { o.sandiAwal = new Date().toISOString(); ket = 'Akun masuk dibuat. Sampaikan kata sandi awal kepada pengguna.'; } else ket = 'Akun masuk dengan email ini sudah ada, kata sandinya tidak diubah.'; } catch (e) { return 'Gagal membuat akun masuk: ' + e.message; }
+      let ket = '';
+      if (!o.id && DB.mode === 'firebase') {
+        try { const h = await DB.buatAkun(o.email, o.email); if (h === 'baru') { o.sandiAwal = new Date().toISOString(); ket = 'Akun masuk dibuat. Kata sandi awal sama dengan alamat email.'; } else ket = 'Email ini sudah punya akun masuk, kata sandinya tidak diubah.'; } catch (e) { return 'Gagal membuat akun masuk: ' + e.message; }
       }
       await save('pengguna', { ...o, id }, `Simpan pengguna ${o.email}`); muatUlangAkun(); rerender(); if (ket) toast(ket);
     },
     onDelete: u.id ? async (o) => { const nanti = S.pengguna.filter(x => x.id !== o.id); if (!adaAdmin(nanti)) { toast('Tidak bisa dihapus: daftar harus menyisakan satu admin, atau kosong sama sekali.'); return; } await remove('pengguna', o.id, `Hapus pengguna ${o.email}`); muatUlangAkun(); rerender(); } : null });
-  const pasangReset = (u) => setTimeout(() => { const b = document.querySelector('#u-reset'); if (b) b.onclick = async () => { try { await DB.kirimReset(u.email); await addLog(`Kirim email atur ulang kata sandi ke ${u.email}`); toast('Email atur ulang kata sandi dikirim ke ' + u.email); } catch (e) { toast('Gagal mengirim: ' + e.message); } }; }, 0);
+  const pasangReset = (u) => setTimeout(() => { const k = document.querySelector('#u-akun'); if (k) k.onclick = async () => { try { const h = await DB.buatAkun(u.email, u.email); if (h === 'baru') { u.sandiAwal = new Date().toISOString(); delete u.sandiDiubah; await save('pengguna', u, `Buat akun masuk ${u.email}`); toast('Akun masuk dibuat. Kata sandi awal sama dengan alamat email.'); rerender(); } else toast('Email ini sudah punya akun masuk, kata sandinya tidak diubah. Pakai email atur ulang bila lupa.'); } catch (e) { toast('Gagal membuat akun: ' + e.message); } };
+    const b = document.querySelector('#u-reset'); if (b) b.onclick = async () => { try { await DB.kirimReset(u.email); await addLog(`Kirim email atur ulang kata sandi ke ${u.email}`); toast('Email atur ulang kata sandi dikirim ke ' + u.email); } catch (e) { toast('Gagal mengirim: ' + e.message); } }; }, 0);
   el.querySelector('#u-add').onclick = () => form({ email: !S.pengguna.length && DB.user ? DB.user.email : '', peran: !S.pengguna.length ? ['admin'] : [], prodi: '', dosen: '' });
   el.querySelectorAll('tr[data-u]').forEach(tr => tr.onclick = () => { const u = S.pengguna.find(x => x.id === tr.dataset.u); form({ ...u }); pasangReset(u); });
 }

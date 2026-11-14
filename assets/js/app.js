@@ -233,15 +233,35 @@ function formSandi() {
   });
 }
 
+/* Pengguna yang masih memakai kata sandi awal (sama dengan email) wajib menggantinya sebelum memakai aplikasi. */
+function wajibGantiSandi() {
+  return new Promise(resolve => {
+    const v = $('#view'), em = DB.user.email.toLowerCase();
+    v.innerHTML = `<div class="card" style="max-width:460px;margin:40px auto"><div class="card-h"><span class="ico-badge" style="--c:#f5a524">${icon('gear')}</span><div><h3>Buat kata sandi Anda sendiri</h3><div class="sub">${esc(em)}</div></div></div>
+      <p class="small" style="margin:10px 0">Ini pertama kali Anda masuk. Kata sandi awal sama dengan alamat email, jadi harus diganti dulu. Kata sandi baru hanya Anda yang tahu, admin tidak bisa melihatnya.</p>
+      <form id="wg" style="display:grid;gap:10px">${kolomSandi('wg-b', 'Kata sandi baru, minimal 8 karakter')}${kolomSandi('wg-u', 'Ulangi kata sandi baru')}<div class="muted small" id="wg-msg"></div><button class="btn pri" type="submit">${icon('check')} Simpan dan lanjutkan</button></form></div>`;
+    pasangMata(v);
+    v.querySelector('#wg').onsubmit = async ev => {
+      ev.preventDefault(); const b = v.querySelector('#wg-b').value, u = v.querySelector('#wg-u').value, msg = v.querySelector('#wg-msg');
+      if (b.length < 8) { msg.textContent = 'Kata sandi baru minimal 8 karakter.'; return; }
+      if (b !== u) { msg.textContent = 'Ulangan kata sandi tidak sama.'; return; }
+      if (b.toLowerCase() === em) { msg.textContent = 'Kata sandi baru tidak boleh sama dengan alamat email.'; return; }
+      try { await DB.gantiSandi(em, b); } catch (e) { msg.textContent = 'Gagal menyimpan: ' + e.message + '. Coba keluar lalu masuk lagi.'; return; }
+      ctx.akun.sandiDiubah = new Date().toISOString(); await save('pengguna', ctx.akun); await addLog('Mengganti kata sandi awal');
+      toast('Kata sandi tersimpan.'); resolve();
+    };
+  });
+}
+
 function loginForm() {
   return new Promise(resolve => {
     const v = $('#view');
     v.innerHTML = `<div class="card" style="max-width:440px;margin:40px auto"><div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('db')}</span><div><h3>Masuk ke KUREKAM</h3><div class="sub">Akun sama dengan SIMANTAP (Firebase).</div></div></div>
       <form id="lgn" style="display:grid;gap:10px;margin-top:12px"><input class="inp" id="lg-e" type="email" placeholder="Email" required>${kolomSandi('lg-p', 'Kata sandi')}
-      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><div class="small"><a href="#" id="lg-lupa">Lupa kata sandi</a> · <a href="#" id="lg-local">Buka mode demo lokal</a></div></form></div>`;
-    v.querySelector('#lgn').onsubmit = async ev => { ev.preventDefault(); try { await DB.login(v.querySelector('#lg-e').value.trim(), v.querySelector('#lg-p').value); resolve(); } catch (e) { v.querySelector('#lg-msg').textContent = 'Gagal masuk: ' + e.message; } };
+      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><button class="btn" type="button" id="lg-lupa">Lupa kata sandi? Kirim tautan ke email saya</button><div class="small muted">Pengguna baru: kata sandi awal sama dengan alamat email (huruf kecil), lalu Anda diminta menggantinya.</div><div class="small"><a href="#" id="lg-local">Buka mode demo lokal</a></div></form></div>`;
+    v.querySelector('#lgn').onsubmit = async ev => { ev.preventDefault(); try { await DB.login(v.querySelector('#lg-e').value.trim().toLowerCase(), v.querySelector('#lg-p').value); resolve(); } catch (e) { v.querySelector('#lg-msg').textContent = /wrong-password|invalid-credential|invalid-login|user-not-found/.test(e.code || '') ? 'Email atau kata sandi tidak cocok. Pengguna baru memakai alamat email sebagai kata sandi awal.' : 'Gagal masuk: ' + e.message; } };
     pasangMata(v);
-    v.querySelector('#lg-lupa').onclick = async ev => { ev.preventDefault(); const em = v.querySelector('#lg-e').value.trim(), msg = v.querySelector('#lg-msg'); if (!em) { msg.textContent = 'Isi email lebih dulu, lalu klik Lupa kata sandi.'; return; } try { await DB.kirimReset(em); msg.textContent = 'Bila email terdaftar, tautan untuk membuat kata sandi baru sudah dikirim ke ' + em + '. Periksa juga folder spam.'; } catch (e) { msg.textContent = 'Gagal mengirim: ' + e.message; } };
+    v.querySelector('#lg-lupa').onclick = async ev => { ev.preventDefault(); const em = v.querySelector('#lg-e').value.trim(), msg = v.querySelector('#lg-msg'); if (!em) { msg.textContent = 'Isi email lebih dulu, lalu klik Lupa kata sandi.'; return; } try { await DB.kirimReset(em); msg.textContent = 'Tautan untuk membuat kata sandi baru dikirim ke ' + em + ' bila email itu sudah punya akun masuk. Pengirimnya noreply dari firebaseapp.com, periksa juga folder spam. Bila tidak ada, minta admin mendaftarkan email ini lebih dulu.'; } catch (e) { msg.textContent = 'Gagal mengirim: ' + e.message; } };
     v.querySelector('#lg-local').onclick = ev => { ev.preventDefault(); DB.useLocal(); resolve(); };
   });
 }
@@ -264,6 +284,7 @@ async function boot() {
   load(d);
   await cekDeveloper();
   terapkanAkun();
+  if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
   window.addEventListener('hashchange', route_);
   route_();
 }

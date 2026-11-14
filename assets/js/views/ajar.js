@@ -3,6 +3,7 @@ import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, closeD
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
+import { alasanRps, usulanMk } from '../usulan.js';
 import { detect, badge } from '../bloom.js';
 import { INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
 import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, bar, pctColor, opts } from './ui.js';
@@ -72,6 +73,7 @@ export function rpsView(el) {
     R.innerHTML = `<div class="card">${head(esc(m.nama), `Semester ${m.smt} · ${m.T}T + ${m.P}P · ${fmt(jpOf(m, P), 2)} jam/minggu · Pengampu: ${esc(peng.join(', ') || 'belum ditugaskan')}`, 'audit', '#10b981', statusTag(r.status))}
       <div class="grid g4 mini"><div><small>RPS terisi</small><b>${fmt(lk)}%</b>${bar(lk, pctColor(lk))}</div><div><small>SAP terisi</small><b>${fmt(sp)}%</b>${bar(sp, pctColor(sp))}</div><div><small>Total bobot asesmen</small><b style="color:${Math.abs(bobot - 100) < 1 ? '#047857' : '#b45309'}">${fmt(bobot, 1)}%</b></div><div><small>Sub-CPMK belum terjadwal</small><b style="color:${cover.length ? '#b42335' : '#047857'}">${cover.length}</b></div></div>
       <div class="grid g3 mini" style="margin-top:10px"><div><small>Pertemuan terintegrasi penelitian atau PKM</small><b style="color:${integrasiOf(r) >= (P.integrasiMinPertemuan || 2) ? '#047857' : '#b45309'}">${integrasiOf(r)} <span class="small muted">minimal ${P.integrasiMinPertemuan || 2}</span></b></div><div style="grid-column:span 2"><small>Penelitian dan PKM yang diintegrasikan</small><div class="small"><b>Penelitian:</b> ${esc(r.penelitian) || '<span class="muted">belum diisi</span>'}<br><b>PKM:</b> ${esc(r.pkm) || '<span class="muted">belum diisi</span>'}</div></div></div>
+      ${alasanRps(m, r) ? `<div style="margin-top:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px"><b>Validasi usulan.</b> RPS belum dapat diajukan atau disahkan: ${esc(alasanRps(m, r))}.${r && r.usulTinjau && ed ? ` Baca seluruh pertemuan, sunting bila perlu, lalu <button class="btn sm pri" id="tinjau">Saya sudah membaca dan menyetujui isi RPS</button>` : ''}${usulanMk(m.id).length ? ' Usulan CPMK dan Sub-CPMK disetujui Tim Kurikulum Prodi di Asisten Kurikulum.' : ''}</div>` : ''}
       <div class="filters" style="margin-top:12px">
         ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
@@ -95,8 +97,9 @@ export function rpsView(el) {
           onSave: async (o) => { const sap = {}; Object.keys(o).filter(k => k.startsWith('sap_')).forEach(k => { sap[k.slice(4)] = o[k]; delete o[k]; }); r.pertemuan[i] = { ...o, sap, m: p.m, ujian: p.ujian }; if (r.status === 'disahkan') r.status = 'draf'; await save('rps', r, `Ubah RPS ${m.nama} pertemuan ${p.m}`); draw(); } });
       });
     }
-    const aju = q('#aju'); if (aju) aju.onclick = async () => { if (lk < 99) { toast('Lengkapi 16 pertemuan sebelum mengajukan.'); return; } r.status = 'diajukan'; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Ajukan RPS ${m.nama}`); draw(); };
-    const sah = q('#sah'); if (sah) sah.onclick = async () => { r.status = 'disahkan'; r.oleh = 'Kaprodi ' + m.prodi; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Sahkan RPS ${m.nama}`); draw(); };
+    const tj = q('#tinjau'); if (tj) tj.onclick = async () => { if (!(await tanya('Saya sudah membaca seluruh isi RPS ini, memahaminya, dan menyetujuinya sebagai isian resmi.', 'Setujui'))) return; r.usulTinjau = false; await save('rps', r, `Setujui isi usulan RPS ${m.nama}`); draw(); };
+    const aju = q('#aju'); if (aju) aju.onclick = async () => { const al = alasanRps(m, r); if (al) { toast('Belum bisa diajukan: ' + al + '.'); return; } if (lk < 99) { toast('Lengkapi 16 pertemuan sebelum mengajukan.'); return; } r.status = 'diajukan'; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Ajukan RPS ${m.nama}`); draw(); };
+    const sah = q('#sah'); if (sah) sah.onclick = async () => { const al = alasanRps(m, r); if (al) { toast('Belum bisa disahkan: ' + al + '.'); return; } r.status = 'disahkan'; r.oleh = 'Kaprodi ' + m.prodi; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Sahkan RPS ${m.nama}`); draw(); };
     const bt = q('#batal'); if (bt) bt.onclick = async () => { if (!(await tanya(`Pengesahan RPS ${m.nama} dibatalkan dan statusnya kembali menjadi draf, sehingga dosen dapat merevisi. Lanjutkan?`, 'Batalkan pengesahan'))) return; r.status = 'draf'; r.oleh = ''; r.tgl = ''; await save('rps', r, `Batalkan pengesahan RPS ${m.nama}`); draw(); };
     const tl = q('#tolak'); if (tl) tl.onclick = async () => { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); draw(); };
     q('#print').onclick = () => cetakRps(m, r);

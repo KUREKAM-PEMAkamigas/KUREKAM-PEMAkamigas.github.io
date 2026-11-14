@@ -5,6 +5,7 @@ import { chart, AX, gaugeOption } from '../charts.js';
 import { mountPyramid } from '../hero3d.js';
 import { LEVELS, KKO, DOMAIN, badge } from '../bloom.js';
 import { cekStruktur, cekTrace, bloomAudit, struktur, progres, param, fmt, byProdi, sksOf, jpOf, trace } from '../rules.js';
+import { usulanProdi } from '../usulan.js';
 import { head, formDrawer, kTag, statusTag, prodiTag, prodiName, kpi, animateCounts, short, tanya, unduh } from './ui.js';
 
 /* ================= Pemeriksa kurikulum ================= */
@@ -76,7 +77,7 @@ export function revisiView(el) {
       ${can('revisi') && r.status === 'menunggu' ? `<div style="margin-top:8px"><button class="btn pri sm" data-ok="${r.id}">Setujui</button> <button class="btn sm danger" data-no="${r.id}">Tolak</button></div>` : ''}</div></div>`).join('') || '<div class="empty">Belum ada usulan revisi.</div>'}</div></div>`;
   const today = () => new Date().toISOString().slice(0, 10);
   const setP = async (id, st, log) => { const p = S.prodi.find(x => x.id === id); p.status = st; p.sahTgl = st === 'disahkan' ? today() : ''; await save('prodi', p, log + ' ' + id); rerender(); };
-  el.querySelectorAll('[data-aju]').forEach(b => b.onclick = async () => { const bad = cekStruktur(S, b.dataset.aju).concat(cekTrace(S, b.dataset.aju)).filter(c => c.k === 'bad').length; if (bad && !(await tanya(`Masih ada ${bad} butir yang belum sesuai. Tetap ajukan?`, 'Tetap ajukan'))) return; setP(b.dataset.aju, 'diajukan', 'Ajukan kurikulum'); });
+  el.querySelectorAll('[data-aju]').forEach(b => b.onclick = async () => { const un = usulanProdi(b.dataset.aju).length; if (un) { toast(`Belum bisa diajukan: masih ada ${un} usulan otomatis yang belum disetujui. Setujui di Asisten Kurikulum.`); return; } const bad = cekStruktur(S, b.dataset.aju).concat(cekTrace(S, b.dataset.aju)).filter(c => c.k === 'bad').length; if (bad && !(await tanya(`Masih ada ${bad} butir yang belum sesuai. Tetap ajukan?`, 'Tetap ajukan'))) return; setP(b.dataset.aju, 'diajukan', 'Ajukan kurikulum'); });
   el.querySelectorAll('[data-sah]').forEach(b => b.onclick = () => setP(b.dataset.sah, 'disahkan', 'Sahkan kurikulum'));
   el.querySelectorAll('[data-kem]').forEach(b => b.onclick = () => setP(b.dataset.kem, 'draf', 'Kembalikan kurikulum'));
   const dec = async (id, st) => { const r = S.revisi.find(x => x.id === id); const c = ''; r.status = st; r.putusan = `${st === 'disetujui' ? 'Disetujui' : 'Ditolak'} Wadir 1, ${today()}${c ? '. ' + c : ''}`; await save('revisi', r, `Usulan revisi ${id} ${st}`); rerender(); };

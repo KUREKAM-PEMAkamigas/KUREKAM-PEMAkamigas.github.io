@@ -7,6 +7,7 @@ import { KELOMPOK, APP } from '../config.js';
 import { PRODI_DEF, CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci } from '../seed.js';
 import { detect, ANJURAN_SMT } from '../bloom.js';
 import { param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
+import { usulanProdi, bolehSetuju, setujui, hapusSlotKosong } from '../usulan.js';
 import { head, bar, pctColor, kTag, tanya, prodiName, ro } from './ui.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -102,7 +103,7 @@ export function lengkapiRps(m, r0, blankRps, timpa) {
   let subs = S.sub.filter(s => s.mk === m.id);
   cp.filter(c => !subs.some(s => s.cpmk === c.id)).forEach(c => { const u = usulSub(m, c); baruS.push(...u); n += u.length; });
   if (baruS.length) { subs = subs.concat(baruS); if (subs.every(s => !(+s.bobot))) ratakanBobotSub(subs); }
-  const r = JSON.parse(JSON.stringify(r0 || blankRps(m)));
+  const r = JSON.parse(JSON.stringify(r0 || blankRps(m))); delete r.cadangan;
   const isi = (o, k, v) => { if (v && (timpa || !String(o[k] || '').trim() || /^diisi dosen/i.test(o[k]))) { if (o[k] !== v) { o[k] = v; n++; } } };
   const cplKode = (m.cpl || []).map(id => (S.cpl.find(c => c.id === id) || {}).kode).filter(Boolean);
   isi(r, 'deskripsi', `Mata kuliah ${m.nama} (${m.T} SKS teori dan ${m.P} SKS praktik) diberikan pada semester ${m.smt}. Setelah mengikuti mata kuliah ini mahasiswa mampu ${cp.map(c => tanpaMampu(c.teks).replace(/^./, x => x.toLowerCase())).join(' serta ') || '[rumuskan kemampuan akhir]'}.${cplKode.length ? ` Mata kuliah ini mendukung ${cplKode.join(', ')}.` : ''}`);
@@ -135,6 +136,7 @@ export function lengkapiRps(m, r0, blankRps, timpa) {
     const sisa = 100 - r.pertemuan.filter(p => p.ujian).reduce((a, p) => a + (+p.bobot || 0), 0), b = Math.floor(sisa / non.length * 10) / 10;
     non.forEach((p, i) => { p.bobot = i === non.length - 1 ? Math.round((sisa - b * (non.length - 1)) * 10) / 10 : b; }); n++;
   }
+  if (n > 0) r.usulTinjau = true;
   return { r, cpmk: baruC, sub: baruS, semuaSub: subs, n };
 }
 function sesuaikanBobot(r) {
@@ -154,18 +156,21 @@ export function bukaAsistenRps(m, draw, blankRps) {
     <div class="legend" style="margin:6px 0 10px"><span><i class="dot" style="--c:#10b981"></i>${n.ok} sesuai</span><span><i class="dot" style="--c:#f5a524"></i>${n.near} perlu perhatian</span><span><i class="dot" style="--c:#f0616d"></i>${n.bad} belum sesuai</span></div>
     ${tabelTemuan(ck)}
     <p class="small muted" style="margin-top:10px">Isi otomatis menyusun kerangka sesuai aturan (16 pertemuan, sebaran Sub-CPMK, metode, asesmen, bobot, SAP). Pokok bahasan, pustaka, serta judul penelitian dan PKM tetap diisi dosen. Semua hasil bisa disunting dengan mengklik baris pertemuan.</p>
-    <div class="drawer-act">${boleh ? `<button class="btn pri" id="as-isi">${icon('spark')} Isi otomatis bagian yang kosong</button><button class="btn" id="as-bobot">Sesuaikan bobot ke 100%</button><button class="btn danger" id="as-ulang">Susun ulang seluruh pertemuan</button>` : ro()}<div class="sp"></div><button class="btn ghost" data-close>Tutup</button></div>`, (dr) => {
+    <div class="drawer-act">${boleh ? `<button class="btn pri" id="as-isi">${icon('spark')} Isi otomatis bagian yang kosong</button><button class="btn" id="as-bobot">Sesuaikan bobot ke 100%</button><button class="btn danger" id="as-ulang">Susun ulang seluruh pertemuan</button>${r && r.cadangan ? '<button class="btn" id="as-batal">Batalkan tindakan Asisten terakhir</button>' : ''}` : ro()}<div class="sp"></div><button class="btn ghost" data-close>Tutup</button></div>`, (dr) => {
     const jalankan = async (timpa) => {
+      const sebelum = r ? JSON.parse(JSON.stringify(r)) : null; if (sebelum) delete sebelum.cadangan;
       const h = lengkapiRps(m, r, blankRps, timpa);
+      if (sebelum && h.n) h.r.cadangan = JSON.stringify(sebelum);
       if (h.cpmk.length) await saveMany('cpmk', h.cpmk);
       if (h.sub.length) await saveMany('sub', h.semuaSub);
       if (h.r.status === 'disahkan') h.r.status = 'draf';
       await save('rps', h.r, `Asisten RPS ${timpa ? 'menyusun ulang' : 'melengkapi'} ${m.nama}`);
-      toast(h.n ? `${h.n} isian ditambahkan sebagai usulan. Silakan tinjau dan sunting.` : 'Tidak ada bagian kosong yang bisa diisi otomatis.');
+      toast(h.n ? `${h.n} isian ditambahkan sebagai usulan. Baca, sunting, lalu setujui sebelum RPS diajukan.` : 'Tidak ada bagian kosong yang bisa diisi otomatis.');
       draw(); bukaAsistenRps(m, draw, blankRps);
     };
     const q = (s) => dr.querySelector(s);
     if (q('#as-isi')) q('#as-isi').onclick = () => jalankan(false);
+    if (q('#as-batal')) q('#as-batal').onclick = async () => { if (!(await tanya('Isi RPS dikembalikan ke keadaan sebelum tindakan Asisten terakhir. Perubahan yang Anda ketik sesudahnya ikut hilang. CPMK dan Sub-CPMK usulan yang sempat dibuat tidak dihapus. Lanjutkan?', 'Batalkan'))) return; const o = JSON.parse(r.cadangan); await save('rps', o, `Batalkan tindakan Asisten RPS ${m.nama}`); draw(); bukaAsistenRps(m, draw, blankRps); };
     if (q('#as-ulang')) q('#as-ulang').onclick = async () => { if (await tanya('Seluruh rencana pertemuan, bobot, dan SAP mata kuliah ini diganti dengan usulan baru. Deskripsi dan bahan kajian juga ditulis ulang. Pustaka tidak diubah. Lanjutkan?', 'Susun ulang')) jalankan(true); };
     if (q('#as-bobot')) q('#as-bobot').onclick = async () => { if (!r) { toast('RPS belum dibuat.'); return; } if (!sesuaikanBobot(r)) { toast('Bobot masih kosong. Pakai isi otomatis.'); return; } if (r.status === 'disahkan') r.status = 'draf'; await save('rps', r, `Sesuaikan bobot RPS ${m.nama}`); draw(); bukaAsistenRps(m, draw, blankRps); };
   }, true);
@@ -225,7 +230,8 @@ const GEN = {
   async kunci(pid) {
     const ada = new Set(byProdi(S.mk, pid).map(m => norm(m.nama))), bk = byProdi(S.bk, pid);
     const cariBk = (n) => { const s = n.toLowerCase(); const rx = s.includes('k3') ? /k3/i : /matematika|statistika/.test(s) ? /matematika/i : /fisika|kimia|termodinamika|mekanika fluida|rangkaian/.test(s) ? /sains/i : /capstone|tugas akhir/.test(s) ? /perancangan|proyek/i : /magang/.test(s) ? /manajemen/i : /karakter|kebangsaan/i; return bk.find(b => rx.test(b.nama)); };
-    const baru = kunciProdi(pid).filter(([, n]) => !ada.has(norm(n))).map(([smt, nama, T, Pp, jk], i) => { const b = cariBk(nama); return mkBaru(pid, { smt, nama, T, P: Pp, kel: kelompokKunci(nama), kunci: jk, bk: b ? [b.id] : [], cpl: b ? (b.cpl || []).slice(0, 2) : [], ...(/magang/i.test(nama) ? { lokasi: 'Industri' } : {}) }, i); });
+    const mkAda = byProdi(S.mk, pid), sudah = (jk, n) => ada.has(norm(n)) || mkAda.some(m => (jk && m.kunci === jk) || (norm(n).length > 6 && (norm(m.nama).includes(norm(n)) || norm(n).includes(norm(m.nama)) && norm(m.nama).length > 6)));
+    const baru = kunciProdi(pid).filter(([, n, , , jk]) => !sudah(jk, n)).map(([smt, nama, T, Pp, jk], i) => { const b = cariBk(nama); return mkBaru(pid, { smt, nama, T, P: Pp, kel: kelompokKunci(nama), kunci: jk, bk: b ? [b.id] : [], cpl: b ? (b.cpl || []).slice(0, 2) : [], ...(/magang/i.test(nama) ? { lokasi: 'Industri' } : {}) }, i); });
     if (baru.length) await saveMany('mk', baru);
     return baru.length;
   },
@@ -334,10 +340,14 @@ export default function asistenView(el) {
     `${rpsAda} dari ${mkA.length} MK sudah punya RPS, ${g.rpsAju} menunggu pengesahan kaprodi, ${g.rpsSah} disahkan. RPS diisi dosen pengampu: unggah RPS lama dari Word atau pakai Asisten RPS di menu RPS dan SAP.`,
     `Pemeriksa otomatis: ${ck.length - nb - nn} butir sesuai, ${nn} perlu perhatian, ${nb} belum sesuai.`,
     'Setelah semua langkah hijau, ajukan kurikulum ke Wakil Direktur I lewat menu Revisi dan Pengesahan.']), `<a class="btn sm ghost" href="#periksa">Buka Pemeriksa Kurikulum</a><a class="btn sm ghost" href="#rps">RPS dan SAP</a><a class="btn sm ghost" href="#revisi">Revisi dan Pengesahan</a>`, '#6366f1')}
+  ${kartuUsulan(pid, ed)}
   <div class="card" style="margin-top:14px">${head('Templat format baku', 'Agar format seragam di lima prodi', 'download', '#14b8a6')}
     <div class="filters" style="margin-top:8px"><a class="btn sm" href="assets/templat/Templat_RPS_KUREKAM.docx" download>${icon('download')} Templat RPS (Word)</a><a class="btn sm" href="assets/templat/Templat_Matriks_Kurikulum_Prodi.xlsx" download>${icon('download')} Templat matriks kurikulum (Excel)</a><a class="btn sm ghost" href="#laporan">Cetak dokumen kurikulum prodi</a></div>
     <p class="small muted" style="margin-top:8px">Templat RPS yang sudah diisi bisa diunggah kembali lewat tombol Unggah RPS dari Word. Templat matriks yang sudah diisi diimpor admin atau Kasubbag AK di Data Induk.</p></div>`;
 
+  el.querySelectorAll('[data-uj]').forEach(b => b.onclick = async () => { const [k, id] = b.dataset.uj.split('|'); const it = usulanProdi(pid).find(x => x.k === k && x.o.id === id); if (!it) return; if (!bolehSetuju(it)) { toast('Ganti nama MK dulu di menu Mata Kuliah, lalu setujui.'); return; } await setujui([it]); rerender(); });
+  const ujAll = el.querySelector('#uj-all'); if (ujAll) ujAll.onclick = async () => { const its = usulanProdi(pid).filter(bolehSetuju); if (!its.length) { toast('Tidak ada usulan yang dapat disetujui.'); return; } if (!(await tanya(`Saya sudah membaca dan memahami ${its.length} usulan ini, dan menyetujuinya sebagai isian resmi prodi. Usulan MK bernama sementara tidak ikut disetujui. Lanjutkan?`, 'Setujui semua'))) return; await setujui(its); toast(`${its.length} usulan disetujui.`); rerender(); };
+  const ujHps = el.querySelector('#uj-hapus'); if (ujHps) ujHps.onclick = async () => { if (!(await tanya('Slot MK usulan yang belum dipakai (belum punya CPMK, penugasan, atau RPS) dihapus. Lanjutkan?', 'Hapus'))) return; const n = await hapusSlotKosong(pid); toast(n ? `${n} slot MK usulan dihapus.` : 'Tidak ada slot yang bisa dihapus.'); rerender(); };
   const inp = el.querySelector('#as-bidang'); if (inp) inp.onchange = () => { bidangInp = inp.value.trim(); rerender(); };
   const PESAN = { visi: 'visi dan profil lulusan', cpl: 'CPL', bk: 'BoK dan bahan kajian', kunci: 'MK kunci', slot: 'slot MK usulan', lacak: 'pemetaan', cpmk: 'CPMK dan Sub-CPMK' };
   el.querySelectorAll('[data-gen]').forEach(b => b.onclick = async () => {
@@ -346,4 +356,17 @@ export default function asistenView(el) {
       toast(n ? `${n} usulan ${PESAN[k]} ditambahkan. Tinjau dan sunting di menunya.` : 'Tidak ada yang perlu ditambahkan.'); } catch (e) { console.error(e); toast('Gagal membuat usulan: ' + e.message); }
     rerender();
   });
+}
+
+/** Kartu validasi usulan: daftar usulan otomatis yang belum disetujui. */
+function kartuUsulan(pid, ed) {
+  const u = usulanProdi(pid);
+  if (!u.length) return `<div class="card" style="margin-top:14px">${head('Validasi usulan', 'Semua isian sudah disetujui prodi', 'check', '#10b981')}</div>`;
+  const per = {}; u.forEach(x => per[x.j] = (per[x.j] || 0) + 1);
+  const baris = u.slice(0, 60).map(x => `<tr><td>${esc(x.j)}</td><td>${esc(x.kode)}</td><td>${esc(x.n)}</td><td>${ed ? `<button class="btn sm" data-uj="${x.k}|${esc(x.o.id)}">Setujui</button>` : ''}</td></tr>`).join('');
+  return `<div class="card" style="margin-top:14px;border:2px solid #f5a524">${head('Validasi usulan: ' + u.length + ' belum disetujui', 'Kurikulum dan RPS tidak dapat diajukan sebelum semua usulan dibaca dan disetujui', 'spark', '#f5a524')}
+    <p class="small" style="margin:6px 0">${Object.entries(per).map(([j, n]) => `${n} ${esc(j)}`).join(', ')}. Baca tiap isian, sunting di menunya bila perlu, lalu klik Setujui.</p>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Jenis</th><th>Kode</th><th>Isi</th><th></th></tr></thead><tbody>${baris}</tbody></table></div>
+    ${u.length > 60 ? `<p class="small muted">Menampilkan 60 dari ${u.length}. Setujui yang tampil, lalu muat ulang untuk melihat sisanya.</p>` : ''}
+    ${ed ? `<div class="filters" style="margin-top:10px"><button class="btn pri sm" id="uj-all">Setujui semua yang sudah saya baca</button><button class="btn sm danger" id="uj-hapus">Hapus slot MK usulan yang belum dipakai</button></div>` : ''}</div>`;
 }

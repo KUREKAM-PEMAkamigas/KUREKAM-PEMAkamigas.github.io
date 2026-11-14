@@ -2,9 +2,10 @@
 import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, toast } from '../app.js';
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
+import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { detect, badge } from '../bloom.js';
 import { INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
-import { tanya, head, formDrawer, ro, prodiName, short, statusTag, bar, pctColor, opts } from './ui.js';
+import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, bar, pctColor, opts } from './ui.js';
 
 const akad = (m) => !/magang|tugas akhir/i.test(m.kel);
 const hintOf = (m) => (+m.P > +m.T ? 'P' : 'C');
@@ -65,7 +66,7 @@ export function rpsView(el) {
     if (!m) { R.innerHTML = '<div class="card empty">Pilih mata kuliah.</div>'; return; }
     const P = param(S), r = rpsOf(S, m.id), ed = can('rps', { prodi: m.prodi, mk: m.id }) && (!r || r.status !== 'disahkan' || ctx.role === 'prodi' || ctx.role === 'admin');
     const subs = S.sub.filter(s => s.mk === m.id), peng = S.tugas.filter(t => t.mk === m.id).map(t => (S.dosen.find(d => d.id === t.dosen) || {}).nama).filter(Boolean);
-    if (!r) { R.innerHTML = `<div class="card">${head(esc(m.nama), 'RPS belum dibuat', 'audit', '#10b981')}<div class="empty">${subs.length ? '' : 'Lengkapi CPMK dan Sub-CPMK terlebih dahulu. '}${ed ? `<br><button class="btn pri" id="mk-rps" style="margin-top:10px">${icon('plus')} Buat RPS 16 pertemuan</button>` : 'Dosen pengampu belum menyusun RPS.'}</div></div>`; const b = R.querySelector('#mk-rps'); if (b) b.onclick = async () => { await save('rps', blankRps(m), `Buat RPS ${m.nama}`); draw(); }; return; }
+    if (!r) { R.innerHTML = `<div class="card">${head(esc(m.nama), 'RPS belum dibuat', 'audit', '#10b981')}<div class="empty">${subs.length ? '' : 'Lengkapi CPMK dan Sub-CPMK terlebih dahulu. '}${ed ? `<br><div class="filters" style="justify-content:center;margin-top:10px"><button class="btn pri" id="mk-rps">${icon('plus')} Buat RPS kosong 16 pertemuan</button><button class="btn vio" id="mk-gen">${icon('spark')} Buat draf otomatis dengan Asisten RPS</button></div><div class="small muted" style="margin-top:8px">Punya RPS lama? Pakai tombol Unggah RPS dari Word di atas, lalu lengkapi kekurangannya dengan Asisten RPS.</div>` : 'Dosen pengampu belum menyusun RPS.'}</div></div>`; const b = R.querySelector('#mk-rps'); if (b) b.onclick = async () => { await save('rps', blankRps(m), `Buat RPS ${m.nama}`); draw(); }; const gb = R.querySelector('#mk-gen'); if (gb) gb.onclick = () => bukaAsistenRps(m, draw, blankRps); return; }
     const lk = rpsLengkap(r), sp = sapLengkap(r), bobot = r.pertemuan.reduce((a, p) => a + (+p.bobot || 0), 0);
     const cover = subs.filter(s => !r.pertemuan.some(p => (p.sub || []).includes(s.id)));
     R.innerHTML = `<div class="card">${head(esc(m.nama), `Semester ${m.smt} · ${m.T}T + ${m.P}P · ${fmt(jpOf(m, P), 2)} jam/minggu · Pengampu: ${esc(peng.join(', ') || 'belum ditugaskan')}`, 'audit', '#10b981', statusTag(r.status))}
@@ -73,6 +74,7 @@ export function rpsView(el) {
       <div class="grid g3 mini" style="margin-top:10px"><div><small>Pertemuan terintegrasi penelitian atau PKM</small><b style="color:${integrasiOf(r) >= (P.integrasiMinPertemuan || 2) ? '#047857' : '#b45309'}">${integrasiOf(r)} <span class="small muted">minimal ${P.integrasiMinPertemuan || 2}</span></b></div><div style="grid-column:span 2"><small>Penelitian dan PKM yang diintegrasikan</small><div class="small"><b>Penelitian:</b> ${esc(r.penelitian) || '<span class="muted">belum diisi</span>'}<br><b>PKM:</b> ${esc(r.pkm) || '<span class="muted">belum diisi</span>'}</div></div></div>
       <div class="filters" style="margin-top:12px">
         ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
+        <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
         <button class="btn sm" id="print">${icon('download')} Cetak RPS</button>
         ${ed && r.status === 'draf' && can('rps', { prodi: m.prodi, mk: m.id }) ? `<button class="btn vio sm" id="aju">${icon('upload')} Ajukan ke kaprodi</button>` : ''}
         ${r.status === 'diajukan' && can('sahkanRps', m) ? `<button class="btn pri sm" id="sah">${icon('check')} Sahkan RPS</button><button class="btn sm danger" id="tolak">Kembalikan ke dosen</button>` : ''}
@@ -98,6 +100,7 @@ export function rpsView(el) {
     const bt = q('#batal'); if (bt) bt.onclick = async () => { if (!(await tanya(`Pengesahan RPS ${m.nama} dibatalkan dan statusnya kembali menjadi draf, sehingga dosen dapat merevisi. Lanjutkan?`, 'Batalkan pengesahan'))) return; r.status = 'draf'; r.oleh = ''; r.tgl = ''; await save('rps', r, `Batalkan pengesahan RPS ${m.nama}`); draw(); };
     const tl = q('#tolak'); if (tl) tl.onclick = async () => { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); draw(); };
     q('#print').onclick = () => cetakRps(m, r);
+    q('#asis').onclick = () => bukaAsistenRps(m, draw, blankRps);
   };
   tombolUnggahRps(el, draw);
   draw();
@@ -106,17 +109,23 @@ export function rpsView(el) {
 function cetakRps(m, r) {
   const P = param(S), p = S.prodi.find(x => x.id === m.prodi), cp = S.cpmk.filter(c => c.mk === m.id), subs = S.sub.filter(s => s.mk === m.id);
   const peng = S.tugas.filter(t => t.mk === m.id).map(t => (S.dosen.find(d => d.id === t.dosen) || {}).nama).filter(Boolean);
-  openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn ghost" data-close>Tutup</button></div>
+  openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="rep-doc">${icon('download')} Unduh Word</button><button class="btn ghost" data-close>Tutup</button></div>
   <div class="report" id="rep"><div class="kop"><img src="assets/img/logo-pem-akamigas.png" alt=""><div class="t"><b>POLITEKNIK ENERGI DAN MINERAL AKAMIGAS</b><span>Program Studi ${esc(p.nama)} · Sarjana Terapan</span></div><img src="assets/img/logo-esdm.png" alt=""></div>
   <h2>RENCANA PEMBELAJARAN SEMESTER</h2><div class="meta">Kurikulum ${APP.tahunKurikulum} · Status: ${r.status}${r.tgl ? ' · ' + r.tgl : ''}</div>
   <table class="tbl"><tbody><tr><th>Mata kuliah</th><td>${esc(m.nama)}</td><th>Kode</th><td>${esc(m.kode)}</td></tr><tr><th>Semester</th><td>${m.smt}</td><th>Bobot</th><td>${m.T} SKS teori + ${m.P} SKS praktik (${fmt(jpOf(m, P), 2)} jam/minggu)</td></tr><tr><th>Kelompok</th><td>${esc(m.kel)}</td><th>Pengampu</th><td>${esc(peng.join(', '))}</td></tr></tbody></table>
   <h4>Deskripsi</h4><p>${esc(r.deskripsi)}</p>
   <h4>CPL yang dibebankan</h4><ul>${(m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean).map(c => `<li><b>${c.kode}</b> ${esc(c.teks)}</li>`).join('')}</ul>
   <h4>CPMK dan Sub-CPMK</h4><ul>${cp.map(c => `<li><b>${c.kode}</b> ${esc(c.teks)} [${(detect(c.teks, hintOf(m)) || {}).code || '?'}]<ul>${subs.filter(s => s.cpmk === c.id).map(s => `<li>${s.kode}: ${esc(s.teks)} (${s.bobot}%)</li>`).join('')}</ul></li>`).join('')}</ul>
-  <h4>Rencana 16 pertemuan</h4><table class="tbl"><thead><tr><th>Mg</th><th>Sub-CPMK</th><th>Materi</th><th>Metode</th><th>Asesmen</th><th>Penelitian/PKM</th><th>Bobot</th></tr></thead><tbody>${r.pertemuan.map(x => `<tr><td>${x.m}</td><td>${(x.sub || []).map(id => ((S.sub.find(s => s.id === id) || {}).kode || '').replace('Sub-CPMK', 'S')).join(', ')}</td><td>${esc(x.materi)}</td><td>${esc(x.metode)}</td><td>${esc(x.asesmen)}</td><td>${esc(x.integ || '')}</td><td>${fmt(x.bobot, 1)}%</td></tr>`).join('')}</tbody></table>
+  <h4>Rencana pembelajaran mingguan</h4><table class="tbl"><thead><tr><th>Mg</th><th>Kemampuan akhir tiap tahap (Sub-CPMK)</th><th>Indikator</th><th>Kriteria dan teknik penilaian</th><th>Bentuk, metode, penugasan, dan waktu</th><th>Materi pembelajaran</th><th>Penelitian/PKM</th><th>Bobot</th></tr></thead><tbody>${r.pertemuan.map(x => `<tr><td>${x.m}</td><td>${x.ujian ? `<b>${x.ujian}</b>` : (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).map(s => `<b>${esc(s.kode)}</b> ${esc(s.teks)}`).join('<br>')}</td><td>${esc(x.indikator || '')}</td><td>${esc(x.asesmen)}</td><td>${esc(x.tatap || x.metode)}${x.daring ? '<br>Daring: ' + esc(x.daring) : ''}</td><td>${esc(x.materi)}</td><td>${esc(x.integ || '')}</td><td>${fmt(x.bobot, 1)}%</td></tr>`).join('')}</tbody></table>
   <h4>Satuan Acara Perkuliahan</h4>${r.pertemuan.filter(x => x.sap && x.sap.inti).map(x => `<p><b>Pertemuan ${x.m}.</b> Pendahuluan: ${esc(x.sap.pendahuluan || '')}. Inti: ${esc(x.sap.inti)}. Penutup: ${esc(x.sap.penutup || '')}. Media: ${esc(x.sap.media || '')}.</p>`).join('') || '<p class="muted">SAP belum diisi.</p>'}
   <h4>Integrasi penelitian dan PKM</h4><p><b>Penelitian:</b> ${esc(r.penelitian) || '–'}<br><b>PKM:</b> ${esc(r.pkm) || '–'}</p>${r.pertemuan.filter(x => x.integ).map(x => `<p>Pertemuan ${x.m} (${x.integ}): ${esc(x.integUraian || '')}</p>`).join('')}
   <h4>Bahan kajian</h4><p>${esc(r.bahan || '')}</p><h4>Pustaka</h4><p style="white-space:pre-line">${esc(r.pustaka)}</p>
-  <div class="ttd"><div><span>Dosen pengampu</span><b>${esc(peng[0] || '....................')}</b></div><div><span>Ketua Program Studi</span><b>....................</b></div></div></div>`, null, true);
+  <div class="ttd"><div><span>Dosen pengampu</span><b>${esc(peng[0] || '....................')}</b></div><div><span>Ketua Program Studi</span><b>....................</b></div></div></div>`, (dr) => {
+    dr.querySelector('#rep-doc').onclick = () => {
+      const isi = dr.querySelector('#rep').innerHTML.replace(/<img[^>]*>/g, '');
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page{size:841.9pt 595.3pt;margin:42pt}body{font:10pt Arial}h2{text-align:center;font-size:13pt}h4{margin:10pt 0 3pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3pt 4pt;font:9.5pt Arial;vertical-align:top;text-align:left}.kop{text-align:center;font-size:11pt}.meta{text-align:center}</style></head><body>${isi}</body></html>`;
+      unduh(new Blob(['\ufeff', html], { type: 'application/msword' }), `RPS_${m.kode}_${m.nama.replace(/[^A-Za-z0-9]+/g, '_')}.doc`);
+    };
+  }, true);
   void closeDrawer;
 }

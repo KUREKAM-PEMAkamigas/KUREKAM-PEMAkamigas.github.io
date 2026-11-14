@@ -1,5 +1,5 @@
 /* KUREKAM PEM Akamigas · Aplikasi utama: state, peran, router, dan utilitas bersama. */
-import { APP, PERAN } from './config.js';
+import { APP, PERAN, MENU_PERAN } from './config.js';
 import { terimaTautanFirebase, DB } from './db.js';
 import { buildSeed } from './seed.js';
 import { icon } from './icons.js';
@@ -15,15 +15,16 @@ import bebanView from './views/beban.js';
 import { periksaView, bloomView, revisiView, laporanView } from './views/evaluasi.js';
 import indukView from './views/induk.js';
 import bebanProdiView from './views/bebanprodi.js';
+import asistenView from './views/asisten.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
   try { return Object.assign(d, JSON.parse(localStorage.getItem(CTX_KEY) || '{}')); } catch (e) { return d; }
 })();
-export function saveCtx() { try { localStorage.setItem(CTX_KEY, JSON.stringify(ctx)); } catch (e) { /* abaikan */ } }
+export function saveCtx() { try { localStorage.setItem(CTX_KEY, JSON.stringify({ role: ctx.role, prodi: ctx.prodi, dosen: ctx.dosen })); } catch (e) { /* abaikan */ } }
 
 export const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -36,6 +37,24 @@ export function userName() {
   if (ctx.role === 'dosen') return (S.dosen.find(d => d.id === ctx.dosen) || {}).nama || 'Dosen';
   return PERAN[ctx.role].nama;
 }
+
+/** Menu yang boleh dibuka peran aktif. */
+export function bolehMenu(id) { const m = MENU_PERAN[ctx.role]; return !m || m.includes(id); }
+/** Peran yang boleh dipilih akun ini. Tanpa daftar pengguna (masa penyiapan atau mode demo) semua peran bisa dicoba. */
+export function peranAkun() { return ctx.kunci ? (ctx.izin || []) : Object.keys(PERAN); }
+function terapkanAkun() {
+  ctx.kunci = false; ctx.tanpaPeran = false; ctx.izin = null; ctx.akun = null;
+  const em = DB.user && DB.user.email ? DB.user.email.toLowerCase() : '';
+  if (!em || !S.pengguna.length) return;
+  const u = S.pengguna.find(x => (x.email || '').toLowerCase() === em);
+  ctx.kunci = true;
+  if (!u || !(u.peran || []).length) { ctx.tanpaPeran = true; ctx.izin = ['dosen']; ctx.role = 'dosen'; ctx.dosen = ''; return; }
+  ctx.akun = u; ctx.izin = u.peran.filter(p => PERAN[p]);
+  if (!ctx.izin.includes(ctx.role)) ctx.role = ctx.izin[0];
+  if (u.prodi) ctx.prodi = u.prodi;
+  ctx.dosen = u.dosen || '';
+}
+export function muatUlangAkun() { terapkanAkun(); }
 
 /** Hak akses per peran. */
 export function can(action, obj = {}) {
@@ -84,7 +103,7 @@ export async function addLog(aksi) {
 export async function resetData() { const d = buildSeed(); for (const c of Object.keys(d)) await DB.replaceAll(c, d[c]); load(d); }
 export async function replaceData(d) { for (const c of Object.keys(d)) { if (S[c] !== undefined || c === 'settings') await DB.replaceAll(c, d[c]); } load(d); }
 function load(d) {
-  Object.keys(S).forEach(k => { if (k !== 'settings') S[k] = d[k] || []; });
+  Object.keys(S).forEach(k => { if (k === 'pengguna' && !d[k]) return; if (k !== 'settings') S[k] = d[k] || []; });
   S.settings = (d.settings && d.settings[0]) || { id: 'app', paritas: 'ganjil', param: {} };
   S.log.sort((a, b) => (b.t || '').localeCompare(a.t || ''));
 }
@@ -108,6 +127,7 @@ export const ROUTES = [
   { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
   { id: 'mutu', t: 'Dasbor Mutu', sub: 'Unit SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag Akademik', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
+  { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },
   { id: 'visi', t: 'Visi & Profil Lulusan', ic: 'flag', c: '#10b981', sec: 'Penyusunan Kurikulum', prodi: true, v: visiView },
   { id: 'cpl', t: 'Capaian Pembelajaran Lulusan', ic: 'target', c: '#0ea5e9', sec: 'Penyusunan Kurikulum', prodi: true, v: cplView },
   { id: 'bk', t: 'BoK & Bahan Kajian', ic: 'layers', c: '#8b5cf6', sec: 'Penyusunan Kurikulum', prodi: true, v: bkView },
@@ -128,7 +148,7 @@ export const ROUTES = [
 function renderSide(cur) {
   let sec = '', h = `<div class="brand-logos"><img src="assets/img/logo-pem-akamigas.png" alt="PEM Akamigas" class="lg-pem"><img src="assets/img/logo-esdm.png" alt="Kementerian ESDM" class="lg-esdm"></div>
     <div class="brand"><div class="brand-logo k">${icon('layers')}</div><div><b>${APP.nama}</b><small>${APP.panjang}</small></div></div><nav class="nav">`;
-  ROUTES.forEach(r => {
+  ROUTES.filter(r => bolehMenu(r.id)).forEach(r => {
     if (r.sec !== sec) { sec = r.sec; h += `<div class="nav-sec">${sec}</div>`; }
     h += `<a href="#${r.id}" class="${r.id === cur ? 'on' : ''}" style="--c:${r.c}"><span class="chip">${icon(r.ic)}</span><span>${r.t}${r.sub ? `<small class="nsub">${r.sub}</small>` : ''}</span></a>`;
   });
@@ -144,11 +164,11 @@ function renderTop(route) {
     <button class="btn ghost menu-btn" id="menuBtn" aria-label="Menu">${icon('menu')}</button>
     <div><div class="crumb">${route.sec}</div><h1>${route.t}</h1></div>
     <div class="sp"></div>
-    ${route.prodi || ctx.role === 'prodi' ? `<div class="role-box"><span class="rl muted small">Prodi</span><select class="inp" id="prodiSel" aria-label="Program studi">${prodiOpts}</select></div>` : ''}
+    ${ctx.kunci && ctx.role === 'prodi' && ctx.akun && ctx.akun.prodi ? `<span class="tag" style="--c:#10b981">Prodi ${esc(ctx.prodi)}</span>` : route.prodi || ctx.role === 'prodi' ? `<div class="role-box"><span class="rl muted small">Prodi</span><select class="inp" id="prodiSel" aria-label="Program studi">${prodiOpts}</select></div>` : ''}
     <div class="role-box">
       <span class="ico-badge" style="--c:${PERAN[ctx.role].c};width:32px;height:32px">${icon('user')}</span>
-      <select class="inp" id="roleSel" aria-label="Peran">${Object.entries(PERAN).map(([k, v]) => `<option value="${k}" ${k === ctx.role ? 'selected' : ''}>${v.nama}</option>`).join('')}</select>
-      ${ctx.role === 'dosen' ? `<select class="inp rl" id="dosenSel" aria-label="Dosen">${dosenOpts}</select>` : ''}
+      <select class="inp" id="roleSel" aria-label="Peran">${peranAkun().map(k => `<option value="${k}" ${k === ctx.role ? 'selected' : ''}>${PERAN[k].nama}</option>`).join('')}</select>
+      ${ctx.role === 'dosen' && !ctx.kunci ? `<select class="inp rl" id="dosenSel" aria-label="Dosen">${dosenOpts}</select>` : ''}
     </div>
     ${DB.user ? `<button class="btn" id="logoutBtn">${icon('logout')} Keluar</button>` : ''}`;
   $('#menuBtn').onclick = () => $('#side').classList.toggle('open');
@@ -160,12 +180,14 @@ function renderTop(route) {
 
 export function route_() {
   const id = (location.hash.replace(/^#\/?/, '').split('?')[0]) || 'beranda';
-  const r = ROUTES.find(x => x.id === id) || ROUTES[0];
+  let r = ROUTES.find(x => x.id === id) || ROUTES[0];
+  if (!bolehMenu(r.id)) { r = ROUTES[0]; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } }
   disposeAll(); disposeHero(); closeDrawer();
   renderSide(r.id); renderTop(r);
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
   view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Mode demo: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
+  if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
   const holder = document.createElement('div'); view.appendChild(holder);
   try { r.v(holder); } catch (e) { console.error(e); holder.innerHTML = `<div class="card empty">Terjadi kesalahan saat memuat halaman: ${esc(e.message)}</div>`; }
   tilt(view);
@@ -200,6 +222,7 @@ async function boot() {
   }
   if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
+  terapkanAkun();
   window.addEventListener('hashchange', route_);
   route_();
 }

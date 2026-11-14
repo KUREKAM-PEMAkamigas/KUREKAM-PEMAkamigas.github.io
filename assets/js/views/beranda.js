@@ -1,10 +1,37 @@
 /* KUREKAM · Beranda */
-import { S, ctx, icon, esc } from '../app.js';
+import { S, ctx, icon, esc, bolehMenu } from '../app.js';
+import { RUMAH_PERAN, PERAN } from '../config.js';
+import { rpsOf } from '../rules.js';
+import { periksaRps } from './asisten.js';
+import { statusTag, bar } from './ui.js';
 import { APP } from '../config.js';
 import { chart, AX, grad } from '../charts.js';
 import { mountHero } from '../hero3d.js';
 import { struktur, progres, grupOf, warnaGrup, sksOf, TAHAP, fmt, cekStruktur, trace } from '../rules.js';
 import { kpi, animateCounts, head, pctColor } from './ui.js';
+
+/* Panel kerja sesuai peran: apa yang perlu dikerjakan pengguna ini. */
+function panelPeran() {
+  const r = ctx.role, c = PERAN[r].c, kepala = (t, s) => `<div class="card-h"><span class="ico-badge" style="--c:${c}">${icon('user')}</span><div><h3>${t}</h3><div class="sub">${s}</div></div></div>`;
+  const langkah = (a) => `<ol class="small" style="margin:8px 0 0 18px;line-height:1.7">${a.map(x => `<li>${x}</li>`).join('')}</ol>`;
+  if (r === 'dosen') {
+    const d = S.dosen.find(x => x.id === ctx.dosen), mk = Array.from(new Set(S.tugas.filter(t => t.dosen === ctx.dosen).map(t => t.mk))).map(id => S.mk.find(m => m.id === id)).filter(m => m && !/magang|tugas akhir/i.test(m.kel)).sort((a, b) => a.smt - b.smt);
+    return `<div class="card" style="margin-top:18px">${kepala('Tugas Anda sebagai dosen pengampu', d ? esc(d.nama) + ' · ' + mk.length + ' mata kuliah' : 'Akun belum dipasangkan dengan data dosen')}
+      ${mk.length ? `<div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Mata kuliah</th><th>Prodi</th><th>Smt</th><th>SKS</th><th>Status RPS</th><th>Saran asisten</th></tr></thead><tbody>${mk.map(m => { const rp = rpsOf(S, m.id), k = periksaRps(m, rp).filter(x => x.k !== 'ok').length; return `<tr><td><b>${esc(m.nama)}</b></td><td>${m.prodi}</td><td>${m.smt}</td><td>${m.T}T + ${m.P}P</td><td>${statusTag(rp ? rp.status : '')}</td><td>${k ? `<span class="st near">${k} butir</span>` : '<span class="st ok">lengkap</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty small">Belum ada mata kuliah yang ditugaskan kepada Anda. Penugasan dibuat Tim Kurikulum Prodi.</p>'}
+      ${langkah(['Buka menu <a href="#rps"><b>RPS & SAP</b></a> dan pilih mata kuliah.', 'Unggah RPS lama dari Word supaya tidak mengetik ulang, atau buat draf otomatis dengan Asisten RPS.', 'Buka Asisten RPS, ikuti saran pengisiannya, lalu sunting bagian yang belum sesuai.', 'Ajukan ke kaprodi. RPS yang dikembalikan bisa direvisi lagi.'])}</div>`;
+  }
+  if (r === 'prodi') {
+    const mk = S.mk.filter(m => m.prodi === ctx.prodi), aju = S.rps.filter(x => x.prodi === ctx.prodi && x.status === 'diajukan').length, g = progres(S, ctx.prodi);
+    return `<div class="card" style="margin-top:18px">${kepala('Tugas Tim Kurikulum Prodi ' + esc(ctx.prodi), `Kemajuan penyusunan ${g.total}% · ${mk.length} mata kuliah · ${aju} RPS menunggu pengesahan`)}
+      <div class="grid g4 mini" style="margin-top:8px">${g.tahap.map(x => `<div><small>${x.n}</small><b>${x.v}%</b>${bar(x.v, x.v >= 85 ? '#10b981' : x.v >= 60 ? '#f5a524' : '#f0616d')}</div>`).join('')}</div>
+      ${langkah(['Buka <a href="#asisten"><b>Asisten Kurikulum</b></a> dan kerjakan tujuh langkahnya, dengan mengisi sendiri atau memakai usulan otomatis.', 'Tugaskan dosen pengampu di menu Penugasan dan Beban Dosen.', 'Tinjau dan sahkan RPS yang diajukan dosen di menu RPS & SAP.', 'Periksa di Pemeriksa Kurikulum, lalu ajukan lewat Revisi dan Pengesahan.'])}</div>`;
+  }
+  const info = { wadir: ['Ruang kerja Wakil Direktur I', `${S.revisi.filter(x => x.status === 'menunggu').length} usulan revisi menunggu putusan · ${S.prodi.filter(p => p.status === 'diajukan').length} kurikulum prodi diajukan`, ['Pantau kemajuan lima prodi di <a href="#pimpinan"><b>Dasbor Pimpinan</b></a>.', 'Putuskan usulan revisi dan sahkan kurikulum di <a href="#revisi"><b>Revisi & Pengesahan</b></a>.', 'Lihat kecukupan dosen di Beban Dosen dan Beban Prodi.']],
+    spm: ['Ruang kerja Unit SPM', 'Pemeriksaan kesesuaian terhadap LAM Teknik dan IABEE', ['Lihat kesesuaian tiap prodi di <a href="#mutu"><b>Dasbor Mutu</b></a>.', 'Telusuri temuan di Pemeriksa Kurikulum dan Taksonomi Bloom.', 'Tulis catatan mutu untuk prodi di Revisi & Pengesahan.']],
+    akademik: ['Ruang kerja Kasubbag Akademik', 'Data induk, kelas, dosen, dan beban mengajar', ['Mutakhirkan prodi, kelas, dan dosen di <a href="#induk"><b>Data Induk</b></a>.', 'Impor data dosen, pengampu, dan matriks kurikulum dari Excel.', 'Pantau jadwal dan kapasitas di <a href="#akademik"><b>Dasbor Akademik</b></a>.']],
+    admin: ['Ruang kerja Admin', 'Semua menu terbuka', ['Daftarkan akun dan perannya di <a href="#induk"><b>Data Induk</b></a>, tab Pengguna & peran.', 'Atur parameter kurikulum dan basis data.', 'Unduh cadangan secara berkala.']] }[r];
+  return `<div class="card" style="margin-top:18px">${kepala(info[0], info[1])}${langkah(info[2])}</div>`;
+}
 
 export default function beranda(el) {
   const nMk = S.mk.length, nCpl = S.cpl.length, nRps = S.rps.filter(r => r.status === 'disahkan').length;
@@ -28,13 +55,13 @@ export default function beranda(el) {
         <div class="glass"><b data-count="${nCpl}">${nCpl}</b><span class="gl">Rumusan CPL</span></div>
         <div class="glass"><b data-count="${avg}" data-dec="0">${fmt(avg)}</b><span class="gl">% kemajuan rata-rata</span></div>
       </div>
-      <a class="btn pri" href="#pimpinan">${icon('dash')} Dasbor pimpinan</a><a class="btn ghost" href="#peta">${icon('grid4')} Peta kurikulum</a>
+      <a class="btn pri" href="#${RUMAH_PERAN[ctx.role][0]}">${icon('dash')} ${RUMAH_PERAN[ctx.role][1]}</a><a class="btn ghost" href="#peta">${icon('grid4')} Peta kurikulum</a>
     </div>
     <div class="h3d-space"></div>
   </section>
-
+  ${panelPeran()}
   <div class="card" style="margin-top:18px">${head('Rantai keterlacakan OBE', 'Dari visi sampai SAP. Klik tahap untuk membuka modulnya.', 'link', '#6366f1')}
-    <div class="chain">${chain.map(([t, n, c, r], i) => `<a class="cstep" href="#${r}" style="--c:${c}"><span class="orb">${i + 1}</span><b>${t}</b><span class="n">${fmt(n)}</span></a>`).join('<span class="carr"></span>')}</div>
+    <div class="chain">${chain.map(([t, n, c, r], i) => `<a class="cstep" href="#${bolehMenu(r) ? r : 'beranda'}" style="--c:${c}"><span class="orb">${i + 1}</span><b>${t}</b><span class="n">${fmt(n)}</span></a>`).join('<span class="carr"></span>')}</div>
   </div>
 
   <div class="grid g4" style="margin-top:18px">
@@ -47,7 +74,7 @@ export default function beranda(el) {
   <div class="grid g-21" style="margin-top:18px">
     <div class="card">${head('Kemajuan penyusunan per prodi', 'Persentase tiap tahap, dari visi sampai SAP', 'pulse', '#10b981')}<div class="chart lg" id="c-prog"></div></div>
     <div class="card">${head('Status lima prodi', 'Kesesuaian aturan dan keterlacakan', 'check', '#0ea5e9')}
-      <div class="plist">${pr.map(({ p, g }) => { const ck = cekStruktur(S, p.id); const ok = ck.filter(c => c.k === 'ok').length; const t = trace(S, p.id); return `<a class="prow" href="#periksa" data-p="${p.id}" style="--c:${p.c}"><span class="pbadge">${p.id}</span><div><b>${esc(p.nama)}</b><div class="small muted">${ok}/${ck.length} aturan sesuai · keterlacakan ${fmt(t.skor)}%</div><div class="bar" style="margin-top:6px"><i style="width:${g.total}%;--c:${pctColor(g.total)}"></i></div></div><span class="pv">${g.total}%</span></a>`; }).join('')}</div>
+      <div class="plist">${pr.map(({ p, g }) => { const ck = cekStruktur(S, p.id); const ok = ck.filter(c => c.k === 'ok').length; const t = trace(S, p.id); return `<a class="prow" href="#${bolehMenu('periksa') ? 'periksa' : 'peta'}" data-p="${p.id}" style="--c:${p.c}"><span class="pbadge">${p.id}</span><div><b>${esc(p.nama)}</b><div class="small muted">${ok}/${ck.length} aturan sesuai · keterlacakan ${fmt(t.skor)}%</div><div class="bar" style="margin-top:6px"><i style="width:${g.total}%;--c:${pctColor(g.total)}"></i></div></div><span class="pv">${g.total}%</span></a>`; }).join('')}</div>
     </div>
   </div>
 

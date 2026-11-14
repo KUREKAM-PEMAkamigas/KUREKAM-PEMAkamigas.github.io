@@ -243,3 +243,5 @@ export function buildSeed() {
   D.settings.push({ id: 'app', seedVersi: APP.seedVersi, paritas: 'ganjil', param: {} });
   return D;
 }
+
+export { CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci };

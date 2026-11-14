@@ -81,6 +81,18 @@ export const PERAN = {
   admin: { nama: 'Admin', c: '#64748b' }
 };
 
+/* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
+export const MENU_PERAN = {
+  dosen: ['beranda', 'peta', 'cpmk', 'rps', 'beban', 'bloom'],
+  prodi: ['beranda', 'asisten', 'visi', 'cpl', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'beban', 'bebanprodi', 'periksa', 'bloom', 'revisi', 'laporan'],
+  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'peta', 'matriks', 'rps', 'beban', 'bebanprodi', 'periksa', 'revisi', 'laporan'],
+  spm: ['beranda', 'mutu', 'visi', 'cpl', 'peta', 'matriks', 'cpmk', 'rps', 'periksa', 'bloom', 'revisi', 'laporan'],
+  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'laporan', 'induk'],
+  admin: null
+};
+/* Halaman kerja utama tiap peran (tombol utama di Beranda). */
+export const RUMAH_PERAN = { dosen: ['rps', 'RPS mata kuliah saya'], prodi: ['asisten', 'Asisten kurikulum'], wadir: ['pimpinan', 'Dasbor pimpinan'], spm: ['mutu', 'Dasbor mutu'], akademik: ['akademik', 'Dasbor akademik'], admin: ['induk', 'Data induk dan pengguna'] };
+
 export const ACUAN = [
   'Permendiktisaintek Nomor 39 Tahun 2025 tentang Penjaminan Mutu Pendidikan Tinggi (beserta perubahannya)',
   'Kepdirjen Dikti Nomor 209/B/KPT/2025 tentang Mata Kuliah Wajib Kurikulum',

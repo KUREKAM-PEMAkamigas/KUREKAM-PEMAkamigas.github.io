@@ -15,7 +15,7 @@ let mode = 'local', fs = null, auth = null, user = null, lastError = null;
 function loadScript(src) {
   return new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = src; s.onload = res; s.onerror = () => rej(new Error('Gagal memuat ' + src));
+    s.async = false; s.src = src; s.onload = res; s.onerror = () => rej(new Error('Gagal memuat ' + src));
     document.head.appendChild(s);
   });
 }
@@ -46,13 +46,12 @@ export function terimaTautanFirebase() {
 }
 
 async function initFirebase(cfg) {
-  await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`);
-  await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-firestore-compat.js`);
-  await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-auth-compat.js`);
+  const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+  /* diunduh bersamaan; async=false menjaga urutan eksekusi (app lebih dulu) */
+  await Promise.all(['firebase-app-compat.js', 'firebase-firestore-compat.js', 'firebase-auth-compat.js'].map(f => loadScript(base + f)));
   const app = window.firebase.apps.length ? window.firebase.app() : window.firebase.initializeApp(cfg);
   fs = app.firestore(); auth = app.auth();
   user = await new Promise(res => { const off = auth.onAuthStateChanged(u => { off(); res(u); }); });
-  if (user) await fs.collection(PFX + 'settings').limit(1).get();
 }
 
 export const DB = {
@@ -88,10 +87,10 @@ export const DB = {
   },
   async loadAll() {
     const out = {};
-    for (const c of COLLECTIONS) {
+    await Promise.all(COLLECTIONS.map(async (c) => {
       if (mode === 'firebase') { const snap = await fs.collection(PFX + c).get(); out[c] = snap.docs.map(d => d.data()); }
       else { try { out[c] = JSON.parse(lsGet(LS + c) || '[]'); } catch (e) { out[c] = []; } }
-    }
+    }));
     return out;
   },
   async put(col, doc, all) {

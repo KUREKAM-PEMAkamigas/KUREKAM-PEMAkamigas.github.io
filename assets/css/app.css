@@ -496,3 +496,6 @@ details.sim[open] > summary .card-h { margin-bottom: 14px; }
   .top .sp { display: none; }
   .role-box { min-width: 0; } .role-box select { max-width: 150px; min-width: 0; }
 }
+
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(100, 116, 139, .3); border-top-color: #10b981; border-radius: 50%; vertical-align: -2px; animation: kspin .7s linear infinite; }
+@keyframes kspin { to { transform: rotate(360deg); } }

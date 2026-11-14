@@ -1,6 +1,7 @@
 /* KUREKAM PEM Akamigas · Aplikasi utama: state, peran, router, dan utilitas bersama. */
 import { APP, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
-import { terimaTautanFirebase, DB } from './db.js';
+import { DB } from './db.js';
+import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
 import { icon } from './icons.js';
 import { disposeAll, tilt } from './charts.js';
@@ -190,7 +191,7 @@ function renderTop(route) {
   const gs = $('#sandiBtn'); if (gs) gs.onclick = formSandi;
   const ps = $('#prodiSel'); if (ps) ps.onchange = e => { ctx.prodi = e.target.value; saveCtx(); route_(); };
   const ds = $('#dosenSel'); if (ds) ds.onchange = e => { ctx.dosen = e.target.value; saveCtx(); route_(); };
-  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { await DB.logout(); location.reload(); };
+  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { lo.disabled = true; closeDrawer(); disposeAll(); disposeHero(); $('#side').innerHTML = ''; $('#top').innerHTML = ''; $('#view').innerHTML = '<div class="empty">Keluar…</div>'; await DB.logout(); Object.keys(S).forEach(k => { S[k] = k === 'settings' ? {} : []; }); ctx.kunci = false; ctx.akun = null; ctx.izin = null; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } window.dispatchEvent(new Event('kurekam:keluar')); };
 }
 
 export function route_() {
@@ -211,9 +212,6 @@ export function route_() {
 }
 export const rerender = () => route_();
 
-/* Kolom kata sandi dengan tombol lihat dan sembunyikan. */
-export const kolomSandi = (id, ph) => `<div style="position:relative"><input class="inp" id="${id}" type="password" placeholder="${ph}" required autocomplete="off" style="width:100%;padding-right:96px"><button type="button" class="btn ghost sm" data-mata="${id}" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">${icon('eye')} Lihat</button></div>`;
-export function pasangMata(root) { root.querySelectorAll('[data-mata]').forEach(b => b.onclick = () => { const i = root.querySelector('#' + b.dataset.mata), buka = i.type === 'password'; i.type = buka ? 'text' : 'password'; b.innerHTML = `${icon('eye')} ${buka ? 'Sembunyikan' : 'Lihat'}`; }); }
 function formSandi() {
   openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('gear')}</span><div><h3>Ganti kata sandi</h3><div class="sub">${esc(DB.user.email)} · alamat email hanya bisa diubah admin</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
     <form id="gs" style="display:grid;gap:10px;margin-top:12px">${kolomSandi('gs-l', 'Kata sandi sekarang')}${kolomSandi('gs-b', 'Kata sandi baru, minimal 8 karakter')}${kolomSandi('gs-u', 'Ulangi kata sandi baru')}<div class="muted small" id="gs-msg"></div>
@@ -253,24 +251,9 @@ function wajibGantiSandi() {
   });
 }
 
-function loginForm() {
-  return new Promise(resolve => {
-    const v = $('#view');
-    v.innerHTML = `<div class="card" style="max-width:440px;margin:40px auto"><div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('db')}</span><div><h3>Masuk ke KUREKAM</h3><div class="sub">Akun sama dengan SIMANTAP (Firebase).</div></div></div>
-      <form id="lgn" style="display:grid;gap:10px;margin-top:12px"><input class="inp" id="lg-e" type="email" placeholder="Email" required>${kolomSandi('lg-p', 'Kata sandi')}
-      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><button class="btn" type="button" id="lg-lupa">Lupa kata sandi? Kirim tautan ke email saya</button><div class="small muted">Pengguna baru: kata sandi awal sama dengan alamat email (huruf kecil), lalu Anda diminta menggantinya.</div><div class="small"><a href="#" id="lg-local">Buka mode demo lokal</a></div></form></div>`;
-    v.querySelector('#lgn').onsubmit = async ev => { ev.preventDefault(); try { await DB.login(v.querySelector('#lg-e').value.trim().toLowerCase(), v.querySelector('#lg-p').value); resolve(); } catch (e) { v.querySelector('#lg-msg').textContent = /wrong-password|invalid-credential|invalid-login|user-not-found/.test(e.code || '') ? 'Email atau kata sandi tidak cocok. Pengguna baru memakai alamat email sebagai kata sandi awal.' : 'Gagal masuk: ' + e.message; } };
-    pasangMata(v);
-    v.querySelector('#lg-lupa').onclick = async ev => { ev.preventDefault(); const em = v.querySelector('#lg-e').value.trim(), msg = v.querySelector('#lg-msg'); if (!em) { msg.textContent = 'Isi email lebih dulu, lalu klik Lupa kata sandi.'; return; } try { await DB.kirimReset(em); msg.textContent = 'Tautan untuk membuat kata sandi baru dikirim ke ' + em + ' bila email itu sudah punya akun masuk. Pengirimnya noreply dari firebaseapp.com, periksa juga folder spam. Bila tidak ada, minta admin mendaftarkan email ini lebih dulu.'; } catch (e) { msg.textContent = 'Gagal mengirim: ' + e.message; } };
-    v.querySelector('#lg-local').onclick = ev => { ev.preventDefault(); DB.useLocal(); resolve(); };
-  });
-}
-
-async function boot() {
-  terimaTautanFirebase();
-  const demo = new URLSearchParams(location.search).has('demo');
-  if (demo) DB.useLocal(); else await DB.init();
-  if (DB.needLogin) await loginForm();
+/** Memuat data lalu menampilkan halaman. Dipanggil boot.js setelah pengguna masuk. */
+let pantau = false;
+export async function start() {
   let d = await DB.loadAll();
   const st = d.settings && d.settings[0];
   if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { d = buildSeed(); for (const c of Object.keys(d)) await DB.replaceAll(c, d[c]); }
@@ -285,9 +268,8 @@ async function boot() {
   await cekDeveloper();
   terapkanAkun();
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
-  window.addEventListener('hashchange', route_);
+  if (!pantau) { pantau = true; window.addEventListener('hashchange', route_); }
   route_();
 }
-boot().catch(e => { console.error(e); $('#view').innerHTML = `<div class="card empty">Gagal memulai aplikasi: ${esc(e.message)}</div>`; });
 
 export { icon };

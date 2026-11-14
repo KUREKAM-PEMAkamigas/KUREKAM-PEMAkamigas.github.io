@@ -3,7 +3,9 @@
    - mountPyramid: piramida Taksonomi Bloom C1–C6, lebar lapisan = jumlah rumusan.
    - mountOrbit: rantai OBE (Visi → SAP) berupa simpul pada lintasan spiral.
    Ringan, berhenti saat tab tersembunyi, dibersihkan saat pindah halaman. */
-import * as THREE from '../vendor/three.module.min.js';
+/* Three.js (670 KB) dimuat saat pertama dibutuhkan agar halaman masuk dan beranda tidak menunggu. */
+let THREE = null;
+const muatThree = () => THREE ? Promise.resolve() : import('../vendor/three.module.min.js').then(m => { THREE = m; });
 
 const stops = new Set();
 export function disposeHero() { stops.forEach(s => s()); stops.clear(); }
@@ -63,7 +65,7 @@ function label(THREE, text, color = '#ffffff', size = 64) {
 }
 
 /** Menara kurikulum: layers = [{smt, mk:[{sks, c}]}] */
-export function mountHero(canvas, layers) {
+function mountHero0(canvas, layers) {
   const anim = [];
   return engine(canvas, {
     cam: [0, 3.2, 11.5],
@@ -102,7 +104,7 @@ export function mountHero(canvas, layers) {
 }
 
 /** Piramida Bloom: counts = {C1..C6: n} */
-export function mountPyramid(canvas, counts, colors) {
+function mountPyramid0(canvas, counts, colors) {
   const anim = [];
   return engine(canvas, {
     cam: [0, 2.6, 9.5],
@@ -126,7 +128,7 @@ export function mountPyramid(canvas, counts, colors) {
 }
 
 /** Spiral rantai OBE: nodes = [{t, n, c}] */
-export function mountOrbit(canvas, nodes) {
+function mountOrbit0(canvas, nodes) {
   const balls = [];
   return engine(canvas, {
     cam: [0, 1.5, 11],
@@ -146,3 +148,7 @@ export function mountOrbit(canvas, nodes) {
     onTick: (s) => { balls.forEach((b, i) => { const k = 1 + Math.sin(s * 2 + i) * 0.06; b.scale.setScalar(k); }); }
   });
 }
+
+export async function mountHero(canvas, ...a) { await muatThree(); if (!canvas || !canvas.isConnected) return; return mountHero0(canvas, ...a); }
+export async function mountPyramid(canvas, ...a) { await muatThree(); if (!canvas || !canvas.isConnected) return; return mountPyramid0(canvas, ...a); }
+export async function mountOrbit(canvas, ...a) { await muatThree(); if (!canvas || !canvas.isConnected) return; return mountOrbit0(canvas, ...a); }

@@ -9,18 +9,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/app.css">
-<script src="assets/vendor/echarts.min.js"></script>
-<script src="assets/vendor/echarts-gl.min.js"></script>
+<link rel="modulepreload" href="assets/js/app.js">
+<link rel="modulepreload" href="assets/js/boot.js">
 </head>
 <body>
 <div class="app">
   <aside class="side" id="side"></aside>
   <div class="main">
     <header class="top" id="top"></header>
-    <main class="view" id="view"><div class="empty">Memuat KUREKAM…</div></main>
+    <main class="view" id="view"><div class="empty"><span class="spin"></span> Memuat KUREKAM…</div></main>
   </div>
 </div>
 <noscript>KUREKAM memerlukan JavaScript.</noscript>
-<script type="module" src="assets/js/app.js"></script>
+<script type="module" src="assets/js/boot.js"></script>
 </body>
 </html>

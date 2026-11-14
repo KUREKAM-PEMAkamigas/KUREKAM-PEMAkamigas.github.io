@@ -101,7 +101,7 @@ export function buildSeed() {
     const pid = pd.id;
     D.prodi.push({ id: pid, nama: pd.nama, c: pd.c, kelas: { ...pd.kelas }, visi: 'Menjadi pusat pendidikan vokasi energi dan sumber daya mineral yang unggul dan berdaya saing global.',
       visiKeilmuan: `Menjadi program studi sarjana terapan yang unggul dalam ${pd.d}, berwawasan keselamatan dan transisi energi, serta diakui industri nasional dan internasional pada tahun 2035.`,
-      status: pid === 'TP' ? 'diajukan' : 'draf', catatanSpm: pid === 'TO' ? [{ t: '2026-11-10', oleh: 'Unit SPM', isi: 'Mohon lengkapi bukti pelibatan pemangku kepentingan untuk perumusan profil lulusan.' }] : [] });
+      status: pid === 'TP' ? 'diajukan' : 'draf', catatanSpm: pid === 'TO' ? [{ t: '2026-11-10', oleh: 'Satuan SPM', isi: 'Mohon lengkapi bukti pelibatan pemangku kepentingan untuk perumusan profil lulusan.' }] : [] });
     const dpool = [];
     for (let i = 1; i <= (pd.kelas[2] >= 3 ? 14 : 10); i++) { const d = { id: `D-${pid}-${pad(i)}`, nama: `Dosen ${pid} ${pad(i)}`, homebase: pid, bidang: pd.bk[(i - 1) % pd.bk.length][0], jabatan: i % 4 === 0 ? 'Lektor Kepala' : i % 2 ? 'Lektor' : 'Asisten Ahli' }; D.dosen.push(d); dpool.push(d.id); }
 

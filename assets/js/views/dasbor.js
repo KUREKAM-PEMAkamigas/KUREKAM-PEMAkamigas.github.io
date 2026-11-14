@@ -1,4 +1,4 @@
-/* KUREKAM · Dasbor pimpinan (Wadir 1), mutu (SPM), dan akademik (Kasubbag Akademik) */
+/* KUREKAM · Dasbor pimpinan (Wadir 1), mutu (SPM), dan akademik (Kasubbag AK) */
 import { S, ctx, saveCtx, esc, icon } from '../app.js';
 import { chart, AX, grad } from '../charts.js';
 import { mountOrbit } from '../hero3d.js';

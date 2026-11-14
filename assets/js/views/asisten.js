@@ -336,7 +336,7 @@ export default function asistenView(el) {
     'Setelah semua langkah hijau, ajukan kurikulum ke Wakil Direktur I lewat menu Revisi dan Pengesahan.']), `<a class="btn sm ghost" href="#periksa">Buka Pemeriksa Kurikulum</a><a class="btn sm ghost" href="#rps">RPS dan SAP</a><a class="btn sm ghost" href="#revisi">Revisi dan Pengesahan</a>`, '#6366f1')}
   <div class="card" style="margin-top:14px">${head('Templat format baku', 'Agar format seragam di lima prodi', 'download', '#14b8a6')}
     <div class="filters" style="margin-top:8px"><a class="btn sm" href="assets/templat/Templat_RPS_KUREKAM.docx" download>${icon('download')} Templat RPS (Word)</a><a class="btn sm" href="assets/templat/Templat_Matriks_Kurikulum_Prodi.xlsx" download>${icon('download')} Templat matriks kurikulum (Excel)</a><a class="btn sm ghost" href="#laporan">Cetak dokumen kurikulum prodi</a></div>
-    <p class="small muted" style="margin-top:8px">Templat RPS yang sudah diisi bisa diunggah kembali lewat tombol Unggah RPS dari Word. Templat matriks yang sudah diisi diimpor admin atau Kasubbag Akademik di Data Induk.</p></div>`;
+    <p class="small muted" style="margin-top:8px">Templat RPS yang sudah diisi bisa diunggah kembali lewat tombol Unggah RPS dari Word. Templat matriks yang sudah diisi diimpor admin atau Kasubbag AK di Data Induk.</p></div>`;
 
   const inp = el.querySelector('#as-bidang'); if (inp) inp.onchange = () => { bidangInp = inp.value.trim(); rerender(); };
   const PESAN = { visi: 'visi dan profil lulusan', cpl: 'CPL', bk: 'BoK dan bahan kajian', kunci: 'MK kunci', slot: 'slot MK usulan', lacak: 'pemetaan', cpmk: 'CPMK dan Sub-CPMK' };

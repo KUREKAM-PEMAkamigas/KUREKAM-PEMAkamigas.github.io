@@ -23,7 +23,7 @@ export function visiView(el) {
       ${p.misi ? `<div class="quote q3"><small>Misi prodi</small><p>${esc(p.misi)}</p></div>` : ''}
       <p class="note">Acuan LAM Teknik butir 1–3: visi keilmuan menunjukkan kekhasan bidang dan menjadi dasar profil lulusan serta CPL.</p>
     </div>
-    <div class="card">${head('Catatan Unit SPM', 'Masukan untuk perbaikan', 'eye', '#f0616d', can('catatanSpm') ? `<button class="btn sm" id="add-cat">${icon('plus')} Catatan</button>` : '')}
+    <div class="card">${head('Catatan Satuan SPM', 'Masukan untuk perbaikan', 'eye', '#f0616d', can('catatanSpm') ? `<button class="btn sm" id="add-cat">${icon('plus')} Catatan</button>` : '')}
       ${(p.catatanSpm || []).length ? p.catatanSpm.map(c => `<div class="note-card"><b>${esc(c.oleh)}</b> <span class="muted small">${esc(c.t)}</span><div>${esc(c.isi)}</div></div>`).join('') : '<div class="empty small">Belum ada catatan.</div>'}
     </div>
   </div>
@@ -41,8 +41,8 @@ export function visiView(el) {
       fields: [{ k: 'visiKeilmuan', label: 'Visi keilmuan prodi', type: 'textarea', rows: 4 }, { k: 'misi', label: 'Misi prodi', type: 'textarea', rows: 4 }],
       onSave: async (o) => { await save('prodi', o, `Ubah visi keilmuan ${p.id}`); rerender(); } });
   }
-  const ac = el.querySelector('#add-cat'); if (ac) ac.onclick = () => formDrawer({ title: 'Catatan Unit SPM', sub: p.nama, fields: [{ k: 'isi', label: 'Catatan', type: 'textarea' }],
-    onSave: async (o) => { p.catatanSpm = (p.catatanSpm || []).concat([{ t: new Date().toISOString().slice(0, 10), oleh: 'Unit SPM', isi: o.isi }]); await save('prodi', p, `Catatan SPM untuk ${p.id}`); rerender(); } });
+  const ac = el.querySelector('#add-cat'); if (ac) ac.onclick = () => formDrawer({ title: 'Catatan Satuan SPM', sub: p.nama, fields: [{ k: 'isi', label: 'Catatan', type: 'textarea' }],
+    onSave: async (o) => { p.catatanSpm = (p.catatanSpm || []).concat([{ t: new Date().toISOString().slice(0, 10), oleh: 'Satuan SPM', isi: o.isi }]); await save('prodi', p, `Catatan SPM untuk ${p.id}`); rerender(); } });
   animateCounts(el);
 }
 

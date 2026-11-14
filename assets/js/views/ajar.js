@@ -25,7 +25,7 @@ function mkList(el, onPick, extra) {
 
 /* ================= CPMK & Sub-CPMK ================= */
 export function cpmkView(el) {
-  el.innerHTML = `<div class="grid g-12"><div class="card" id="left"></div><div id="right"></div></div>`;
+  el.innerHTML = `<div class="grid g-12 split-mk"><div class="card" id="left"></div><div id="right"></div></div>`;
   const draw = () => {
     mkList(el.querySelector('#left'), draw, m => { const n = S.cpmk.filter(c => c.mk === m.id).length, s = S.sub.filter(c => c.mk === m.id).length; return `<span class="tag" style="--c:${n ? '#10b981' : '#f0616d'}">${n} CPMK · ${s} Sub</span>`; });
     const m = S.mk.find(x => x.id === sel); const R = el.querySelector('#right');
@@ -60,7 +60,7 @@ function blankRps(m) {
   return { id: m.id, mk: m.id, prodi: m.prodi, deskripsi: '', pustaka: '', penelitian: '', pkm: '', status: 'draf', pertemuan: Array.from({ length: 16 }, (_, i) => { const w = i + 1; if (w === 8 || w === 16) return { m: w, ujian: w === 8 ? 'UTS' : 'UAS', sub: ss.map(s => s.id), materi: w === 8 ? 'Ujian Tengah Semester' : 'Ujian Akhir Semester', metode: prak ? 'Ujian praktik' : 'Ujian tertulis', asesmen: prak ? 'Unjuk kerja' : 'Tes tertulis', bobot: w === 8 ? 20 : 25, sap: {} }; return { m: w, sub: [], materi: '', metode: '', asesmen: '', bobot: 0, integ: '', integUraian: '', sap: {} }; }) };
 }
 export function rpsView(el) {
-  el.innerHTML = `<div class="filters" id="rps-unggah" style="margin-bottom:12px"></div><div class="grid g-12"><div class="card" id="left"></div><div id="right"></div></div>`;
+  el.innerHTML = `<div class="filters" id="rps-unggah" style="margin-bottom:12px"></div><div class="grid g-12 split-mk"><div class="card" id="left"></div><div id="right"></div></div>`;
   const draw = () => {
     mkList(el.querySelector('#left'), draw, m => { const r = rpsOf(S, m.id); return statusTag(r ? r.status : ''); });
     const m = S.mk.find(x => x.id === sel); const R = el.querySelector('#right');
@@ -82,9 +82,9 @@ export function rpsView(el) {
         ${r.status === 'diajukan' && can('sahkanRps', m) ? `<button class="btn pri sm" id="sah">${icon('check')} Sahkan RPS</button><button class="btn sm danger" id="tolak">Kembalikan ke dosen</button>` : ''}
         ${r.status === 'disahkan' && can('sahkanRps', m) ? `<button class="btn sm danger" id="batal">Batalkan pengesahan</button>` : ''}
         ${!ed ? ro() : ''}</div>
-      <div class="tbl-wrap" style="max-height:560px;margin-top:8px"><table class="tbl"><thead><tr><th>Mg</th><th>Sub-CPMK</th><th>Bahan kajian / materi</th><th>Metode & bentuk</th><th>Asesmen</th><th>Penelitian / PKM</th><th class="num">Bobot</th><th>SAP</th></tr></thead><tbody>
-      ${r.pertemuan.map((p, i) => `<tr class="${p.ujian ? 'locked' : ''} ${ed ? 'click' : ''}" data-i="${i}"><td class="num"><b>${p.m}</b></td><td class="small">${(p.sub || []).map(id => (S.sub.find(s => s.id === id) || {}).kode).filter(Boolean).map(k => k.replace('Sub-CPMK', 'S')).join(', ')}</td><td>${p.ujian ? `<span class="tag" style="--c:#8b5cf6">${p.ujian}</span> ` : ''}${esc(p.materi) || '<span class="st bad">belum diisi</span>'}</td><td class="small">${esc(p.metode)}</td><td class="small">${esc(p.asesmen)}</td><td class="small">${p.integ ? `<span class="tag" style="--c:${p.integ === 'PKM' ? '#f5a524' : p.integ === 'Penelitian' ? '#8b5cf6' : '#14b8a6'}">${p.integ}</span>` : '<span class="muted">–</span>'}</td><td class="num">${fmt(p.bobot, 1)}%</td><td>${p.ujian ? '–' : (p.sap && p.sap.inti ? '<span class="st ok">ada</span>' : '<span class="st na">kosong</span>')}</td></tr>`).join('')}
-      </tbody></table></div></div>`;
+      <div class="rps-cq"><div class="tbl-wrap" style="max-height:560px;margin-top:8px"><table class="tbl"><thead><tr><th>Mg</th><th>Sub-CPMK</th><th>Bahan kajian / materi</th><th>Metode & bentuk</th><th>Asesmen</th><th>Penelitian / PKM</th><th class="num">Bobot</th><th>SAP</th></tr></thead><tbody>
+      ${r.pertemuan.map((p, i) => `<tr class="${p.ujian ? 'locked' : ''} ${ed ? 'click' : ''}" data-i="${i}"><td class="num" data-l="Pertemuan"><b>${p.m}</b></td><td class="small" data-l="Sub-CPMK">${(p.sub || []).map(id => (S.sub.find(s => s.id === id) || {}).kode).filter(Boolean).map(k => k.replace('Sub-CPMK', 'S')).join(', ')}</td><td data-l="Materi">${p.ujian ? `<span class="tag" style="--c:#8b5cf6">${p.ujian}</span> ` : ''}${esc(p.materi) || '<span class="st bad">belum diisi</span>'}</td><td class="small" data-l="Metode">${esc(p.metode)}</td><td class="small" data-l="Asesmen">${esc(p.asesmen)}</td><td class="small" data-l="Penelitian atau PKM">${p.integ ? `<span class="tag" style="--c:${p.integ === 'PKM' ? '#f5a524' : p.integ === 'Penelitian' ? '#8b5cf6' : '#14b8a6'}">${p.integ}</span>` : '<span class="muted">–</span>'}</td><td class="num" data-l="Bobot">${fmt(p.bobot, 1)}%</td><td data-l="SAP">${p.ujian ? '–' : (p.sap && p.sap.inti ? '<span class="st ok">ada</span>' : '<span class="st na">kosong</span>')}</td></tr>`).join('')}
+      </tbody></table></div></div></div>`;
     const q = (s) => R.querySelector(s);
     if (ed) {
       q('#ed-info').onclick = () => formDrawer({ title: 'Deskripsi dan pustaka', sub: m.nama, obj: r, fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 4 }, { k: 'bahan', label: 'Bahan kajian', type: 'textarea', rows: 3 }, { k: 'syarat', label: 'Mata kuliah syarat', type: 'textarea', rows: 1 }, { k: 'pustaka', label: 'Pustaka utama dan pendukung', type: 'textarea', rows: 5 }, { k: 'penelitian', label: 'Penelitian dosen yang diintegrasikan (judul, skema, tahun)', type: 'textarea', rows: 2, ph: 'Contoh: Optimasi gas lift sumur tua, Penelitian Terapan 2026' }, { k: 'pkm', label: 'PKM yang diintegrasikan (judul, mitra, tahun)', type: 'textarea', rows: 2, ph: 'Contoh: Pendampingan K3 bengkel mitra, PKM 2026' }], onSave: async (o) => { await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw(); } });

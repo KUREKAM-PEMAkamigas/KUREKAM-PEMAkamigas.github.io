@@ -162,6 +162,28 @@ export const ROUTES = [
   { id: 'induk', t: 'Data Induk & Pengaturan', ic: 'db', c: '#64748b', sec: 'Sistem', v: indukView }
 ];
 
+/* Menu samping lipat: otomatis pada halaman yang butuh ruang lebar, bisa diatur manual, dan mengintip saat disentuh atau didekati. */
+const PREF_SIDE = 'kurekam_side', HALAMAN_LEBAR = new Set(['rps', 'cpmk', 'peta', 'matriks', 'bebanprodi']);
+const lebar = () => window.innerWidth > 900;
+function tutupSide() { const s = $('#side'); if (!s) return; s.classList.remove('open', 'peek'); document.body.classList.remove('side-open'); const a = document.querySelector('.app'); if (a) a.classList.remove('peeking'); }
+function terapkanSide(id) {
+  const a = document.querySelector('.app'); if (!a) return; let pref = null; try { pref = localStorage.getItem(PREF_SIDE); } catch (e) { /* abaikan */ }
+  a.classList.toggle('min', lebar() && (pref ? pref === 'min' : HALAMAN_LEBAR.has(id)));
+  const s = $('#side'); if (s) s.classList.remove('peek');
+}
+let sideSiap = false;
+function pasangSide() {
+  if (sideSiap) return; sideSiap = true; const s = $('#side'), a = document.querySelector('.app');
+  if (!document.getElementById('sideBg')) { const bg = document.createElement('div'); bg.id = 'sideBg'; bg.onclick = tutupSide; document.body.appendChild(bg); }
+  const hover = () => window.matchMedia('(hover: hover)').matches;
+  const intip = (on) => { if (!a.classList.contains('min')) return; s.classList.toggle('peek', on); a.classList.toggle('peeking', on); document.body.classList.toggle('side-open', on && !hover());
+    if (on) s.querySelectorAll('.nav a').forEach((x, i) => { x.style.animationDelay = (i * 22) + 'ms'; }); };
+  s.addEventListener('mouseenter', () => { if (hover()) intip(true); });
+  s.addEventListener('mouseleave', () => { if (hover()) intip(false); });
+  s.addEventListener('click', (e) => { if (a.classList.contains('min') && !s.classList.contains('peek') && !e.target.closest('a')) intip(true); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') tutupSide(); });
+  window.addEventListener('resize', () => { const h = (location.hash || '#beranda').slice(1).split('/')[0]; terapkanSide(h); if (lebar()) tutupSide(); });
+}
 function renderSide(cur) {
   let sec = '', h = `<div class="brand-logos"><img src="assets/img/logo-pem-akamigas.png" alt="PEM Akamigas" class="lg-pem"><img src="assets/img/logo-esdm.png" alt="Kementerian ESDM" class="lg-esdm"></div>
     <div class="brand"><div class="brand-logo k">${icon('layers')}</div><div><b>${APP.nama}</b><small>${APP.panjang}</small></div></div><nav class="nav">`;
@@ -171,7 +193,7 @@ function renderSide(cur) {
   });
   h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
   $('#side').innerHTML = h;
-  $$('#side a').forEach(a => a.addEventListener('click', () => $('#side').classList.remove('open')));
+  $$('#side a').forEach(a => a.addEventListener('click', () => tutupSide()));
 }
 
 function renderTop(route) {
@@ -190,7 +212,7 @@ function renderTop(route) {
     ${bisaSimulasi() ? `<button class="btn ${dalamSimulasi() ? 'vio' : ''}" id="simBtn" title="Uji coba fitur dengan data contoh tanpa menyentuh Firebase">${icon('play')} ${dalamSimulasi() ? 'Keluar simulasi' : 'Simulasi'}</button>` : ''}
     ${DB.user ? `<button class="btn" id="sandiBtn" title="${esc(DB.user.email)}">${icon('gear')} Kata sandi</button>` : ''}
     ${DB.user ? `<button class="btn" id="logoutBtn">${icon('logout')} Keluar</button>` : ''}`;
-  $('#menuBtn').onclick = () => $('#side').classList.toggle('open');
+  $('#menuBtn').onclick = () => { if (lebar()) { const min = document.querySelector('.app').classList.contains('min'); try { localStorage.setItem(PREF_SIDE, min ? 'open' : 'min'); } catch (e) { /* abaikan */ } terapkanSide(route.id); tutupSide(); } else { const o = $('#side').classList.toggle('open'); document.body.classList.toggle('side-open', o); } };
   $('#roleSel').onchange = e => { ctx.role = e.target.value; ctx.pilihDev = ctx.role; saveCtx(); route_(); };
   const gs = $('#sandiBtn'); if (gs) gs.onclick = formSandi;
   const sm = $('#simBtn'); if (sm) sm.onclick = () => ubahSimulasi(!dalamSimulasi());
@@ -204,7 +226,7 @@ export function route_() {
   let r = ROUTES.find(x => x.id === id) || ROUTES[0];
   if (!bolehMenu(r.id)) { r = ROUTES[0]; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } }
   disposeAll(); disposeHero(); closeDrawer();
-  renderSide(r.id); renderTop(r);
+  renderSide(r.id); renderTop(r); pasangSide(); terapkanSide(r.id);
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
   view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Data contoh: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';

@@ -499,3 +499,56 @@ details.sim[open] > summary .card-h { margin-bottom: 14px; }
 
 .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(100, 116, 139, .3); border-top-color: #10b981; border-radius: 50%; vertical-align: -2px; animation: kspin .7s linear infinite; }
 @keyframes kspin { to { transform: rotate(360deg); } }
+
+/* ===== Menu lipat dengan efek intip 3D ===== */
+.menu-btn { display: inline-flex !important; }
+#sideBg { position: fixed; inset: 0; background: rgba(15, 23, 42, .38); backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 55; }
+body.side-open #sideBg { opacity: 1; pointer-events: auto; }
+@keyframes peekIn { from { transform: perspective(900px) rotateY(-32deg) translateX(-18px) scale(.97); opacity: .55; } to { transform: perspective(900px) rotateY(0) translateX(0) scale(1); opacity: 1; } }
+@keyframes navIn { from { opacity: 0; transform: translateX(-16px) rotateY(-40deg); } to { opacity: 1; transform: none; } }
+@media (min-width: 901px) {
+  .app { transition: grid-template-columns .45s cubic-bezier(.2, .8, .2, 1); }
+  .app.min { grid-template-columns: 76px minmax(0, 1fr); }
+  .app.min .main { grid-column: 2; }
+  .app.min .side { position: fixed; left: 0; top: 0; width: 76px; padding: 18px 10px; overflow: hidden; z-index: 60; transform-origin: left center;
+    transition: width .45s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, background .3s; background: rgba(255, 255, 255, .86); }
+  .app.min .side.peek { width: 272px; padding: 18px 14px; overflow-y: auto; background: rgba(255, 255, 255, .97); box-shadow: 34px 0 70px -24px rgba(15, 23, 42, .45), 1px 0 0 var(--line); animation: peekIn .5s cubic-bezier(.2, .8, .2, 1); }
+  .app.min .side:not(.peek) .brand-logos, .app.min .side:not(.peek) .brand > div:last-child, .app.min .side:not(.peek) .nav a > span:last-child, .app.min .side:not(.peek) .side-foot { display: none; }
+  .app.min .side:not(.peek) .brand { justify-content: center; padding: 4px 0 12px; }
+  .app.min .side:not(.peek) .nav-sec { font-size: 0; height: 1px; padding: 0; margin: 8px 8px; background: var(--line); }
+  .app.min .side:not(.peek) .nav a { justify-content: center; padding: 5px 0; }
+  .app.min .side:not(.peek) .nav a .chip { transform: perspective(260px) rotateY(16deg); }
+  .app.min .side:not(.peek) .nav a:hover .chip { transform: perspective(260px) rotateY(-8deg) translateZ(10px) scale(1.12); box-shadow: 0 10px 18px -6px var(--c); }
+  .app.min .side.peek .nav a { animation: navIn .45s cubic-bezier(.2, .8, .2, 1) both; transform-origin: left center; }
+  .app.min .side.peek .brand-logo { animation: navIn .5s both; }
+  .app.min .main { transition: filter .35s; }
+  .app.min.peeking .main { filter: brightness(.96) saturate(.95); }
+}
+@media (max-width: 900px) {
+  .side { transform: translateX(-105%) perspective(900px) rotateY(-24deg); transform-origin: left center; transition: transform .45s cubic-bezier(.2, .8, .2, 1); z-index: 60; }
+  .side.open { transform: none; }
+  .side.open .nav a { animation: navIn .45s cubic-bezier(.2, .8, .2, 1) both; transform-origin: left center; }
+}
+
+/* ===== RPS dan CPMK: tata letak tanpa geser ===== */
+.grid.split-mk { grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); align-items: start; }
+.mkrow { flex-wrap: wrap; }
+.mkrow > div:first-child { flex: 1 1 150px; min-width: 0; }
+.mkrow .tag, .mkrow .st { flex: 0 0 auto; }
+@media (max-width: 1100px) {
+  .grid.split-mk { grid-template-columns: minmax(0, 1fr); }
+  .grid.split-mk .mklist { max-height: 260px; }
+}
+.rps-cq { container-type: inline-size; }
+@container (max-width: 1040px) {
+  .rps-cq .tbl-wrap { max-height: none !important; overflow: visible; }
+  .rps-cq .tbl, .rps-cq .tbl tbody, .rps-cq .tbl tr, .rps-cq .tbl td { display: block; width: 100%; }
+  .rps-cq .tbl thead { display: none; }
+  .rps-cq .tbl tr { border: 1px solid var(--line); border-left: 4px solid var(--sky); border-radius: 14px; margin-bottom: 10px; padding: 8px 12px 10px; background: var(--card-solid); }
+  .rps-cq .tbl tr.locked { border-left-color: #8b5cf6; }
+  .rps-cq .tbl td { padding: 4px 0 !important; border: 0 !important; text-align: left !important; white-space: normal; }
+  .rps-cq .tbl td:empty { display: none; }
+  .rps-cq .tbl td[data-l]::before { content: attr(data-l); display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .rps-cq .tbl td[data-l="Pertemuan"] { display: flex; align-items: baseline; gap: 8px; font-size: 15px; }
+  .rps-cq .tbl td[data-l="Pertemuan"]::before { display: inline; }
+}

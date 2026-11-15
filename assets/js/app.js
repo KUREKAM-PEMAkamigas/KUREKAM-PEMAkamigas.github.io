@@ -19,6 +19,7 @@ import indukView from './views/induk.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
 import { piView, kesiapanView } from './views/iabee.js';
+import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
 import lulusanView from './views/lulusan.js';
 import panduanView from './views/panduan.js';
@@ -166,6 +167,7 @@ export const ROUTES = [
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },
   { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
+  { id: 'generator', t: 'Generator Usulan', sub: 'MK inti, PI, tindak lanjut', ic: 'spark', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: generatorView },
   { id: 'panduan', t: 'Panduan 10 Indikator', sub: 'Cara mengisi dan contoh', ic: 'audit', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: panduanView },
   { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'lulusan', t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi', ic: 'medal', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: lulusanView },

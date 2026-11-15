@@ -50,3 +50,6 @@ Menu **Panduan 10 Indikator**: prinsip, alur empat langkah, pembagian peran, dan
 
 ## Sinkron otomatis dengan SIMANTAP
 KUREKAM menulis ringkasan 10 indikator IABEE per prodi ke koleksi `kur_umpan` (satu dokumen per prodi, id = kode prodi), otomatis beberapa detik setelah data tersimpan, dan lewat tombol "Kirim sekarang" di menu Kesiapan IABEE. SIMANTAP membacanya. Temuan AMI di koleksi `indikator` SIMANTAP dibaca balik di menu yang sama. Aturan Firestore harus mengizinkan pengguna masuk membaca dan menulis `kur_umpan`.
+
+## Generator usulan (berbasis aturan, tanpa biaya)
+Menu Generator Usulan membuat usulan MK inti, PI per CPL, dan tindak lanjut CPL di bawah kriteria, tiap usulan disertai analisis kesesuaian aturan (taksonomi Bloom, jumlah PI 2 sampai 4, kriteria capaian). Isi dapat direvisi dan baru tersimpan setelah disetujui akun prodi.

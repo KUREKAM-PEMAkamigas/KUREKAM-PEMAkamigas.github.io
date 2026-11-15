@@ -638,3 +638,21 @@ body.side-open #sideBg { opacity: 1; pointer-events: auto; }
   .report .tbl { table-layout: fixed; width: 100%; }
   .report .tbl th, .report .tbl td { white-space: normal; overflow-wrap: anywhere; padding: 4px 5px; font-size: 10.5px; }
 }
+
+/* Panduan 10 indikator */
+.pg-alur { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.pg-step { display: flex; flex-direction: column; gap: 4px; background: var(--tint); border-radius: 14px; padding: 12px; }
+.pg-step .n { width: 24px; height: 24px; border-radius: 50%; background: #8b5cf6; color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; }
+.pg-list { display: grid; gap: 10px; margin-top: 12px; }
+.pg-item { background: var(--card-solid); border: 1px solid var(--line); border-left: 4px solid #94a3b8; border-radius: 16px; padding: 4px 14px; box-shadow: var(--shadow); }
+.pg-item.ok { border-left-color: #10b981; } .pg-item.near { border-left-color: #f5a524; } .pg-item.bad { border-left-color: #f0616d; }
+.pg-item summary { display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; list-style: none; flex-wrap: wrap; }
+.pg-item summary::-webkit-details-marker { display: none; }
+.pg-item summary b { flex: 1 1 200px; min-width: 0; }
+.pg-body { padding: 0 0 12px; font-size: 13.5px; line-height: 1.55; }
+.pg-body h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.pg-body ol, .pg-body ul { margin: 0 0 0 18px; padding: 0; }
+.pg-body li { margin: 3px 0; }
+.pg-box { background: var(--tint); border-radius: 12px; padding: 4px 14px 12px; min-width: 0; }
+@media (max-width: 760px) { .pg-alur { grid-template-columns: minmax(0, 1fr); } }
+@media print { .pg-item { break-inside: avoid; } }

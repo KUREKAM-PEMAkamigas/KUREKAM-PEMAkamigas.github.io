@@ -128,12 +128,12 @@ export function kesiapanView(el) {
   const adm = ['admin', 'developer'].includes(ctx.role);
   const terukur = cur.ind.filter(i => i.k !== 'na').length, sesuai = cur.ind.filter(i => i.k === 'ok').length;
   el.innerHTML = `
-  <div class="ribbon info">${icon('info')} <span>Sepuluh indikator ini menunjukkan seberapa siap tiap prodi menghadapi akreditasi IABEE. Indikator yang datanya belum masuk ditulis <b>Belum diukur</b>, bukan nol. Indikator 1 dan 2 dihitung dari isian PI, CPMK, MK inti, dan butir IABEE pada CPL. Indikator 3, 4, dan 7 dihitung dari menu Capaian CPL & Tindak Lanjut, dan indikator 10 dari bidang dan sertifikasi dosen. Indikator 5, 6, dan 8 dari menu Capstone, Lulusan & Tracer. Indikator 9 dipantau di SIMANTAP.</span></div>
+  <div class="ribbon info">${icon('info')} <span>Sepuluh indikator ini menunjukkan seberapa siap tiap prodi menghadapi akreditasi IABEE. Indikator yang datanya belum masuk ditulis <b>Belum diukur</b>, bukan nol. Indikator 1 dan 2 dihitung dari isian PI, CPMK, MK inti, dan butir IABEE pada CPL. Indikator 3, 4, dan 7 dihitung dari menu Capaian CPL & Tindak Lanjut, dan indikator 10 dari bidang dan sertifikasi dosen. Indikator 5, 6, dan 8 dari menu Capstone, Lulusan & Tracer. Cara mengisi tiap indikator ada di menu <a href="#panduan"><b>Panduan 10 Indikator</b></a>. Indikator 9 dipantau di SIMANTAP.</span></div>
   <div class="grid g4">
     ${kpi('Indikator terukur', terukur, `dari 10 indikator · ${cur.p.id}`, '#0ea5e9', 'pulse')}
     ${kpi('Sesuai target', sesuai, `${cur.p.id}`, sesuai ? '#10b981' : '#f5a524', 'check')}
     ${kpi('CPL ber-PI', cur.ind[0].nilai == null ? '–' : Math.round(byProdi(S.cpl, cur.p.id).length ? (byProdi(S.cpl, cur.p.id).length - piTrace(S, cur.p.id).cplNoPi.length) / byProdi(S.cpl, cur.p.id).length * 100 : 0), '% CPL yang sudah punya PI', '#8b5cf6', 'target')}
-    ${kpi('Butir IABEE tercakup', HURUF_IABEE.length - piTrace(S, cur.p.id).butirKosong.length, `dari ${HURUF_IABEE.length} butir (a)–(k)`, '#6366f1', 'medal')}
+    ${kpi('Butir IABEE tercakup', HURUF_IABEE.length - piTrace(S, cur.p.id).butirKosong.length, `dari ${HURUF_IABEE.length} butir (a)–(${HURUF_IABEE[HURUF_IABEE.length - 1]})`, '#6366f1', 'medal')}
   </div>
   <div class="card" style="margin-top:18px">${head('Ringkasan lima prodi', 'Klik kode prodi untuk melihat rinciannya', 'grid4', '#8b5cf6', adm ? `<button class="btn sm" id="tgt">${icon('edit')} Ubah target</button>` : '')}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>No</th><th>Indikator</th><th>Target</th>${semua.map(x => `<th><button class="btn ghost sm ${x.p.id === cur.p.id ? 'on' : ''}" data-p="${x.p.id}">${prodiTag(x.p.id)}</button></th>`).join('')}</tr></thead><tbody>

@@ -43,3 +43,7 @@ Menu **Data Induk & Pengaturan > Impor & ekspor**:
 - Menu **Capstone, Lulusan & Tracer** (prodi, Wadir, SPM, Akademik): dokumentasi capstone (bobot, rubrik, proyek nyata, tautan Drive) dan angka lulusan OBE, responden tracer, dan responden survei pengguna per tahun lulus, dengan templat dan impor Excel. Koleksi `kur_capstone` dan `kur_lulusan`. Tanpa nama, NIM, atau nama mitra.
 - Indikator 5, 6, dan 8 dihitung otomatis. Indikator 9 tetap dipantau di SIMANTAP.
 - Menu Kesiapan IABEE: kartu **Ekspor triwulan untuk SIMANTAP** (JSON dan Excel, angka agregat 10 indikator per prodi, kunci `iabee_01` sampai `iabee_10`).
+
+## Panduan 10 indikator
+
+Menu **Panduan 10 Indikator**: prinsip, alur empat langkah, pembagian peran, dan kartu tiap indikator (tujuan, langkah, contoh bentuk isian, bukti, penanggung jawab usulan, cara aplikasi menilai, status prodi saat ini). Isi ada di `assets/js/panduan.js`. Butir kompetensi lulusan IABEE kini sepuluh (a sampai j).

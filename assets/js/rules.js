@@ -287,12 +287,56 @@ export function cekIabee(S, pid) {
       : { grp: 'Kesiapan IABEE', label: 'Mata kuliah inti sudah ditandai', val: 'Belum ada', target: '≥ 1 MK', k: 'near', acuan: 'Lampiran kesiapan IABEE' },
     row('CPMK mata kuliah inti tanpa PI', t.cpmkIntiNoPi, 'IABEE 2.1.2, rantai ukur CPL'),
     row('CPL tanpa butir IABEE', t.cplNoButir, 'IABEE 1.2.2'),
+    ...(() => { const ki = kompetensiInti(S, pid), cp = capaianCpl(S, pid), tl = tlProdi(S, pid);
+      const out = [];
+      if (ki.length) { const b = ki.filter(x => x.status === 'tanpa' || x.status === 'tidak'); out.push({ grp: 'Kesiapan IABEE', label: 'MK inti tanpa dosen pengampu yang sesuai', val: b.length ? `${b.length}: ${b.map(x => x.m.kode).slice(0, 6).join(', ')}` : 'Tidak ada', target: '0', k: b.length ? 'bad' : 'ok', acuan: 'IABEE 5 (staf pengajar)' }); }
+      if (cp.bawah.length) { const tanpa = cp.bawah.filter(h => !tl.some(x => x.cpl === h.c.id)); out.push({ grp: 'Kesiapan IABEE', label: 'CPL di bawah kriteria tanpa catatan tindak lanjut', val: tanpa.length ? `${tanpa.length}: ${tanpa.map(h => h.c.kode).slice(0, 6).join(', ')}` : 'Tidak ada', target: '0', k: tanpa.length ? 'bad' : 'ok', acuan: 'IABEE 3 (peningkatan berkelanjutan)' }); }
+      return out; })(),
     { grp: 'Kesiapan IABEE', label: 'Butir IABEE (a)–(k) yang belum dicakup CPL', val: t.butirKosong.length ? `${t.butirKosong.length}: ${t.butirKosong.map(b => '(' + b.k + ')').join(', ')}` : 'Semua tercakup', target: '0', k: t.butirKosong.length ? 'bad' : 'ok', acuan: 'IABEE 1.2.2' }
   ];
 }
+
+/* ---------- Tahap 2: capaian CPL agregat, tindak lanjut, kompetensi dosen ---------- */
+const nz = (s) => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+export const persenCap = (r) => r && +r.n > 0 ? Math.min(100, (+r.lulus || 0) / +r.n * 100) : null;
+const urutAngkatan = (a, b) => String(a).localeCompare(String(b), 'id', { numeric: true });
+/** Capaian tiap CPL per angkatan. Baris tingkat CPL dipakai bila ada; bila hanya ada baris PI, dipakai PI terendah. */
+export function capaianCpl(S, pid) {
+  const P = param(S), krit = P.piMinPersen, cpl = byProdi(S.cpl, pid), rows = byProdi(S.capaian || [], pid);
+  const hasil = cpl.map(c => {
+    const rc = rows.filter(r => r.cpl === c.id && +r.n > 0), angk = Array.from(new Set(rc.map(r => String(r.angkatan)))).sort(urutAngkatan);
+    const per = angk.map(a => {
+      const lv = rc.filter(r => String(r.angkatan) === a), langsung = lv.find(r => !r.pi);
+      if (langsung) return { angkatan: a, persen: persenCap(langsung), n: +langsung.n, lulus: +langsung.lulus, dari: 'CPL', id: langsung.id };
+      const terendah = lv.map(r => ({ r, p: persenCap(r) })).sort((x, y) => x.p - y.p)[0];
+      return { angkatan: a, persen: terendah.p, n: +terendah.r.n, lulus: +terendah.r.lulus, dari: 'PI', id: terendah.r.id };
+    });
+    const akhir = per[per.length - 1] || null;
+    return { c, per, akhir, terukur: !!per.length, ok: !!akhir && akhir.persen >= krit };
+  });
+  const angkatan = Array.from(new Set(rows.filter(r => +r.n > 0).map(r => String(r.angkatan)))).sort(urutAngkatan);
+  return { krit, hasil, angkatan, terukur: hasil.filter(h => h.terukur), ok: hasil.filter(h => h.ok), bawah: hasil.filter(h => h.terukur && !h.ok) };
+}
+export const tlProdi = (S, pid) => byProdi(S.tl || [], pid);
+export const TL_STATUS = { rencana: 'Direncanakan', berjalan: 'Berjalan', selesai: 'Selesai' };
+const STOP_KOMP = new Set(['praktik', 'praktikum', 'dasar', 'teknik', 'mata', 'kuliah', 'design', 'capstone', 'berdampak', 'magang', 'tugas', 'akhir', 'terpadu', 'sistem', 'dengan', 'untuk', 'migas']);
+export const kataKompetensi = (m) => { const eksplisit = String(m.kompetensi || '').split(/[,;\n]/).map(nz).filter(Boolean); if (eksplisit.length) return { kata: eksplisit, dari: 'diisi' }; return { kata: nz(m.nama).split(' ').filter(w => w.length >= 5 && !STOP_KOMP.has(w)), dari: 'nama' }; };
+export const dosenPunyaBidang = (d) => !!(d && [d.bidang, d.s1, d.s2, d.s3, d.sertifikasi].some(v => nz(v)));
+const teksBidang = (d) => nz([d.bidang, d.s1, d.s2, d.s3, d.sertifikasi].join(' '));
+/** Kecocokan dosen pengampu dengan kompetensi yang diperlukan MK inti. Tidak memakai NIP. */
+export function kompetensiInti(S, pid) {
+  return byProdi(S.mk, pid).filter(m => m.inti).map(m => {
+    const { kata, dari } = kataKompetensi(m), ids = Array.from(new Set(S.tugas.filter(t => t.mk === m.id).map(t => t.dosen)));
+    const dosen = ids.map(id => S.dosen.find(d => d.id === id)).filter(Boolean);
+    const cocok = dosen.filter(d => { const tb = teksBidang(d); return kata.some(k => tb.includes(k)); });
+    const status = !dosen.length ? 'tanpa' : cocok.length ? 'sesuai' : dosen.some(dosenPunyaBidang) ? 'tidak' : 'data';
+    return { m, kata, dari, dosen, cocok, status };
+  });
+}
+
 /** Sepuluh indikator kesiapan per prodi. nilai null berarti belum diukur (bukan nol). */
 export function kesiapan(S, pid) {
-  const t = piTrace(S, pid), target = (S.settings && S.settings.targetIabee) || {};
+  const t = piTrace(S, pid), target = (S.settings && S.settings.targetIabee) || {}, cap = capaianCpl(S, pid), tl = tlProdi(S, pid), ki = kompetensiInti(S, pid);
   const pct = (a, b) => b ? a / b * 100 : 0;
   const st = (v) => v >= 99.5 ? 'ok' : v >= 50 ? 'near' : 'bad';
   const belum = (ket) => ({ nilai: null, teks: 'Belum diukur', k: 'na', ket });
@@ -310,14 +354,33 @@ export function kesiapan(S, pid) {
       const v = Math.min(pct(ada, HURUF_IABEE.length), pct(cplOk, t.cpl.length));
       return { nilai: v, teks: `${ada} dari ${HURUF_IABEE.length} butir tercakup`, k: st(v), ket: `${cplOk} dari ${t.cpl.length} CPL sudah diberi butir IABEE.${t.butirKosong.length ? ' Butir belum tercakup: ' + t.butirKosong.map(b => '(' + b.k + ')').join(', ') + '.' : ''}` };
     })(),
-    3: belum('Menunggu rekap capaian CPL per angkatan (angka agregat dari Excel prodi). Fitur impornya disiapkan pada tahap berikutnya.'),
-    4: belum('Dihitung dari rekap capaian CPL terhadap kriteria. Fitur impornya disiapkan pada tahap berikutnya.'),
+    3: (() => {
+      if (!t.cpl.length) return belum('CPL prodi belum ada.');
+      if (!cap.terukur.length) return belum('Belum ada rekap capaian CPL. Isi atau impor di menu Capaian CPL & Tindak Lanjut.');
+      const v = pct(cap.terukur.length, t.cpl.length);
+      return { nilai: v, teks: `${cap.terukur.length} dari ${t.cpl.length} CPL terukur`, k: st(v), ket: `${cap.terukur.length} dari ${t.cpl.length} CPL sudah punya data capaian. Angkatan terdata: ${cap.angkatan.join(', ')}.` };
+    })(),
+    4: (() => {
+      if (!cap.terukur.length) return belum('Dihitung setelah rekap capaian CPL masuk.');
+      const v = pct(cap.ok.length, cap.terukur.length);
+      return { nilai: v, teks: `${cap.ok.length} dari ${cap.terukur.length} CPL memenuhi`, k: st(v), ket: `Kriteria: minimal ${fmt(cap.krit)}% mahasiswa mencapai nilai batas, dilihat pada angkatan terbaru tiap CPL.${cap.bawah.length ? ' Di bawah kriteria: ' + cap.bawah.map(h => h.c.kode).join(', ') + '.' : ''}` };
+    })(),
     5: (() => { const cap = t.mk.filter(m => /capstone/i.test(m.nama + ' ' + m.kel)); return belum(cap.length ? `Kurikulum memuat ${cap.length} MK capstone (${cap.reduce((a, m) => a + sksOf(m), 0)} SKS). Rubrik dan daftar proyek nyata dicatat pada tahap berikutnya.` : 'MK capstone belum ada di kurikulum prodi. Rubrik dan proyek nyata dicatat pada tahap berikutnya.'); })(),
     6: belum('Menunggu data agregat lulusan dari Bagian Akademik (tahap berikutnya).'),
-    7: belum('Catatan tindak lanjut hasil CPL disiapkan pada tahap berikutnya dan terhubung ke menu Revisi.'),
+    7: (() => {
+      if (!tl.length) return belum('Belum ada catatan tindak lanjut. Catat di menu Capaian CPL & Tindak Lanjut, lalu hubungkan ke menu Revisi.');
+      const sl = tl.filter(x => x.status === 'selesai').length, jalan = tl.length - sl;
+      return sl ? { nilai: 100, teks: `${sl} siklus selesai`, k: 'ok', ket: `${tl.length} catatan tindak lanjut, ${sl} selesai${jalan ? `, ${jalan} masih direncanakan atau berjalan` : ''}. ${tl.filter(x => x.revisi).length} terhubung ke usulan revisi.` }
+        : { nilai: 0, teks: `${tl.length} catatan, belum selesai`, k: 'near', ket: `Ada ${tl.length} catatan tindak lanjut, belum ada yang berstatus selesai. Satu siklus dihitung bila temuan, tindakan, dan hasilnya sudah dicatat dan ditandai selesai.` };
+    })(),
     8: belum('Menunggu ringkasan tracer dan survei pengguna dari CDC (tahap berikutnya).'),
     9: belum('Dipantau melalui daftar periksa dokumen di SIMANTAP.'),
-    10: belum('Dihitung setelah data bidang keahlian dosen (S1, S2, S3, sertifikasi) dilengkapi pada tahap berikutnya.')
+    10: (() => {
+      if (!ki.length) return belum('Mata kuliah inti belum ditandai.');
+      if (!S.dosen.some(dosenPunyaBidang)) return belum('Bidang S1, S2, S3, dan sertifikasi dosen belum diisi (Data Induk, tab Dosen).');
+      const ok = ki.filter(x => x.status === 'sesuai').length, v = pct(ok, ki.length), c = (s) => ki.filter(x => x.status === s).length;
+      return { nilai: v, teks: `${ok} dari ${ki.length} MK inti sesuai`, k: st(v), ket: `Belum ada dosen pengampu: ${c('tanpa')}. Pengampu belum cocok dengan kompetensi: ${c('tidak')}. Pengampu belum diisi bidangnya: ${c('data')}.` };
+    })()
   };
   return INDIKATOR_IABEE.map(d => ({ ...d, target: target[d.no] || d.target, ...hasil[d.no] }));
 }

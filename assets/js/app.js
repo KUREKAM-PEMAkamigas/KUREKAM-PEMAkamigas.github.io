@@ -18,9 +18,10 @@ import indukView from './views/induk.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
 import { piView, kesiapanView } from './views/iabee.js';
+import capaianView from './views/capaian.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
@@ -159,6 +160,7 @@ export const ROUTES = [
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },
   { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
+  { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },

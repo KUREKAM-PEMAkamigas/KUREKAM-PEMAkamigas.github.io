@@ -146,6 +146,7 @@ export function mkView(el) {
       { k: 'kel', label: 'Kelompok', type: 'select', opts: KELOMPOK.map(k => ({ v: k.id, t: k.id })) }, { k: 'kat', label: 'Kategori IABEE', type: 'select', opts: KAT_IABEE.map(v => ({ v, t: v })) },
       { k: 'lokasi', label: 'Lokasi', type: 'select', opts: ['Kampus', 'Laboratorium', 'Industri'].map(v => ({ v, t: v })) },
       { k: 'inti', label: 'Mata kuliah inti (asesmen CPL)', type: 'select', opts: [{ v: '', t: 'Bukan MK inti' }, { v: '1', t: 'Ya, MK inti' }], help: 'MK inti menjadi tempat utama pengukuran CPL melalui PI. Biasanya MK kompetensi penciri dan capstone.' },
+      { k: 'kompetensi', label: 'Kompetensi dosen untuk MK inti (kata kunci)', type: 'textarea', rows: 2, ph: 'Misalnya: reservoir, well control, petrofisika', help: 'Pisahkan dengan koma. Dicocokkan dengan bidang S1, S2, S3, dan sertifikasi dosen pengampu (indikator 10 IABEE). Bila kosong, aplikasi memakai kata pada nama MK.' },
       { k: 'T', label: 'SKS teori', type: 'number', live: () => jpHelp() }, { k: 'P', label: 'SKS praktik (1–3)', type: 'number', live: () => jpHelp() },
       { k: 'bk', label: 'Bahan kajian', type: 'multi', opts: opts(byProdi(S.bk, ctx.prodi)) }, { k: 'cpl', label: 'CPL yang didukung', type: 'multi', opts: opts(byProdi(S.cpl, ctx.prodi), c => c.teks) },
       { k: 'prasyarat', label: 'Prasyarat', type: 'multi', opts: all.filter(m => m.id !== x.id && m.smt < +x.smt + 1).map(m => ({ v: m.id, t: short(m.nama, 30) })) }],

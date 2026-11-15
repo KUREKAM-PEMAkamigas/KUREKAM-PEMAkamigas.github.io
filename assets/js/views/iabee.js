@@ -3,7 +3,7 @@ import { S, ctx, can, save, remove, rerender, esc, icon, uid, saveSettings, addL
 import { APP, BUTIR_IABEE, INDIKATOR_IABEE } from '../config.js';
 import { chart, AX } from '../charts.js';
 import { detect, badge } from '../bloom.js';
-import { byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, HURUF_IABEE } from '../rules.js';
+import { byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, kompetensiInti, HURUF_IABEE } from '../rules.js';
 import { head, formDrawer, ro, kpi, animateCounts, prodiName, short, stTag, prodiTag } from './ui.js';
 
 const ST_TEKS = { ok: 'Sesuai target', near: 'Sebagian', bad: 'Jauh dari target', na: 'Belum diukur' };
@@ -93,6 +93,17 @@ function cetak() {
   window.print(); setTimeout(off, 1500);
 }
 
+
+const KI_ST = { sesuai: ['ok', 'Sesuai'], tidak: ['bad', 'Belum cocok'], data: ['near', 'Bidang dosen belum diisi'], tanpa: ['bad', 'Belum ada pengampu'] };
+function kompetensiTabel(pid) {
+  const ki = kompetensiInti(S, pid);
+  if (!ki.length) return '<div class="empty">Belum ada MK inti. Tandai di menu Mata Kuliah & SKS, kolom Inti.</div>';
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>MK inti</th><th>Kompetensi dicari</th><th>Dosen pengampu</th><th>Status</th></tr></thead><tbody>
+    ${ki.map(x => `<tr><td><b>${esc(x.m.kode)}</b><div class="small muted">${esc(x.m.nama)}</div></td><td class="small">${x.kata.map(k => `<span class="tag">${esc(k)}</span>`).join(' ') || '–'}${x.dari === 'nama' ? '<div class="muted">dari nama MK, isi kata kunci agar lebih tepat</div>' : ''}</td>
+    <td class="small">${x.dosen.map(d => `${esc(d.nama)}${x.cocok.includes(d) ? ' ✓' : ''}`).join('<br>') || '<span class="muted">belum ada</span>'}</td><td>${stTag(...KI_ST[x.status])}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
 /* ================= Menu Kesiapan IABEE ================= */
 export function kesiapanView(el) {
   const semua = S.prodi.map(p => ({ p, ind: kesiapan(S, p.id) }));
@@ -100,7 +111,7 @@ export function kesiapanView(el) {
   const adm = ['admin', 'developer'].includes(ctx.role);
   const terukur = cur.ind.filter(i => i.k !== 'na').length, sesuai = cur.ind.filter(i => i.k === 'ok').length;
   el.innerHTML = `
-  <div class="ribbon info">${icon('info')} <span>Sepuluh indikator ini menunjukkan seberapa siap tiap prodi menghadapi akreditasi IABEE. Indikator yang datanya belum masuk ditulis <b>Belum diukur</b>, bukan nol. Indikator 1 dan 2 sudah dihitung dari isian PI, CPMK, MK inti, dan butir IABEE pada CPL. Indikator lain akan terisi setelah fitur rekap capaian, capstone, lulusan, dan tracer tersedia.</span></div>
+  <div class="ribbon info">${icon('info')} <span>Sepuluh indikator ini menunjukkan seberapa siap tiap prodi menghadapi akreditasi IABEE. Indikator yang datanya belum masuk ditulis <b>Belum diukur</b>, bukan nol. Indikator 1 dan 2 dihitung dari isian PI, CPMK, MK inti, dan butir IABEE pada CPL. Indikator 3, 4, dan 7 dihitung dari menu Capaian CPL & Tindak Lanjut, dan indikator 10 dari bidang dan sertifikasi dosen. Capstone, lulusan, dan tracer menyusul pada tahap berikutnya.</span></div>
   <div class="grid g4">
     ${kpi('Indikator terukur', terukur, `dari 10 indikator · ${cur.p.id}`, '#0ea5e9', 'pulse')}
     ${kpi('Sesuai target', sesuai, `${cur.p.id}`, sesuai ? '#10b981' : '#f5a524', 'check')}
@@ -116,6 +127,7 @@ export function kesiapanView(el) {
       <div class="ind-list">${cur.ind.map(v => `<div class="ind ${v.k}"><span class="ind-no">${v.no}</span><div><b>${esc(v.nama)}</b><div class="small">${v.nilai != null ? `<b>${esc(v.teks)}</b> · ` : ''}Target: ${esc(v.target)}</div><div class="small muted">${esc(v.ket || '')} Sumber data: ${esc(v.sumber)}.</div></div>${stTagI(v.k)}</div>`).join('')}</div></div>
     <div class="card">${head('Indikator 1 dan 2 per prodi', 'Persentase menuju target 100%', 'pulse', '#0ea5e9')}<div class="chart" id="c-12"></div></div>
   </div>
+  <div class="card" style="margin-top:18px">${head('Kompetensi dosen untuk mata kuliah inti · ' + cur.p.id, 'Pengampu dicocokkan dengan bidang S1, S2, S3, dan sertifikasi. Kata kunci diisi pada formulir MK. Tanpa NIP.', 'user', '#f5a524')}${kompetensiTabel(cur.p.id)}</div>
   <div class="card" style="margin-top:18px">${head('Matriks CPL ke butir IABEE · ' + cur.p.id, 'Diisi di menu CPL (formulir) atau Matriks Keterlacakan, tab CPL × butir IABEE', 'link', '#6366f1', `<button class="btn pri sm no-print" id="cetak">${icon('download')} Cetak / simpan PDF</button>`)}
     ${matriksIabee(cur.p.id)}</div>`;
   animateCounts(el);

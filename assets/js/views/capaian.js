@@ -35,7 +35,7 @@ function tCapaian(el, pid, p, ed) {
   </div>
   <div class="card" style="margin-top:18px">${head('Rekap capaian CPL · ' + pid, esc(p.nama) + '. Klik angka untuk mengubah.', 'pulse', '#0ea5e9', ed ? `<button class="btn sm" id="c-tpl">${icon('download')} Templat Excel</button><button class="btn sm" id="c-imp">${icon('upload')} Impor Excel</button><button class="btn pri sm" id="c-add">${icon('plus')} Isi capaian</button>` : ro())}
     ${cpl.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>CPL</th>${K.angkatan.map(a => `<th class="num">Angkatan ${esc(a)}</th>`).join('')}<th>Status</th></tr></thead><tbody>
-      ${baris.map(h => `<tr><td><b>${esc(h.c.kode)}</b><div class="small muted">${esc(short(h.c.teks, 80))}</div></td>
+      ${baris.map(h => `<tr><td><b>${esc(h.c.kode)}</b><div class="small muted" style="white-space:normal">${esc(h.c.teks)}</div></td>
         ${K.angkatan.map(a => { const x = h.per.find(q => q.angkatan === a); return x ? `<td class="num ${ed ? 'click' : ''}" ${ed ? `data-cap="${esc(x.id)}"` : ''}><b style="color:${x.persen >= K.krit ? '#0f8a5f' : '#b42335'}">${fmt(x.persen, 1)}%</b><div class="small muted">${x.lulus}/${x.n}${x.dari === 'PI' ? ' · PI terendah' : ''}</div></td>` : '<td class="num muted">–</td>'; }).join('')}
         <td>${!h.terukur ? stTag('na', 'Belum diukur') : h.ok ? stTag('ok', 'Memenuhi') : stTag('bad', 'Di bawah kriteria')}</td></tr>`).join('')}
     </tbody></table></div>` : '<div class="empty">CPL prodi belum ada. Isi dulu di menu Capaian Pembelajaran Lulusan.</div>'}

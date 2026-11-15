@@ -259,7 +259,7 @@ function cekTabel(root) {
     const t = w.querySelector(':scope > table.tbl'); if (!t || t.classList.contains('mx') || w.closest('.rps-cq')) return;
     if (!labelTabel(t)) return;
     w.classList.remove('kartu');
-    if (t.scrollWidth > w.clientWidth + 4) w.classList.add('kartu');
+    if (t.scrollWidth > w.clientWidth + 4 || t.getBoundingClientRect().right > document.documentElement.clientWidth + 2) w.classList.add('kartu');
   });
 }
 function pasangTabel(view) {

@@ -100,6 +100,9 @@ export const DB = {
     if (mode === 'firebase') await fs.collection(PFX + col).doc(String(doc.id)).set(JSON.parse(JSON.stringify(doc)));
     else lsSet(LS + col, JSON.stringify(all));
   },
+  /** Koleksi lintas aplikasi (SIMANTAP): nama koleksi lengkap, tanpa awalan otomatis. Hanya aktif di mode Firestore. */
+  async tulisLuar(col, doc) { if (mode !== 'firebase') return false; await fs.collection(col).doc(String(doc.id)).set(JSON.parse(JSON.stringify(doc))); return true; },
+  async bacaLuar(col) { if (mode !== 'firebase') return []; try { const snap = await fs.collection(col).get(); return snap.docs.map(d => d.data()); } catch (e) { console.warn('Koleksi ' + col + ' tidak terbaca:', e.message); return []; } },
   async del(col, id, all) {
     if (mode === 'firebase') await fs.collection(PFX + col).doc(String(id)).delete();
     else lsSet(LS + col, JSON.stringify(all));

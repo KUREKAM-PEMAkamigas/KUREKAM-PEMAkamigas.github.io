@@ -47,3 +47,6 @@ Menu **Data Induk & Pengaturan > Impor & ekspor**:
 ## Panduan 10 indikator
 
 Menu **Panduan 10 Indikator**: prinsip, alur empat langkah, pembagian peran, dan kartu tiap indikator (tujuan, langkah, contoh bentuk isian, bukti, penanggung jawab usulan, cara aplikasi menilai, status prodi saat ini). Isi ada di `assets/js/panduan.js`. Butir kompetensi lulusan IABEE kini sepuluh (a sampai j).
+
+## Sinkron otomatis dengan SIMANTAP
+KUREKAM menulis ringkasan 10 indikator IABEE per prodi ke koleksi `kur_umpan` (satu dokumen per prodi, id = kode prodi), otomatis beberapa detik setelah data tersimpan, dan lewat tombol "Kirim sekarang" di menu Kesiapan IABEE. SIMANTAP membacanya. Temuan AMI di koleksi `indikator` SIMANTAP dibaca balik di menu yang sama. Aturan Firestore harus mengizinkan pengguna masuk membaca dan menulis `kur_umpan`.

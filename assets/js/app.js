@@ -3,6 +3,7 @@ import { APP, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
 import { DB } from './db.js';
 import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
+import { jadwalkanUmpan } from './sinkron.js';
 import { icon } from './icons.js';
 import { disposeAll, tilt } from './charts.js';
 import { disposeHero } from './hero3d.js';
@@ -103,16 +104,19 @@ export async function save(col, doc, aksi) {
   const arr = S[col]; const i = arr.findIndex(x => x.id === doc.id);
   if (i >= 0) arr[i] = doc; else arr.push(doc);
   try { await DB.put(col, doc, arr); } catch (e) { toast('Gagal menyimpan: ' + e.message); return; }
+  if (col !== 'log') jadwalkanUmpan();
   if (aksi) await addLog(aksi);
 }
 export async function saveMany(col, docs, aksi) {
   docs.forEach(doc => { const i = S[col].findIndex(x => x.id === doc.id); if (i >= 0) S[col][i] = doc; else S[col].push(doc); });
   try { if (DB.mode === 'firebase') { for (const d of docs) await DB.put(col, d, S[col]); } else await DB.put(col, docs[0] || {}, S[col]); } catch (e) { toast('Gagal menyimpan: ' + e.message); }
+  jadwalkanUmpan();
   if (aksi) await addLog(aksi);
 }
 export async function remove(col, id, aksi) {
   S[col] = S[col].filter(x => x.id !== id);
   try { await DB.del(col, id, S[col]); } catch (e) { toast('Gagal menghapus: ' + e.message); }
+  jadwalkanUmpan();
   if (aksi) await addLog(aksi);
 }
 export async function saveSettings() { const doc = Object.assign({ id: 'app' }, S.settings); try { await DB.put('settings', doc, [doc]); } catch (e) { toast('Gagal menyimpan pengaturan'); } }

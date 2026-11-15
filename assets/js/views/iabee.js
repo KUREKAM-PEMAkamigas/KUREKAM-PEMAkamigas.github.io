@@ -4,6 +4,8 @@ import { APP, BUTIR_IABEE, INDIKATOR_IABEE } from '../config.js';
 import { chart, AX } from '../charts.js';
 import { detect, badge } from '../bloom.js';
 import { byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, kompetensiInti, lulusanRekap, HURUF_IABEE } from '../rules.js';
+import { kirimUmpan, temuanAmi } from '../sinkron.js';
+import { DB } from '../db.js';
 import { head, formDrawer, ro, kpi, animateCounts, prodiName, short, stTag, prodiTag, unduh, loadXLSX } from './ui.js';
 
 const ST_TEKS = { ok: 'Sesuai target', near: 'Sebagian', bad: 'Jauh dari target', na: 'Belum diukur' };
@@ -145,6 +147,9 @@ export function kesiapanView(el) {
     <div class="card">${head('Indikator 1 dan 2 per prodi', 'Persentase menuju target 100%', 'pulse', '#0ea5e9')}<div class="chart" id="c-12"></div></div>
   </div>
   <div class="card" style="margin-top:18px">${head('Kompetensi dosen untuk mata kuliah inti · ' + cur.p.id, 'Pengampu dicocokkan dengan bidang S1, S2, S3, dan sertifikasi. Kata kunci diisi pada formulir MK. Tanpa NIP.', 'user', '#f5a524')}${kompetensiTabel(cur.p.id)}</div>
+  <div class="card" style="margin-top:18px">${head('Sinkron otomatis dengan SIMANTAP', 'Tanpa impor atau ekspor. Setiap data KUREKAM berubah, ringkasan 10 indikator terkirim sendiri dan terbaca di SIMANTAP.', 'link', '#10b981', `<button class="btn pri sm" id="sk-kirim">${icon('check')} Kirim sekarang</button>`)}
+    <div class="small muted" id="sk-st">${DB.mode === 'firebase' ? 'Basis data bersama aktif. Pengiriman otomatis berjalan beberapa detik setelah perubahan tersimpan.' : 'Basis data bersama belum aktif (mode lokal), sehingga belum ada yang terkirim.'}</div>
+    <h4 style="margin:14px 0 6px">Temuan AMI dari SIMANTAP · ${cur.p.id}</h4><div id="sk-ami" class="small muted">Memuat…</div></div>
   <div class="card" style="margin-top:18px">${head('Ekspor triwulan untuk SIMANTAP', 'Berisi angka agregat 10 indikator untuk lima prodi. Tanpa nama, NIP, NIM, atau nilai per mahasiswa.', 'download', '#14b8a6')}
     <div class="filters"><select class="inp" id="x-th">${[0, 1, 2].map(k => triwulanIni().tahun - k).map(t => `<option ${t === triwulanIni().tahun ? 'selected' : ''}>${t}</option>`).join('')}</select><select class="inp" id="x-tw">${[1, 2, 3, 4].map(q => `<option value="${q}" ${q === triwulanIni().tw ? 'selected' : ''}>Triwulan ${q}</option>`).join('')}</select>
       <button class="btn pri sm" id="x-json">${icon('download')} Unduh JSON</button><button class="btn sm" id="x-xls">${icon('download')} Unduh Excel</button></div>
@@ -154,6 +159,11 @@ export function kesiapanView(el) {
   animateCounts(el);
   el.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (ctx.kunci && ctx.role === 'prodi' && ctx.akun && ctx.akun.prodi) { toast('Akun prodi hanya dapat melihat rincian prodinya sendiri. Ringkasan lima prodi tetap tampil di tabel.'); return; } ctx.prodi = b.dataset.p; saveCtx(); rerender(); });
   el.querySelector('#cetak').onclick = cetak;
+  el.querySelector('#sk-kirim').onclick = async () => { const r = await kirimUmpan(); el.querySelector('#sk-st').textContent = r.ok ? (r.tanpaPerubahan ? 'Sudah terkirim, tidak ada perubahan baru.' : `Terkirim untuk ${r.n} prodi pada ${new Date().toLocaleTimeString('id-ID')}.`) : 'Belum terkirim: ' + r.alasan; toast(r.ok ? 'Umpan SIMANTAP terkirim' : 'Umpan belum terkirim'); };
+  (async () => { const box = el.querySelector('#sk-ami'); const rows = await temuanAmi(cur.p.id); const ada = new Set(S.tl.map(t => t.amiId).filter(Boolean));
+    box.innerHTML = rows.length ? rows.map(r => `<div style="padding:6px 0;border-top:1px solid var(--line,#0001)"><b>${esc(r.kode)}</b> · ${esc(r.temuan)}<div>${esc(r.teks)}</div>${r.uraian ? `<div class="muted">${esc(r.uraian)}</div>` : ''}${can('susun', { prodi: cur.p.id }) ? (ada.has(r.id) ? '<span class="tag" style="--c:#10b981">Sudah dicatat</span>' : `<button class="btn sm" data-ami="${esc(r.id)}">Catat sebagai tindak lanjut</button>`) : ''}</div>`).join('') : (DB.mode === 'firebase' ? 'Belum ada temuan AMI untuk prodi ini.' : 'Tersedia setelah basis data bersama aktif.');
+    box.querySelectorAll('[data-ami]').forEach(b => b.onclick = async () => { const r = rows.find(x => x.id === b.dataset.ami);
+      await save('tl', { id: uid('TL'), prodi: cur.p.id, tgl: new Date().toISOString().slice(0, 10), status: 'rencana', amiId: r.id, temuan: `Temuan AMI (${r.temuan}) pada indikator ${r.kode}: ${r.teks}${r.uraian ? '. ' + r.uraian : ''}`, tindakan: '' }, `Catat temuan AMI ${r.kode} sebagai tindak lanjut ${cur.p.id}`); toast('Dicatat di Capaian CPL & Tindak Lanjut'); rerender(); }); })();
   const per = () => `${el.querySelector('#x-th').value}-T${el.querySelector('#x-tw').value}`;
   el.querySelector('#x-json').onclick = async () => { const pr = per(); unduh(new Blob([JSON.stringify(umpanIabee(pr), null, 2)], { type: 'application/json' }), `kurekam-iabee-${pr}.json`); await addLog(`Ekspor kesiapan IABEE ${pr} (JSON)`); toast('Berkas JSON diunduh'); };
   el.querySelector('#x-xls').onclick = async () => { const pr = per(); try { await eksporExcel(pr); await addLog(`Ekspor kesiapan IABEE ${pr} (Excel)`); toast('Berkas Excel diunduh'); } catch (e) { toast('Ekspor gagal: ' + e.message); } };

@@ -122,6 +122,8 @@ function tParam(el, ed, adm) {
         <div class="pfrow"><span>Pendidikan umum maksimal</span>${num('p-umum', P.pendidikanUmumMax)}<small>% (IABEE 2.1.1)</small></div>
         <div class="pfrow"><span>Matematika dan sains minimal</span>${num('p-mat', P.matSainsMin)}<small>SKS (LAM Teknik butir 19)</small></div>
         <div class="pfrow"><span>Porsi jam praktik</span><span class="duo">${num('p-prmin', P.praktikMin)}${num('p-prmax', P.praktikMax)}</span><small>% (LAM Teknik butir 18)</small></div>
+        <div class="pfrow"><span>Kriteria ketercapaian PI dan CPL</span><span class="duo">${num('p-pipct', P.piMinPersen)}${num('p-pinil', P.piMinNilai)}</span><small>% mahasiswa dengan nilai minimal</small></div>
+        <div class="pfrow"><span>Jumlah PI per CPL</span><span class="duo">${num('p-pimin', P.piPerCplMin)}${num('p-pimax', P.piPerCplMax)}</span><small>minimal dan maksimal</small></div>
       </div></div>
   </div>
   <div class="card" style="margin-top:18px">${head('Kerangka per semester', 'Rentang wajib yang seragam untuk semua prodi (Pedoman Bab IV)', 'grid4', '#6366f1')}
@@ -135,7 +137,7 @@ function tParam(el, ed, adm) {
   el.querySelector('#p-save').onclick = async () => {
     const ker = {}; for (let s = 1; s <= 8; s++) ker[s] = P.kerangka[s].map((_, i) => v(`k-${s}-${i}`));
     if (!(v('p-t') > 0) || GK.some(g => !(v('p-' + g) > 0))) { toast('Durasi harus lebih dari nol'); return; }
-    S.settings.param = { menitTeori: v('p-t'), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), kerangka: ker };
+    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), kerangka: ker };
     S.settings.jp = { dur: v('j-dur') || JP_DEFAULT.dur, perDay: v('j-day') || JP_DEFAULT.perDay, days: v('j-days') || JP_DEFAULT.days };
     await saveSettings(); await addLog('Ubah parameter kurikulum'); toast('Parameter tersimpan'); rerender();
   };

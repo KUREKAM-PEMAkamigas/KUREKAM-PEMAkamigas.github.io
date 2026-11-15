@@ -4,13 +4,13 @@ import { APP, ACUAN } from '../config.js';
 import { chart, AX, gaugeOption } from '../charts.js';
 import { mountPyramid } from '../hero3d.js';
 import { LEVELS, KKO, DOMAIN, badge } from '../bloom.js';
-import { cekStruktur, cekTrace, bloomAudit, struktur, progres, param, fmt, byProdi, sksOf, jpOf, trace } from '../rules.js';
+import { cekIabee, cekStruktur, cekTrace, bloomAudit, struktur, progres, param, fmt, byProdi, sksOf, jpOf, trace } from '../rules.js';
 import { usulanProdi } from '../usulan.js';
 import { head, formDrawer, kTag, statusTag, prodiTag, prodiName, kpi, animateCounts, short, tanya, unduh } from './ui.js';
 
 /* ================= Pemeriksa kurikulum ================= */
 export function periksaView(el) {
-  const ck = cekStruktur(S, ctx.prodi).concat(cekTrace(S, ctx.prodi));
+  const ck = cekStruktur(S, ctx.prodi).concat(cekTrace(S, ctx.prodi), cekIabee(S, ctx.prodi));
   const n = { ok: ck.filter(c => c.k === 'ok').length, near: ck.filter(c => c.k === 'near').length, bad: ck.filter(c => c.k === 'bad').length };
   const grp = Array.from(new Set(ck.map(c => c.grp)));
   let only = false;
@@ -91,7 +91,7 @@ export function revisiView(el) {
 /* ================= Laporan ================= */
 export function laporanView(el) {
   const P = param(S), p = S.prodi.find(x => x.id === ctx.prodi), R = struktur(S, ctx.prodi), mk = byProdi(S.mk, ctx.prodi), cpl = byProdi(S.cpl, ctx.prodi), pl = byProdi(S.pl, ctx.prodi);
-  const ck = cekStruktur(S, ctx.prodi).concat(cekTrace(S, ctx.prodi));
+  const ck = cekStruktur(S, ctx.prodi).concat(cekTrace(S, ctx.prodi), cekIabee(S, ctx.prodi));
   el.innerHTML = `
   <div class="filters no-print"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="x-csv">${icon('download')} Struktur MK (CSV)</button><button class="btn" id="x-sim">${icon('link')} Umpan indikator SIMANTAP (JSON)</button><button class="btn" id="x-all">${icon('db')} Cadangan data (JSON)</button></div>
   <div class="report"><div class="kop"><img src="assets/img/logo-pem-akamigas.png" alt=""><div class="t"><b>POLITEKNIK ENERGI DAN MINERAL AKAMIGAS</b><span>Dokumen Kurikulum ${APP.tahunKurikulum} · Program Sarjana Terapan</span></div><img src="assets/img/logo-esdm.png" alt=""></div>

@@ -1,10 +1,10 @@
 /* KUREKAM · Penyusunan: Visi & PL, CPL, BoK & BK, Mata Kuliah */
 import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, addLog } from '../app.js';
-import { KELOMPOK, KAT_IABEE, GRUP } from '../config.js';
+import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { detect } from '../bloom.js';
 import { badge } from '../bloom.js';
-import { byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
+import { iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
 import { head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar } from './ui.js';
 
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
@@ -54,8 +54,8 @@ export function cplView(el) {
   el.innerHTML = `
   <div class="grid g-21">
     <div class="card">${head('Capaian Pembelajaran Lulusan', prodiName() + ' · level dideteksi otomatis dari kata kerja operasional (Taksonomi Bloom)', 'target', '#0ea5e9', ed ? `<button class="btn pri sm" id="add">${icon('plus')} CPL</button>` : ro())}
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kode</th><th>Ranah</th><th>Rumusan</th><th>Bloom</th><th>PL</th><th>IABEE</th><th class="num">MK</th></tr></thead><tbody>
-      ${cpl.map((c, i) => { const b = detect(c.teks, RANAH_HINT[c.ranah]); return `<tr class="${ed ? 'click' : ''}" data-id="${c.id}"><td><b>${c.kode}</b></td><td><span class="tag" style="--c:${PAL[['S', 'P', 'KU', 'KK'].indexOf(c.ranah)]}">${RANAH[c.ranah] || c.ranah}</span></td><td>${esc(c.teks)}</td><td>${b ? badge(b.code) : badge(null)}${b && b.kabur ? '<div class="small" style="color:#b45309">kurang terukur</div>' : ''}</td><td class="small">${(c.pl || []).map(id => (S.pl.find(x => x.id === id) || {}).kode).join(', ') || '<span class="st bad">–</span>'}</td><td class="small">${esc(c.iabee || '')}</td><td class="num"><b style="color:${dukung[i] >= 3 ? '#047857' : dukung[i] ? '#b45309' : '#b42335'}">${dukung[i]}</b></td></tr>`; }).join('')}
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kode</th><th>Ranah</th><th>Rumusan</th><th>Bloom</th><th>PL</th><th>IABEE</th><th class="num">PI</th><th class="num">MK</th></tr></thead><tbody>
+      ${cpl.map((c, i) => { const b = detect(c.teks, RANAH_HINT[c.ranah]); return `<tr class="${ed ? 'click' : ''}" data-id="${c.id}"><td><b>${c.kode}</b></td><td><span class="tag" style="--c:${PAL[['S', 'P', 'KU', 'KK'].indexOf(c.ranah)]}">${RANAH[c.ranah] || c.ranah}</span></td><td>${esc(c.teks)}</td><td>${b ? badge(b.code) : badge(null)}${b && b.kabur ? '<div class="small" style="color:#b45309">kurang terukur</div>' : ''}</td><td class="small">${(c.pl || []).map(id => (S.pl.find(x => x.id === id) || {}).kode).join(', ') || '<span class="st bad">–</span>'}</td><td class="small">${iabeeOf(c).map(k => `(${k})`).join(' ') || '<span class="st bad">–</span>'}</td><td class="num">${(n => `<b style="color:${n >= 2 && n <= 4 ? '#047857' : n ? '#b45309' : '#b42335'}">${n}</b>`)(piOfCpl(S, c.id).length)}</td><td class="num"><b style="color:${dukung[i] >= 3 ? '#047857' : dukung[i] ? '#b45309' : '#b42335'}">${dukung[i]}</b></td></tr>`; }).join('')}
       </tbody></table></div>
     </div>
     <div class="grid" style="align-content:start">
@@ -67,10 +67,10 @@ export function cplView(el) {
     series: [{ type: 'bar', data: dukung.map(v => ({ value: v, itemStyle: { color: v >= 3 ? '#10b981' : v ? '#f5a524' : '#f0616d', borderRadius: [0, 8, 8, 0] } })), barWidth: 14, label: { show: true, position: 'right', fontSize: 11 }, markLine: { symbol: 'none', data: [{ xAxis: 3 }], lineStyle: { color: '#8b5cf6', type: 'dashed' }, label: { formatter: 'min 3' } } }] });
   const lv = {}; cpl.forEach(c => { const b = detect(c.teks, RANAH_HINT[c.ranah]); const k = b ? b.code : '?'; lv[k] = (lv[k] || 0) + 1; });
   chart(el.querySelector('#c-r'), { tooltip: {}, series: [{ type: 'sunburst', radius: ['18%', '92%'], data: Object.keys(RANAH).map((r, i) => ({ name: r, itemStyle: { color: PAL[i] }, children: Object.entries(cpl.filter(c => c.ranah === r).reduce((a, c) => { const b = detect(c.teks, RANAH_HINT[c.ranah]); const k = b ? b.code : '?'; a[k] = (a[k] || 0) + 1; return a; }, {})).map(([k, v]) => ({ name: k, value: v })) })), label: { fontSize: 10 } }] });
-  const form = (x = { ranah: 'KK', pl: [] }) => formDrawer({ title: x.id ? 'Ubah CPL ' + x.kode : 'CPL baru', sub: prodiName(), obj: x,
+  const form = (x = { ranah: 'KK', pl: [], iabee: [] }) => formDrawer({ title: x.id ? 'Ubah CPL ' + x.kode : 'CPL baru', sub: prodiName(), obj: { ...x, iabee: iabeeOf(x) },
     fields: [{ k: 'kode', label: 'Kode', ph: 'KK5' }, { k: 'ranah', label: 'Ranah', type: 'select', opts: Object.entries(RANAH).map(([v, t]) => ({ v, t })) },
       { k: 'teks', label: 'Rumusan CPL', type: 'textarea', rows: 3, live: liveBloom(() => RANAH_HINT[document.querySelector('[name=ranah]').value]) },
-      { k: 'pl', label: 'Mendukung profil lulusan', type: 'multi', opts: opts(pl) }, { k: 'iabee', label: 'Butir student outcome IABEE (huruf)', ph: 'mis. a, c' }],
+      { k: 'pl', label: 'Mendukung profil lulusan', type: 'multi', opts: opts(pl) }, { k: 'iabee', label: 'Butir kompetensi lulusan IABEE (boleh lebih dari satu)', type: 'multi', opts: BUTIR_IABEE.map(b => ({ v: b.k, t: `(${b.k}) ${b.ringkas}`, title: b.teks })), help: 'Arahkan kursor ke butir untuk membaca rumusan lengkapnya (Kriteria IABEE 1.2.2).' }],
     onSave: async (o) => { if (!o.kode || !o.teks) return 'Kode dan rumusan wajib diisi.'; if (!o.id && cpl.some(c => c.kode === o.kode)) return 'Kode sudah dipakai.'; o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('cpl', o, `Simpan CPL ${o.kode} (${ctx.prodi})`); rerender(); },
     onDelete: x.id ? async () => { await remove('cpl', x.id, `Hapus CPL ${x.kode}`); rerender(); } : null });
   if (ed) { el.querySelector('#add').onclick = () => form(); el.querySelectorAll('tr.click').forEach(r => r.onclick = () => form({ ...S.cpl.find(c => c.id === r.dataset.id) })); }
@@ -131,24 +131,26 @@ export function mkView(el) {
   </div>`;
   const draw = () => {
     const rows = all.filter(m => (!st.smt || m.smt === +st.smt) && (!st.kel || grupOf(m) === st.kel) && (!st.q || (m.nama + m.kode).toLowerCase().includes(st.q))).sort((a, b) => a.smt - b.smt || a.kode.localeCompare(b.kode));
-    el.querySelector('#t-mk').innerHTML = `<thead><tr><th>Smt</th><th>Kode</th><th>Mata kuliah</th><th>Kelompok</th><th class="num">T</th><th class="num">P</th><th class="num">SKS</th><th class="num">JP/mg</th><th>Kategori IABEE</th><th>CPL</th><th>BK</th><th>Prasyarat</th></tr></thead><tbody>
-    ${rows.map(m => `<tr class="${m.kunci ? 'locked' : ''} ${ed && (!m.kunci || ['admin', 'developer'].includes(ctx.role)) ? 'click' : ''}" data-id="${m.id}"><td class="num">${m.smt}</td><td class="small">${esc(m.kode)}</td><td><b>${esc(m.nama)}</b>${m.kunci ? `<div><span class="tag" style="--c:#64748b">${icon('info')} ${esc(m.kunci)}</span></div>` : ''}</td><td><span class="tag" style="--c:${warnaGrup(grupOf(m))}">${esc(m.kel)}</span></td><td class="num">${m.T}</td><td class="num">${m.P}</td><td class="num"><b>${sksOf(m)}</b></td><td class="num">${fmt(jpOf(m, P), 2)}</td><td class="small">${esc(m.kat)}</td><td class="small">${(m.cpl || []).map(id => (S.cpl.find(c => c.id === id) || {}).kode).join(', ') || '<span class="st bad">–</span>'}</td><td class="small">${(m.bk || []).map(id => (S.bk.find(c => c.id === id) || {}).kode).join(', ')}</td><td class="small">${(m.prasyarat || []).map(id => short((S.mk.find(c => c.id === id) || {}).nama, 24)).join(', ')}</td></tr>`).join('')}
-    <tr class="sum"><td colspan="4">Jumlah (${rows.length} MK)</td><td class="num">${rows.reduce((a, m) => a + m.T, 0)}</td><td class="num">${rows.reduce((a, m) => a + m.P, 0)}</td><td class="num">${rows.reduce((a, m) => a + sksOf(m), 0)}</td><td class="num">${fmt(rows.reduce((a, m) => a + jpOf(m, P), 0), 1)}</td><td colspan="4"></td></tr></tbody>`;
-    if (ed) el.querySelectorAll('#t-mk tr.click').forEach(r => r.onclick = () => form({ ...S.mk.find(m => m.id === r.dataset.id) }));
+    el.querySelector('#t-mk').innerHTML = `<thead><tr><th>Smt</th><th>Kode</th><th>Mata kuliah</th><th>Kelompok</th><th class="num">T</th><th class="num">P</th><th class="num">SKS</th><th class="num">JP/mg</th><th>Kategori IABEE</th><th title="Mata kuliah inti untuk asesmen CPL (IABEE)">Inti</th><th>CPL</th><th>BK</th><th>Prasyarat</th></tr></thead><tbody>
+    ${rows.map(m => `<tr class="${m.kunci ? 'locked' : ''} ${ed && (!m.kunci || ['admin', 'developer'].includes(ctx.role)) ? 'click' : ''}" data-id="${m.id}"><td class="num">${m.smt}</td><td class="small">${esc(m.kode)}</td><td><b>${esc(m.nama)}</b>${m.kunci ? `<div><span class="tag" style="--c:#64748b">${icon('info')} ${esc(m.kunci)}</span></div>` : ''}</td><td><span class="tag" style="--c:${warnaGrup(grupOf(m))}">${esc(m.kel)}</span></td><td class="num">${m.T}</td><td class="num">${m.P}</td><td class="num"><b>${sksOf(m)}</b></td><td class="num">${fmt(jpOf(m, P), 2)}</td><td class="small">${esc(m.kat)}</td><td>${ed ? `<label class="inti-tg" title="Tandai sebagai mata kuliah inti"><input type="checkbox" data-inti="${m.id}" ${m.inti ? 'checked' : ''}> ${m.inti ? 'Inti' : ''}</label>` : (m.inti ? '<span class="tag" style="--c:#8b5cf6">Inti</span>' : '')}</td><td class="small">${(m.cpl || []).map(id => (S.cpl.find(c => c.id === id) || {}).kode).join(', ') || '<span class="st bad">–</span>'}</td><td class="small">${(m.bk || []).map(id => (S.bk.find(c => c.id === id) || {}).kode).join(', ')}</td><td class="small">${(m.prasyarat || []).map(id => short((S.mk.find(c => c.id === id) || {}).nama, 24)).join(', ')}</td></tr>`).join('')}
+    <tr class="sum"><td colspan="4">Jumlah (${rows.length} MK)</td><td class="num">${rows.reduce((a, m) => a + m.T, 0)}</td><td class="num">${rows.reduce((a, m) => a + m.P, 0)}</td><td class="num">${rows.reduce((a, m) => a + sksOf(m), 0)}</td><td class="num">${fmt(rows.reduce((a, m) => a + jpOf(m, P), 0), 1)}</td><td></td><td class="num">${rows.filter(m => m.inti).length}</td><td colspan="3"></td></tr></tbody>`;
+    if (ed) el.querySelectorAll('#t-mk tr.click').forEach(r => r.onclick = (e) => { if (e.target.closest('.inti-tg')) return; form({ ...S.mk.find(m => m.id === r.dataset.id) }); });
+    if (ed) el.querySelectorAll('[data-inti]').forEach(i => { i.onclick = (e) => e.stopPropagation(); i.onchange = async () => { const m = S.mk.find(x => x.id === i.dataset.inti); const doc = { ...m, inti: i.checked }; await save('mk', doc, `${i.checked ? 'Tandai' : 'Lepas'} MK inti ${m.nama} (${ctx.prodi})`); Object.assign(m, doc); draw(); }; });
   };
   el.querySelector('#q').oninput = e => { st.q = e.target.value.toLowerCase(); draw(); };
   el.querySelector('#f-smt').onchange = e => { st.smt = e.target.value; draw(); };
   el.querySelector('#f-kel').onchange = e => { st.kel = e.target.value; draw(); };
   draw(); animateCounts(el);
-  const form = (x = { smt: 1, kel: 'MKK - kompetensi penciri', kat: 'Muatan spesifik', T: 2, P: 0, cpl: [], bk: [], prasyarat: [], lokasi: 'Kampus' }) => formDrawer({ title: x.id ? 'Ubah mata kuliah' : 'Mata kuliah baru', sub: prodiName(), obj: x, wide: true,
+  const form = (x = { smt: 1, kel: 'MKK - kompetensi penciri', kat: 'Muatan spesifik', T: 2, P: 0, cpl: [], bk: [], prasyarat: [], lokasi: 'Kampus' }) => formDrawer({ title: x.id ? 'Ubah mata kuliah' : 'Mata kuliah baru', sub: prodiName(), obj: { ...x, inti: x.inti ? '1' : '' }, wide: true,
     fields: [{ k: 'kode', label: 'Kode MK' }, { k: 'nama', label: 'Nama mata kuliah' }, { k: 'smt', label: 'Semester', type: 'select', opts: [1, 2, 3, 4, 5, 6, 7, 8].map(v => ({ v, t: 'Semester ' + v })) },
       { k: 'kel', label: 'Kelompok', type: 'select', opts: KELOMPOK.map(k => ({ v: k.id, t: k.id })) }, { k: 'kat', label: 'Kategori IABEE', type: 'select', opts: KAT_IABEE.map(v => ({ v, t: v })) },
       { k: 'lokasi', label: 'Lokasi', type: 'select', opts: ['Kampus', 'Laboratorium', 'Industri'].map(v => ({ v, t: v })) },
+      { k: 'inti', label: 'Mata kuliah inti (asesmen CPL)', type: 'select', opts: [{ v: '', t: 'Bukan MK inti' }, { v: '1', t: 'Ya, MK inti' }], help: 'MK inti menjadi tempat utama pengukuran CPL melalui PI. Biasanya MK kompetensi penciri dan capstone.' },
       { k: 'T', label: 'SKS teori', type: 'number', live: () => jpHelp() }, { k: 'P', label: 'SKS praktik (1–3)', type: 'number', live: () => jpHelp() },
       { k: 'bk', label: 'Bahan kajian', type: 'multi', opts: opts(byProdi(S.bk, ctx.prodi)) }, { k: 'cpl', label: 'CPL yang didukung', type: 'multi', opts: opts(byProdi(S.cpl, ctx.prodi), c => c.teks) },
       { k: 'prasyarat', label: 'Prasyarat', type: 'multi', opts: all.filter(m => m.id !== x.id && m.smt < +x.smt + 1).map(m => ({ v: m.id, t: short(m.nama, 30) })) }],
     onSave: async (o) => {
-      o.smt = +o.smt; o.T = +o.T || 0; o.P = +o.P || 0;
+      o.smt = +o.smt; o.T = +o.T || 0; o.P = +o.P || 0; o.inti = o.inti === true || o.inti === '1';
       if (!o.nama) return 'Nama MK wajib diisi.'; if (o.P > 3 && !/magang|tugas akhir/i.test(o.kel)) return 'MK praktik dibatasi 1–3 SKS (Buku Pedoman).';
       o.id = o.id || uid(ctx.prodi + '-MK'); o.prodi = ctx.prodi; o.kode = o.kode || `${ctx.prodi}${o.smt}${String(all.length + 1).padStart(2, '0')}`;
       await save('mk', o, `Simpan MK ${o.nama} (${ctx.prodi})`); rerender();

@@ -24,3 +24,10 @@ Menu **Data Induk & Pengaturan > Impor & ekspor**:
 - **Impor data dosen**: membaca berkas DUK (lembar "DOSEN PER PRODI") atau Template_Dosen.xlsx. Hanya nama, NIP, NIDN, jabatan, pendidikan, bidang ilmu, dan prodi yang dibaca. Kolom pribadi (NIK, telepon, tanggal lahir, keluarga, gaji) tidak dibaca dan tidak disimpan. Berkas diproses di peramban, tidak dikirim ke mana pun.
 - **Impor penugasan**: dosen dapat mengampu MK di prodi mana pun (dosen milik UPPS). Homebase hanya penanda asal.
 - Jangan menaruh berkas DUK di repositori ini. Data dosen tersimpan di peramban (mode lokal) atau Firestore bila dihubungkan.
+
+## Kesiapan IABEE (Tahap 1, November 2026)
+- Koleksi baru `kur_pi`: indikator kinerja (PI) per CPL `{id, prodi, cpl, kode, teks, cpmk[], minPersen, minNilai}`. Kriteria bawaan 70% mahasiswa bernilai minimal 60 (Data Induk > parameter).
+- `cpl.iabee` kini daftar huruf butir (a) sampai (k) sesuai templat evaluasi diri IABEE 2024 (Sydney Accord). Data lama berbentuk teks tetap terbaca lewat `iabeeOf()`.
+- `mk.inti` (boolean) menandai mata kuliah inti untuk asesmen CPL.
+- Menu baru: Indikator Kinerja (PI) dan Kesiapan IABEE (10 indikator; tanpa data ditampilkan "Belum diukur"). Matriks Keterlacakan punya tab CPL × butir IABEE. Pemeriksa Kurikulum punya kelompok aturan Kesiapan IABEE.
+- Versi seed tidak dinaikkan agar data riil di Firestore tidak tertimpa.

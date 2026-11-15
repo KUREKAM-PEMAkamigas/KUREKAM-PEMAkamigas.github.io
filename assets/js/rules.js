@@ -1,5 +1,5 @@
 /* KUREKAM · Aturan Buku Pedoman, keterlacakan OBE, progres, dan beban dosen riil. */
-import { PARAM_DEFAULT, KELOMPOK, GRUP } from './config.js';
+import { PARAM_DEFAULT, KELOMPOK, GRUP, BUTIR_IABEE, INDIKATOR_IABEE } from './config.js';
 import { detect, lvNum, MIN_CPL, ANJURAN_SMT } from './bloom.js';
 
 export const KMAP = Object.fromEntries(KELOMPOK.map(k => [k.id, k]));
@@ -242,3 +242,82 @@ export function mkTanpaPengampu(S, paritas = 'ganjil') {
   return S.mk.filter(m => m.smt <= 6 && ((m.smt % 2 === 1) === (paritas === 'ganjil')) && !S.tugas.some(t => t.mk === m.id));
 }
 export const warnaGrup = (g) => (GRUP[g] || {}).c || '#64748b';
+
+/* ---------- Kesiapan IABEE: PI, butir (a)-(k), MK inti ---------- */
+export const HURUF_IABEE = BUTIR_IABEE.map(b => b.k);
+/** Butir IABEE pada CPL selalu dibaca sebagai daftar huruf. Data lama berupa teks ("a, c") tetap terbaca. */
+export function iabeeOf(c) {
+  const v = c && c.iabee;
+  const arr = Array.isArray(v) ? v : String(v || '').split(/[^a-zA-Z]+/);
+  return Array.from(new Set(arr.map(x => String(x).trim().toLowerCase()).filter(x => HURUF_IABEE.includes(x)))).sort();
+}
+export const piOfCpl = (S, cplId) => (S.pi || []).filter(p => p.cpl === cplId).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
+export const kriteriaPi = (p, P) => ({ persen: p && p.minPersen != null && p.minPersen !== '' ? +p.minPersen : P.piMinPersen, nilai: p && p.minNilai != null && p.minNilai !== '' ? +p.minNilai : P.piMinNilai });
+const labelCpmk = (S, c) => { const m = S.mk.find(x => x.id === c.mk); return { ...c, kode: `${m ? m.kode : c.mk}/${c.kode}` }; };
+export function piTrace(S, pid) {
+  const P = param(S);
+  const cpl = byProdi(S.cpl, pid), pi = byProdi(S.pi || [], pid), mk = byProdi(S.mk, pid), cpmk = byProdi(S.cpmk, pid);
+  const nPi = (c) => pi.filter(p => p.cpl === c.id).length;
+  const punyaPi = (c) => pi.some(p => (p.cpmk || []).includes(c.id));
+  const inti = mk.filter(m => m.inti);
+  const cpmkInti = cpmk.filter(c => inti.some(m => m.id === c.mk));
+  const butir = BUTIR_IABEE.map(b => ({ ...b, cpl: cpl.filter(c => iabeeOf(c).includes(b.k)) }));
+  return {
+    P, cpl, pi, mk, cpmk, inti, butir,
+    cplNoPi: cpl.filter(c => !nPi(c)),
+    cplPiDiLuar: cpl.filter(c => nPi(c) && (nPi(c) < P.piPerCplMin || nPi(c) > P.piPerCplMax)),
+    piNoCpmk: pi.filter(p => !(p.cpmk || []).some(id => cpmk.some(c => c.id === id))),
+    piNoCpl: pi.filter(p => !cpl.some(c => c.id === p.cpl)),
+    cpmkInti,
+    cpmkIntiNoPi: cpmkInti.filter(c => !punyaPi(c)).map(c => labelCpmk(S, c)),
+    intiNoCpmk: inti.filter(m => !cpmk.some(c => c.mk === m.id)),
+    intiLengkap: inti.filter(m => { const cs = cpmk.filter(c => c.mk === m.id); return cs.length && cs.every(punyaPi); }),
+    butirKosong: butir.filter(b => !b.cpl.length),
+    cplNoButir: cpl.filter(c => !iabeeOf(c).length)
+  };
+}
+export function cekIabee(S, pid) {
+  const t = piTrace(S, pid), P = t.P, L = (a) => a.map(x => x.kode).slice(0, 6).join(', ') + (a.length > 6 ? ', …' : '');
+  const row = (label, arr, acuan, k = 'bad', kosong = 'Tidak ada') => ({ grp: 'Kesiapan IABEE', label, val: arr.length ? `${arr.length}: ${L(arr)}` : kosong, target: '0', k: arr.length ? k : 'ok', acuan });
+  return [
+    row('CPL tanpa indikator kinerja (PI)', t.cplNoPi, 'IABEE 1.2, asesmen CPL'),
+    row(`CPL dengan jumlah PI di luar ${P.piPerCplMin}–${P.piPerCplMax}`, t.cplPiDiLuar, 'Pedoman asesmen CPL', 'near'),
+    row('PI tanpa CPMK', t.piNoCpmk, 'IABEE 2.1.2, rantai ukur CPL'),
+    t.inti.length ? row('Mata kuliah inti tanpa CPMK', t.intiNoCpmk, 'IABEE 2.1.2')
+      : { grp: 'Kesiapan IABEE', label: 'Mata kuliah inti sudah ditandai', val: 'Belum ada', target: '≥ 1 MK', k: 'near', acuan: 'Lampiran kesiapan IABEE' },
+    row('CPMK mata kuliah inti tanpa PI', t.cpmkIntiNoPi, 'IABEE 2.1.2, rantai ukur CPL'),
+    row('CPL tanpa butir IABEE', t.cplNoButir, 'IABEE 1.2.2'),
+    { grp: 'Kesiapan IABEE', label: 'Butir IABEE (a)–(k) yang belum dicakup CPL', val: t.butirKosong.length ? `${t.butirKosong.length}: ${t.butirKosong.map(b => '(' + b.k + ')').join(', ')}` : 'Semua tercakup', target: '0', k: t.butirKosong.length ? 'bad' : 'ok', acuan: 'IABEE 1.2.2' }
+  ];
+}
+/** Sepuluh indikator kesiapan per prodi. nilai null berarti belum diukur (bukan nol). */
+export function kesiapan(S, pid) {
+  const t = piTrace(S, pid), target = (S.settings && S.settings.targetIabee) || {};
+  const pct = (a, b) => b ? a / b * 100 : 0;
+  const st = (v) => v >= 99.5 ? 'ok' : v >= 50 ? 'near' : 'bad';
+  const belum = (ket) => ({ nilai: null, teks: 'Belum diukur', k: 'na', ket });
+  const hasil = {
+    1: (() => {
+      if (!t.cpl.length) return belum('CPL prodi belum ada.');
+      const cplPi = pct(t.cpl.length - t.cplNoPi.length, t.cpl.length);
+      if (!t.inti.length) return { nilai: cplPi, teks: `${fmt(cplPi)}% CPL ber-PI`, k: cplPi >= 50 ? 'near' : 'bad', ket: `${t.cpl.length - t.cplNoPi.length} dari ${t.cpl.length} CPL sudah punya PI. Mata kuliah inti belum ditandai, jadi pemetaan PI ke CPMK MK inti belum bisa dihitung.` };
+      const mi = pct(t.intiLengkap.length, t.inti.length);
+      return { nilai: Math.min(cplPi, mi), teks: `${fmt(cplPi)}% CPL ber-PI · ${fmt(mi)}% MK inti lengkap`, k: st(Math.min(cplPi, mi)), ket: `${t.cpl.length - t.cplNoPi.length} dari ${t.cpl.length} CPL punya PI. ${t.intiLengkap.length} dari ${t.inti.length} MK inti sudah memiliki CPMK yang seluruhnya terhubung ke PI.` };
+    })(),
+    2: (() => {
+      if (!t.cpl.length) return belum('CPL prodi belum ada.');
+      const ada = HURUF_IABEE.length - t.butirKosong.length, cplOk = t.cpl.length - t.cplNoButir.length;
+      const v = Math.min(pct(ada, HURUF_IABEE.length), pct(cplOk, t.cpl.length));
+      return { nilai: v, teks: `${ada} dari ${HURUF_IABEE.length} butir tercakup`, k: st(v), ket: `${cplOk} dari ${t.cpl.length} CPL sudah diberi butir IABEE.${t.butirKosong.length ? ' Butir belum tercakup: ' + t.butirKosong.map(b => '(' + b.k + ')').join(', ') + '.' : ''}` };
+    })(),
+    3: belum('Menunggu rekap capaian CPL per angkatan (angka agregat dari Excel prodi). Fitur impornya disiapkan pada tahap berikutnya.'),
+    4: belum('Dihitung dari rekap capaian CPL terhadap kriteria. Fitur impornya disiapkan pada tahap berikutnya.'),
+    5: (() => { const cap = t.mk.filter(m => /capstone/i.test(m.nama + ' ' + m.kel)); return belum(cap.length ? `Kurikulum memuat ${cap.length} MK capstone (${cap.reduce((a, m) => a + sksOf(m), 0)} SKS). Rubrik dan daftar proyek nyata dicatat pada tahap berikutnya.` : 'MK capstone belum ada di kurikulum prodi. Rubrik dan proyek nyata dicatat pada tahap berikutnya.'); })(),
+    6: belum('Menunggu data agregat lulusan dari Bagian Akademik (tahap berikutnya).'),
+    7: belum('Catatan tindak lanjut hasil CPL disiapkan pada tahap berikutnya dan terhubung ke menu Revisi.'),
+    8: belum('Menunggu ringkasan tracer dan survei pengguna dari CDC (tahap berikutnya).'),
+    9: belum('Dipantau melalui daftar periksa dokumen di SIMANTAP.'),
+    10: belum('Dihitung setelah data bidang keahlian dosen (S1, S2, S3, sertifikasi) dilengkapi pada tahap berikutnya.')
+  };
+  return INDIKATOR_IABEE.map(d => ({ ...d, target: target[d.no] || d.target, ...hasil[d.no] }));
+}

@@ -1,8 +1,8 @@
 /* KUREKAM · Peta kurikulum dan matriks keterlacakan */
 import { S, ctx, can, save, rerender, esc, icon, toast } from '../app.js';
-import { GRUP } from '../config.js';
+import { GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
-import { byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, jpRange, trace } from '../rules.js';
+import { byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, jpRange, trace, iabeeOf } from '../rules.js';
 import { head, ro, prodiName, short } from './ui.js';
 
 export function petaView(el) {
@@ -58,7 +58,7 @@ export function petaView(el) {
 }
 
 /* ================= Matriks ================= */
-const TABS = [['plcpl', 'PL × CPL'], ['cplbk', 'CPL × BK'], ['bkmk', 'BK × MK'], ['cplmk', 'CPL × MK'], ['cplcpmk', 'CPL × CPMK per MK']];
+const TABS = [['plcpl', 'PL × CPL'], ['cplbk', 'CPL × BK'], ['bkmk', 'BK × MK'], ['cplmk', 'CPL × MK'], ['cplcpmk', 'CPL × CPMK per MK'], ['cpliabee', 'CPL × butir IABEE']];
 let tab = 'cplmk';
 export function matriksView(el) {
   const ed = can('susun'), t = trace(S, ctx.prodi);
@@ -67,7 +67,8 @@ export function matriksView(el) {
     plcpl: { rows: cpl, cols: pl, has: (r, c) => (r.pl || []).includes(c.id), tog: (r, c) => ['cpl', r, 'pl', c.id], rl: r => `${r.kode}`, rt: r => r.teks, ct: c => c.nama },
     cplbk: { rows: bk, cols: cpl, has: (r, c) => (r.cpl || []).includes(c.id), tog: (r, c) => ['bk', r, 'cpl', c.id], rl: r => `${r.kode} ${short(r.nama, 34)}`, rt: r => r.nama, ct: c => c.teks },
     bkmk: { rows: mk, cols: bk, has: (r, c) => (r.bk || []).includes(c.id), tog: (r, c) => ['mk', r, 'bk', c.id], rl: r => `S${r.smt} · ${short(r.nama, 34)}`, rt: r => r.nama, ct: c => c.nama },
-    cplmk: { rows: mk, cols: cpl, has: (r, c) => (r.cpl || []).includes(c.id), tog: (r, c) => ['mk', r, 'cpl', c.id], rl: r => `S${r.smt} · ${short(r.nama, 34)}`, rt: r => r.nama, ct: c => c.teks }
+    cplmk: { rows: mk, cols: cpl, has: (r, c) => (r.cpl || []).includes(c.id), tog: (r, c) => ['mk', r, 'cpl', c.id], rl: r => `S${r.smt} · ${short(r.nama, 34)}`, rt: r => r.nama, ct: c => c.teks },
+    cpliabee: { rows: cpl, cols: BUTIR_IABEE.map(b => ({ id: b.k, kode: `(${b.k})`, teks: `(${b.k}) ${b.teks}` })), has: (r, c) => iabeeOf(r).includes(c.id), tog: (r, c) => ['cpl', r, 'iabee', c.id], rl: r => r.kode, rt: r => r.teks, ct: c => c.teks }
   };
   const warn = [[t.cplNoMk, 'CPL tanpa MK'], [t.cplNoBk, 'CPL tanpa BK'], [t.bkNoMk, 'BK belum dipakai MK'], [t.mkNoCpl, 'MK tanpa CPL'], [t.plNoCpl, 'PL tanpa CPL']].filter(x => x[0].length);
   let body;
@@ -79,7 +80,7 @@ export function matriksView(el) {
   } else {
     const m = M[tab];
     const colSum = m.cols.map(c => m.rows.filter(r => m.has(r, c)).length);
-    body = `<div class="tbl-wrap" style="max-height:640px"><table class="tbl mx"><thead><tr><th>${tab === 'plcpl' ? 'CPL' : tab === 'cplbk' ? 'Bahan kajian' : 'Mata kuliah'}</th>${m.cols.map(c => `<th class="mxh" title="${esc(m.ct(c))}">${c.kode}</th>`).join('')}<th class="num">Σ</th></tr></thead><tbody>
+    body = `<div class="tbl-wrap" style="max-height:640px"><table class="tbl mx"><thead><tr><th>${tab === 'plcpl' || tab === 'cpliabee' ? 'CPL' : tab === 'cplbk' ? 'Bahan kajian' : 'Mata kuliah'}</th>${m.cols.map(c => `<th class="mxh" title="${esc(m.ct(c))}">${c.kode}</th>`).join('')}<th class="num">Σ</th></tr></thead><tbody>
       ${m.rows.map((r, ri) => { const n = m.cols.filter(c => m.has(r, c)).length; return `<tr><td title="${esc(m.rt(r))}" class="${n ? '' : 'mxwarn'}">${esc(m.rl(r))}</td>${m.cols.map((c, ci) => `<td class="mxc ${m.has(r, c) ? 'on' : ''} ${ed ? 'ed' : ''}" data-r="${ri}" data-c="${ci}">${m.has(r, c) ? '●' : ''}</td>`).join('')}<td class="num"><b>${n}</b></td></tr>`; }).join('')}
       <tr class="sum"><td>Jumlah</td>${colSum.map(v => `<td class="num" style="text-align:center;color:${v ? 'inherit' : '#b42335'}">${v}</td>`).join('')}<td></td></tr></tbody></table></div>`;
   }
@@ -95,7 +96,7 @@ export function matriksView(el) {
     const m = M[tab];
     el.querySelectorAll('.mxc.ed').forEach(td => td.onclick = async () => {
       const r = m.rows[+td.dataset.r], c = m.cols[+td.dataset.c]; const [col, doc, key, id] = m.tog(r, c);
-      const arr = new Set(doc[key] || []); arr.has(id) ? arr.delete(id) : arr.add(id); doc[key] = Array.from(arr);
+      if (key === 'iabee') doc.iabee = iabeeOf(doc); const arr = new Set(doc[key] || []); arr.has(id) ? arr.delete(id) : arr.add(id); doc[key] = Array.from(arr);
       await save(col, doc); td.classList.toggle('on'); td.textContent = td.classList.contains('on') ? '●' : '';
     });
   }

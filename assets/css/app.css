@@ -552,3 +552,24 @@ body.side-open #sideBg { opacity: 1; pointer-events: auto; }
   .rps-cq .tbl td[data-l="Pertemuan"] { display: flex; align-items: baseline; gap: 8px; font-size: 15px; }
   .rps-cq .tbl td[data-l="Pertemuan"]::before { display: inline; }
 }
+
+/* Kesiapan IABEE: PI per CPL, daftar indikator, cetak satu bagian */
+.pi-cpl { border: 1px solid var(--line, #e2e8f0); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+.pi-h { display: flex; gap: 10px; align-items: flex-start; }
+.pi-h .pi-t { flex: 1 1 auto; min-width: 0; }
+.pi-row { display: flex; gap: 10px; padding: 8px 10px; margin-top: 8px; border-radius: 10px; background: rgba(99, 102, 241, .06); }
+.pi-row.click { cursor: pointer; } .pi-row.click:hover { background: rgba(99, 102, 241, .12); }
+.pi-k { font-weight: 700; color: #4f46e5; min-width: 52px; }
+.pi-cpl > .btn { margin-top: 8px; }
+.inti-tg { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; font-weight: 700; color: #6d28d9; cursor: pointer; white-space: nowrap; }
+.ind-list { display: grid; gap: 10px; }
+.ind { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border-left: 4px solid #94a3b8; background: rgba(148, 163, 184, .08); }
+.ind.ok { border-left-color: #10b981; } .ind.near { border-left-color: #f5a524; } .ind.bad { border-left-color: #f0616d; }
+.ind > div { flex: 1 1 auto; min-width: 0; }
+.ind-no { flex: 0 0 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--card-solid); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+#cetakLayer { display: none; }
+@media print {
+  body.cetak-sel > *:not(#cetakLayer) { display: none !important; }
+  body.cetak-sel #cetakLayer { display: block; }
+  #cetakLayer .tbl-wrap { overflow: visible; max-height: none; }
+}

@@ -17,9 +17,10 @@ import { periksaView, bloomView, revisiView, laporanView } from './views/evaluas
 import indukView from './views/induk.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
+import { piView, kesiapanView } from './views/iabee.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
@@ -147,6 +148,7 @@ export const ROUTES = [
   { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },
   { id: 'visi', t: 'Visi & Profil Lulusan', ic: 'flag', c: '#10b981', sec: 'Penyusunan Kurikulum', prodi: true, v: visiView },
   { id: 'cpl', t: 'Capaian Pembelajaran Lulusan', ic: 'target', c: '#0ea5e9', sec: 'Penyusunan Kurikulum', prodi: true, v: cplView },
+  { id: 'pi', t: 'Indikator Kinerja (PI)', sub: 'Pemecah CPL untuk asesmen', ic: 'pulse', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: piView },
   { id: 'bk', t: 'BoK & Bahan Kajian', ic: 'layers', c: '#8b5cf6', sec: 'Penyusunan Kurikulum', prodi: true, v: bkView },
   { id: 'mk', t: 'Mata Kuliah & SKS', ic: 'book', c: '#14b8a6', sec: 'Penyusunan Kurikulum', prodi: true, v: mkView },
   { id: 'peta', t: 'Peta Kurikulum', ic: 'grid4', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: petaView },
@@ -156,6 +158,7 @@ export const ROUTES = [
   { id: 'beban', t: 'Penugasan & Beban Dosen', ic: 'user', c: '#f5a524', sec: 'Beban Dosen & Prodi', v: bebanView },
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },
+  { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },

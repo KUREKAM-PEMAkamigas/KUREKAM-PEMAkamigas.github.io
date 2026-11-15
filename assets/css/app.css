@@ -616,10 +616,20 @@ body.side-open #sideBg { opacity: 1; pointer-events: auto; }
 }
 /* Tanpa geser kiri-kanan di layar sempit: peta semester, tab, dan rantai tahap dilipat ke baris berikutnya */
 @media (max-width: 1100px) { .peta { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); overflow-x: visible; } }
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .seg.scroll { flex-wrap: wrap; overflow-x: visible; }
   .chain { flex-wrap: wrap; overflow-x: visible; }
 }
+/* Bilah atas: lipat ke baris berikutnya sampai lebar 900, label dan pilihan prodi tidak boleh menyempit */
+@media (max-width: 900px) {
+  .top { flex-wrap: wrap; row-gap: 6px; }
+  .top > div:nth-child(2) { flex: 1 1 60%; min-width: 0; }
+  .top .sp { display: none; }
+}
+.top .role-box { flex: 0 0 auto; }
+.role-box .rl { white-space: nowrap; }
+#prodiSel { min-width: 78px; text-overflow: clip; }
+#roleSel { min-width: 110px; }
 
 /* Pengaman lebar layar: teks panjang dan anak grid tidak boleh melebarkan halaman. */
 .grid > *, #view > *, .card { min-width: 0; max-width: 100%; }

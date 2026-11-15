@@ -573,3 +573,50 @@ body.side-open #sideBg { opacity: 1; pointer-events: auto; }
   body.cetak-sel #cetakLayer { display: block; }
   #cetakLayer .tbl-wrap { overflow: visible; max-height: none; }
 }
+
+/* Grafik lebar (alur prasyarat, jaringan CPL) bisa digeser di layar sempit */
+.chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+
+/* Tabel menjadi kartu bila tidak muat (diatur pasangTabel di app.js) */
+@media screen {
+  .tbl-wrap.kartu { overflow: visible; max-height: none !important; }
+  .tbl-wrap.kartu > .tbl, .tbl-wrap.kartu > .tbl > tbody, .tbl-wrap.kartu > .tbl > tbody > tr { display: block; width: 100%; }
+  .tbl-wrap.kartu > .tbl > thead { display: none; }
+  .tbl-wrap.kartu > .tbl > tbody > tr { border: 1px solid var(--line); border-left: 4px solid var(--sky); border-radius: 14px; margin-bottom: 10px; padding: 8px 12px; background: var(--card-solid); }
+  .tbl-wrap.kartu > .tbl > tbody > tr.locked { border-left-color: #8b5cf6; }
+  .tbl-wrap.kartu > .tbl > tbody > tr.sum, .tbl-wrap.kartu > .tbl > tbody > tr.rentang { border-left-color: var(--emerald); background: rgba(16, 185, 129, .06); }
+  .tbl-wrap.kartu > .tbl > tbody > tr { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); column-gap: 14px; row-gap: 2px; }
+  .tbl-wrap.kartu > .tbl > tbody > tr > td { display: block; padding: 3px 0 !important; border: 0 !important; background: none !important; text-align: left !important; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+  .tbl-wrap.kartu > .tbl > tbody > tr > td.lebar, .tbl-wrap.kartu > .tbl > tbody > tr > td:not([data-l]), .tbl-wrap.kartu > .tbl > tbody > tr > td:first-child:has(b) { grid-column: 1 / -1; }
+  .tbl-wrap.kartu > .tbl > tbody > tr > td:empty { display: none; }
+  .tbl-wrap.kartu > .tbl > tbody > tr > td[data-l]::before { content: attr(data-l); display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); line-height: 1.3; }
+  .tbl-wrap.kartu > .tbl > tbody > tr > td[data-l=""]::before { content: none; }
+  .tbl-wrap.kartu > .tbl > tbody > tr > td > * { min-width: 0; }
+}
+/* Matriks tetap tabel, dipadatkan di layar sempit */
+@media screen and (max-width: 760px) {
+  table.mx td, table.mx th { padding: 4px 3px !important; font-size: 10.5px; }
+  table.mx td:first-child, table.mx th:first-child { max-width: 112px; min-width: 70px; white-space: normal; overflow-wrap: anywhere; }
+  .mxh, .mxc { min-width: 20px; }
+  table.mx .mxh { letter-spacing: 0; }
+  .tbl.mx .hide-sm { display: none; }
+}
+
+/* Judul kartu: tombol pindah ke baris bawah di layar sempit agar subjudul tidak terjepit */
+@media (max-width: 760px) {
+  .card-h { flex-wrap: wrap; row-gap: 8px; }
+  .card-h > div:not(.sp):not(.seg) { flex: 1 1 calc(100% - 60px); }
+  .card-h > .sp { display: none; }
+}
+@media (max-width: 900px) { .hero canvas.h3d { opacity: .5; } }
+@media (max-width: 760px) {
+  .subs .sub { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .subs .sub > :nth-child(1), .subs .sub > :nth-child(2) { grid-column: 1 / -1; }
+  .subs .sub > :nth-child(3) { justify-self: start; }
+}
+/* Tanpa geser kiri-kanan di layar sempit: peta semester, tab, dan rantai tahap dilipat ke baris berikutnya */
+@media (max-width: 1100px) { .peta { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); overflow-x: visible; } }
+@media (max-width: 760px) {
+  .seg.scroll { flex-wrap: wrap; overflow-x: visible; }
+  .chain { flex-wrap: wrap; overflow-x: visible; }
+}

@@ -17,11 +17,9 @@ export function petaView(el) {
   <div class="card">${head('Peta kurikulum ' + ctx.prodi, prodiName() + (ed ? ' · seret kartu MK ruang prodi untuk memindah semester' : ''), 'grid4', '#6366f1', `<div class="legend">${Object.entries(GRUP).map(([g, v]) => `<span><i class="dot" style="--c:${v.c}"></i>${g}</span>`).join('')}</div>${ed ? '' : ro()}`)}
     <div class="peta">${[1, 2, 3, 4, 5, 6, 7, 8].map(cell).join('')}</div>
   </div>
-  <div class="grid g2" style="margin-top:18px">
-    <div class="card">${head('Teori, praktik, dan JP per semester', 'Porsi praktik naik bertahap; JP menjaga mahasiswa full day di kampus', 'pulse', '#10b981')}<div class="chart lg" id="c-tp"></div></div>
-    <div class="card">${head('Alur prasyarat', 'Garis menghubungkan MK prasyarat ke MK lanjutannya', 'link', '#f472b6')}<div class="chart lg" id="c-pre"></div></div>
-  </div>
-  <div class="card" style="margin-top:18px">${head('Jaringan CPL → bahan kajian → mata kuliah', 'Lebar pita = SKS. Arahkan kursor untuk menelusuri dukungan suatu CPL.', 'layers', '#8b5cf6')}<div class="chart" style="height:560px" id="c-san"></div></div>`;
+  <div class="card" style="margin-top:18px">${head('Teori, praktik, dan JP per semester', 'Batang = SKS teori dan praktik (sumbu kiri). Garis = JP per minggu (sumbu kanan). Porsi praktik naik bertahap; JP menjaga mahasiswa full day di kampus.', 'pulse', '#10b981')}<div class="chart lg" id="c-tp"></div></div>
+  <div class="card" style="margin-top:18px">${head('Alur prasyarat', 'Garis menghubungkan MK prasyarat ke MK lanjutannya. Kolom = semester.', 'link', '#f472b6')}<div class="chart" id="c-pre"></div></div>
+  <div class="card" style="margin-top:18px">${head('Jaringan CPL → bahan kajian → mata kuliah', 'Lebar pita = SKS. Sentuh atau arahkan kursor untuk menelusuri dukungan suatu CPL.', 'layers', '#8b5cf6')}<div class="chart" style="height:600px" id="c-san"></div></div>`;
 
   const sm = [1, 2, 3, 4, 5, 6, 7, 8];
   chart(el.querySelector('#c-tp'), { tooltip: { trigger: 'axis' }, legend: { top: 0 }, grid: { left: 8, right: 8, top: 34, bottom: 8, containLabel: true },
@@ -31,9 +29,23 @@ export function petaView(el) {
 
   const withPre = mk.filter(m => (m.prasyarat || []).length || mk.some(x => (x.prasyarat || []).includes(m.id)));
   const cnt = {};
-  chart(el.querySelector('#c-pre'), { tooltip: {}, series: [{ type: 'graph', layout: 'none', roam: true, label: { show: true, fontSize: 9, position: 'right', formatter: (q) => short(q.name, 22) }, edgeSymbol: ['none', 'arrow'], edgeSymbolSize: 7, lineStyle: { color: '#94a3b8', curveness: 0.15, width: 1.4 },
-    data: withPre.map(m => { cnt[m.smt] = (cnt[m.smt] || 0) + 1; return { id: m.id, name: m.nama, x: m.smt * 150, y: cnt[m.smt] * 46, symbolSize: 10 + sksOf(m) * 2.5, itemStyle: { color: warnaGrup(grupOf(m)) } }; }),
-    links: withPre.flatMap(m => (m.prasyarat || []).map(p => ({ source: p, target: m.id }))) }] });
+  const baris = new Map();
+  withPre.sort((a, b) => a.smt - b.smt || a.nama.localeCompare(b.nama)).forEach(m => { cnt[m.smt] = (cnt[m.smt] || 0) + 1; baris.set(m.id, cnt[m.smt]); });
+  const smtAda = Array.from(new Set(withPre.map(m => m.smt))).sort((a, b) => a - b), kol = Object.fromEntries(smtAda.map((s, i) => [s, i]));
+  const pre = el.querySelector('#c-pre'), maxRow = Math.max(1, ...Object.values(cnt)), nS = Math.max(1, smtAda.length);
+  /* Layar lebar: kolom = semester. Layar sempit: baris = semester, agar semua terlihat tanpa geser. */
+  const W = pre.clientWidth || 360, tegak = W < 760;
+  const sel = tegak ? (W - 40) / maxRow : (W - 60) / nS, RH = tegak ? 96 : 74;
+  pre.style.height = (tegak ? nS * RH + 40 : Math.max(260, maxRow * RH + 80)) + 'px';
+  const pos = (m) => tegak ? { x: (baris.get(m.id) - 1) * sel, y: kol[m.smt] * RH } : { x: kol[m.smt] * sel, y: (baris.get(m.id) - 1) * RH };
+  if (!withPre.length) pre.outerHTML = '<div class="empty small">Belum ada MK yang memiliki prasyarat.</div>';
+  else chart(pre, { tooltip: { formatter: (q) => q.dataType === 'node' && q.data.full ? `${esc(q.data.full)}<br>Semester ${q.data.smt}` : '' },
+    series: [{ type: 'graph', layout: 'none', roam: false, left: tegak ? 64 : 30, right: tegak ? 24 : 30, top: tegak ? 20 : 44, bottom: tegak ? 44 : 40,
+      label: { show: true, position: 'bottom', distance: 3, fontSize: tegak ? 9 : 10, color: '#3b4760', width: Math.max(48, sel - 10), overflow: 'break', lineHeight: tegak ? 11 : 12, formatter: (q) => short(q.data.full, tegak ? 28 : 34) },
+      edgeSymbol: ['none', 'arrow'], edgeSymbolSize: 6, lineStyle: { color: '#94a3b8', curveness: 0.15, width: 1.3, opacity: .8 }, emphasis: { focus: 'adjacency' },
+      data: withPre.map(m => ({ id: m.id, name: m.id, full: m.nama, smt: m.smt, ...pos(m), symbolSize: 9 + sksOf(m) * 2, itemStyle: { color: warnaGrup(grupOf(m)) } }))
+        .concat(smtAda.map(s => ({ id: 'smt' + s, name: 'smt' + s, smt: s, x: tegak ? -54 : kol[s] * sel, y: tegak ? kol[s] * RH : -RH * 0.6, symbolSize: 0, label: { show: true, position: 'inside', width: 60, fontWeight: 700, fontSize: 11, color: '#6366f1', formatter: () => tegak ? 'Smt ' + s : 'Semester ' + s } }))),
+      links: withPre.flatMap(m => (m.prasyarat || []).filter(p => withPre.some(x => x.id === p)).map(p => ({ source: p, target: m.id }))) }] });
 
   const cpl = byProdi(S.cpl, ctx.prodi), bk = byProdi(S.bk, ctx.prodi);
   const nodes = [], links = [], seen = new Set();
@@ -44,7 +56,8 @@ export function petaView(el) {
   sm.forEach(s => add(smtName(s), '#10b981', 2));
   bk.forEach(b => sm.forEach(s => { const v = mk.filter(m => m.smt === s && (m.bk || []).includes(b.id)).reduce((a, m) => a + sksOf(m), 0); if (v > 0) links.push({ source: b.kode + ' ' + short(b.nama, 26), target: smtName(s), value: v }); }));
   const used = new Set(links.flatMap(l => [l.source, l.target]));
-  chart(el.querySelector('#c-san'), { tooltip: { trigger: 'item' }, series: [{ type: 'sankey', data: nodes.filter(n => used.has(n.name)), links, nodeWidth: 14, nodeGap: 9, left: 8, right: 130, top: 8, bottom: 8, emphasis: { focus: 'adjacency' }, lineStyle: { color: 'gradient', opacity: 0.32, curveness: 0.5 }, label: { fontSize: 11, color: '#3b4760' } }] });
+  const sanEl = el.querySelector('#c-san'), sempitSan = (sanEl.clientWidth || 360) < 700;
+  chart(sanEl, { tooltip: { trigger: 'item' }, series: [{ type: 'sankey', data: nodes.filter(n => used.has(n.name)), links, nodeWidth: sempitSan ? 10 : 14, nodeGap: 10, left: 8, right: sempitSan ? 48 : 170, top: 8, bottom: 8, emphasis: { focus: 'adjacency' }, lineStyle: { color: 'gradient', opacity: 0.32, curveness: 0.5 }, label: { fontSize: sempitSan ? 10 : 11, color: '#3b4760', width: sempitSan ? 70 : 150, overflow: 'truncate', formatter: (q) => sempitSan ? (q.name.startsWith('MK semester') ? 'Smt ' + q.name.slice(12) : q.name.split(' ')[0]) : q.name } }] });
 
   if (ed) {
     let drag = null;

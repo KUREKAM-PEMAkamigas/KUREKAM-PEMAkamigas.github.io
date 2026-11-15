@@ -239,7 +239,32 @@ export function route_() {
   const holder = document.createElement('div'); view.appendChild(holder);
   try { r.v(holder); } catch (e) { console.error(e); holder.innerHTML = `<div class="card empty">Terjadi kesalahan saat memuat halaman: ${esc(e.message)}</div>`; }
   tilt(view);
+  pasangTabel(view);
   window.scrollTo({ top: 0 });
+}
+
+/* Tabel lebar otomatis berubah menjadi kartu bila tidak muat di layar, sehingga semua kolom terbaca tanpa geser kiri-kanan.
+   Label tiap sel diambil dari judul kolomnya. Matriks (.mx) tetap berbentuk tabel. */
+let pantauTabel = null, ukurTabel = null, jadwalTabel = 0;
+function labelTabel(t) {
+  const th = Array.from(t.querySelectorAll('thead tr:last-child th')).map(x => x.textContent.trim());
+  if (!th.length) return false;
+  t.querySelectorAll('tbody tr').forEach(tr => { let i = 0; Array.from(tr.children).forEach(td => { const span = +td.getAttribute('colspan') || 1; if (!td.hasAttribute('data-l') && span === 1 && th[i]) td.setAttribute('data-l', th[i]); if (span === 1 && td.textContent.trim().length > 22) td.classList.add('lebar'); if (span > 1) tr.classList.add('rentang'); i += span; }); });
+  return true;
+}
+function cekTabel(root) {
+  root.querySelectorAll('.tbl-wrap').forEach(w => {
+    const t = w.querySelector(':scope > table.tbl'); if (!t || t.classList.contains('mx') || w.closest('.rps-cq')) return;
+    if (!labelTabel(t)) return;
+    w.classList.remove('kartu');
+    if (t.scrollWidth > w.clientWidth + 4) w.classList.add('kartu');
+  });
+}
+function pasangTabel(view) {
+  const jalan = () => { cancelAnimationFrame(jadwalTabel); jadwalTabel = requestAnimationFrame(() => cekTabel(view)); };
+  jalan();
+  if (!pantauTabel) { pantauTabel = new MutationObserver(jalan); pantauTabel.observe(view, { childList: true, subtree: true }); }
+  if (!ukurTabel && 'ResizeObserver' in window) { let w0 = view.clientWidth; ukurTabel = new ResizeObserver(() => { if (Math.abs(view.clientWidth - w0) > 8) { w0 = view.clientWidth; jalan(); } }); ukurTabel.observe(view); }
 }
 export const rerender = () => route_();
 

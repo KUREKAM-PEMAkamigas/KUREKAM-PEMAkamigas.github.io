@@ -25,20 +25,58 @@ function merge(a, b) {
   return o;
 }
 
+const arr = (v) => v == null ? [] : Array.isArray(v) ? v : [v];
+const wrap = (t, n) => { const w = String(t).split(' '), out = []; let line = ''; w.forEach(x => { if ((line + ' ' + x).trim().length > n && line) { out.push(line); line = x; } else line = (line + ' ' + x).trim(); }); if (line) out.push(line); return out.join('\n'); };
+/** Penyesuaian otomatis agar teks grafik tidak bertumpuk: legenda satu baris yang bisa digeser,
+    label garis batas di dalam area grafik, label sumbu yang bertabrakan disembunyikan,
+    dan pada layar sempit nama sumbu (yang sering menabrak legenda) dipindah ke tooltip. */
+function adapt(opt, w) {
+  const narrow = w < 560;
+  const o = { ...opt };
+  const hasLegend = arr(o.legend).some(l => l && l.show !== false);
+  if (hasLegend) {
+    o.legend = arr(o.legend).map(l => ({ type: 'scroll', top: 0, itemGap: narrow ? 8 : 12, itemWidth: narrow ? 14 : 18, itemHeight: narrow ? 9 : 11, pageIconSize: 10, pageTextStyle: { fontSize: 10 }, ...l, textStyle: { fontSize: narrow ? 11 : 12, ...(l.textStyle || {}) } }));
+    if (o.grid && !Array.isArray(o.grid) && (o.grid.top == null || o.grid.top < 36)) o.grid = { ...o.grid, top: 36 };
+  }
+  ['xAxis', 'yAxis'].forEach(k => {
+    if (!o[k]) return;
+    const many = Array.isArray(o[k]);
+    const list = arr(o[k]).map(a => {
+      const b = { ...a, axisLabel: { hideOverlap: true, ...(a.axisLabel || {}), ...(narrow ? { fontSize: (a.axisLabel || {}).rotate ? 9 : 10 } : {}), ...(narrow && (a.axisLabel || {}).rotate ? { rotate: 60 } : {}) } };
+      if (a.name && (hasLegend || narrow)) { b.name = ''; }
+      return b;
+    });
+    o[k] = many ? list : list[0];
+  });
+  if (o.radar) o.radar = arr(o.radar).map(r => ({ ...r, radius: narrow ? '52%' : r.radius, axisName: { ...(r.axisName || {}), fontSize: narrow ? 10 : ((r.axisName || {}).fontSize || 11), formatter: (n) => wrap(n, narrow ? 10 : 16) } }))[0];
+  let labelKanan = false;
+  o.series = arr(o.series).map(sr => {
+    const x = { ...sr };
+    if (x.markLine) x.markLine = { ...x.markLine, label: { position: 'insideEndTop', fontSize: 10, color: '#6b778c', ...(x.markLine.label || {}), ...((x.markLine.label || {}).position === undefined ? { position: 'insideEndTop' } : {}) } };
+    if (x.label && x.label.show && x.label.position === 'right' && x.type === 'bar') labelKanan = true;
+    if (['bar', 'line', 'scatter', 'pie', 'graph'].includes(x.type)) x.labelLayout = { hideOverlap: true, ...(x.labelLayout || {}) };
+    if (x.type === 'pie' && narrow) x.label = { ...(x.label || {}), fontSize: 10, overflow: 'break', width: 70 };
+    return x;
+  });
+  if (labelKanan && o.grid && !Array.isArray(o.grid)) o.grid = { ...o.grid, right: Math.max(o.grid.right || 0, narrow ? 54 : 64) };
+  return o;
+}
+
 /** Buat grafik; animasi dimulai saat elemen masuk viewport. */
 export function chart(el, option) {
   if (!el || !window.echarts) return null;
   const inst = window.echarts.init(el, null, { renderer: 'canvas' });
   live.add(inst);
-  const opt = merge(BASE, option);
-  let done = false;
-  const go = () => { if (done || inst.isDisposed()) return; done = true; inst.setOption(opt, true); };
+  const base = merge(BASE, option);
+  let done = false, lebar = el.clientWidth;
+  const go = () => { if (done || inst.isDisposed()) return; done = true; lebar = el.clientWidth; inst.setOption(adapt(base, lebar), true); };
+  const ulang = () => { if (!done || inst.isDisposed()) return; const w = el.clientWidth; if ((w < 560) !== (lebar < 560)) { lebar = w; inst.setOption(adapt(base, w), true); } };
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((es) => { if (es.some(e => e.isIntersecting)) { go(); io.disconnect(); } }, { threshold: 0.1, rootMargin: '80px' });
     io.observe(el);
     setTimeout(() => { go(); io.disconnect(); }, 3500); // cadangan: cetak/tangkapan layar
   } else go();
-  if ('ResizeObserver' in window) new ResizeObserver(() => inst.resize()).observe(el);
+  if ('ResizeObserver' in window) new ResizeObserver(() => { inst.resize(); ulang(); }).observe(el);
   return inst;
 }
 export function disposeAll() { live.forEach(c => { try { c.dispose(); } catch (e) { /* abaikan */ } }); live.clear(); }

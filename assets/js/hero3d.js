@@ -65,7 +65,9 @@ function label(THREE, text, color = '#ffffff', size = 64) {
 }
 
 /** Menara kurikulum: layers = [{smt, mk:[{sks, c}]}] */
+const labelHero = [];
 function mountHero0(canvas, layers) {
+  labelHero.length = 0;
   const anim = [];
   return engine(canvas, {
     cam: [0, 3.2, 11.5],
@@ -86,7 +88,7 @@ function mountHero0(canvas, layers) {
           mesh.position.set(Math.cos(a) * r, y + 0.03, Math.sin(a) * r); mesh.scale.y = 0.01; mesh.userData = { h, d: li * 0.18 + i * 0.015 };
           tower.add(mesh); anim.push(mesh);
         });
-        const lb = label(THREE, 'S' + L.smt, 'rgba(255,255,255,.85)', 52); lb.position.set(2.95, y + 0.15, 0); tower.add(lb);
+        const lb = label(THREE, 'S' + L.smt, 'rgba(255,255,255,.85)', 52); lb.position.set(2.95, y + 0.15, 0); tower.add(lb); labelHero.push(lb);
       });
       const core = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, layers.length * 0.62, 32, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.28, roughness: 0.1, clearcoat: 1, emissive: 0x0ea5e9, emissiveIntensity: 0.25 }));
       core.position.y = layers.length * 0.31; tower.add(core);
@@ -98,7 +100,7 @@ function mountHero0(canvas, layers) {
     },
     onTick: (s, { world, canvas }) => {
       anim.forEach(m => { const p = Math.min(1, Math.max(0, (s - 0.2 - m.userData.d) / 0.9)); m.scale.y = 0.01 + (m.userData.h - 0.01) * (1 - Math.pow(1 - p, 3)); });
-      const w = canvas.clientWidth; world.position.x = w > 900 ? 3.1 : 0; world.position.y = w > 900 ? 0 : 1.6; world.scale.setScalar(w > 900 ? 1 : (w < 600 ? 0.62 : 0.8));
+      const w = canvas.clientWidth; labelHero.forEach(l => { l.visible = w > 900; }); world.position.x = w > 900 ? 3.1 : 0; world.position.y = w > 900 ? 0 : 1.6; world.scale.setScalar(w > 900 ? 1 : (w < 600 ? 0.62 : 0.8));
     }
   });
 }

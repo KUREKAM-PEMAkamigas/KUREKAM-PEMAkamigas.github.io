@@ -54,7 +54,7 @@ function adapt(opt, w) {
     const x = { ...sr };
     if (x.markLine) x.markLine = { ...x.markLine, label: { position: 'insideEndTop', fontSize: 10, color: '#6b778c', ...(x.markLine.label || {}), ...((x.markLine.label || {}).position === undefined ? { position: 'insideEndTop' } : {}) } };
     if (x.label && x.label.show && x.label.position === 'right' && x.type === 'bar') labelKanan = true;
-    if (['bar', 'line', 'scatter', 'pie', 'graph'].includes(x.type)) x.labelLayout = { hideOverlap: true, ...(x.labelLayout || {}) };
+    if (typeof x.labelLayout !== 'function' && ['bar', 'line', 'scatter', 'pie', 'graph'].includes(x.type)) x.labelLayout = { hideOverlap: true, ...(x.labelLayout || {}) };
     if (x.type === 'pie' && narrow) x.label = { ...(x.label || {}), fontSize: 10, overflow: 'break', width: 70 };
     return x;
   });

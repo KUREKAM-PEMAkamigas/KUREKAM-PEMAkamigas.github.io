@@ -41,7 +41,8 @@ export function petaView(el) {
   if (!withPre.length) pre.outerHTML = '<div class="empty small">Belum ada MK yang memiliki prasyarat.</div>';
   else chart(pre, { tooltip: { formatter: (q) => q.dataType === 'node' && q.data.full ? `${esc(q.data.full)}<br>Semester ${q.data.smt}` : '' },
     series: [{ type: 'graph', layout: 'none', roam: false, left: tegak ? 64 : 30, right: tegak ? 24 : 30, top: tegak ? 20 : 44, bottom: tegak ? 44 : 40,
-      label: { show: true, position: 'bottom', distance: 3, fontSize: tegak ? 9 : 10, color: '#3b4760', width: Math.max(48, sel - 10), overflow: 'break', lineHeight: tegak ? 11 : 12, formatter: (q) => short(q.data.full, tegak ? 28 : 34) },
+      labelLayout: (q) => { const cw = pre.clientWidth || W, r = q.labelRect; let dx = 0; if (r.x < 4) dx = 4 - r.x; else if (r.x + r.width > cw - 4) dx = cw - 4 - (r.x + r.width); return dx ? { dx } : {}; },
+      label: { show: true, position: 'bottom', distance: 3, fontSize: tegak ? 9.5 : 10, color: '#3b4760', width: Math.min(tegak ? 96 : 130, Math.max(52, sel - 16)), overflow: 'break', lineHeight: tegak ? 11 : 12, formatter: (q) => short(q.data.full, tegak ? 28 : 34) },
       edgeSymbol: ['none', 'arrow'], edgeSymbolSize: 6, lineStyle: { color: '#94a3b8', curveness: 0.15, width: 1.3, opacity: .8 }, emphasis: { focus: 'adjacency' },
       data: withPre.map(m => ({ id: m.id, name: m.id, full: m.nama, smt: m.smt, ...pos(m), symbolSize: 9 + sksOf(m) * 2, itemStyle: { color: warnaGrup(grupOf(m)) } }))
         .concat(smtAda.map(s => ({ id: 'smt' + s, name: 'smt' + s, smt: s, x: tegak ? -54 : kol[s] * sel, y: tegak ? kol[s] * RH : -RH * 0.6, symbolSize: 0, label: { show: true, position: 'inside', width: 60, fontWeight: 700, fontSize: 11, color: '#6366f1', formatter: () => tegak ? 'Smt ' + s : 'Semester ' + s } }))),

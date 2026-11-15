@@ -120,10 +120,10 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 /* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
 export const MENU_PERAN = {
   dosen: ['beranda', 'peta', 'cpmk', 'rps', 'beban', 'bloom'],
-  prodi: ['beranda', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'beban', 'bebanprodi', 'periksa', 'iabee', 'capaian', 'bloom', 'revisi', 'laporan'],
-  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'beban', 'bebanprodi', 'periksa', 'iabee', 'capaian', 'revisi', 'laporan'],
-  spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'periksa', 'iabee', 'capaian', 'bloom', 'revisi', 'laporan'],
-  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'laporan', 'induk'],
+  prodi: ['beranda', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'beban', 'bebanprodi', 'periksa', 'iabee', 'capaian', 'lulusan', 'bloom', 'revisi', 'laporan'],
+  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'beban', 'bebanprodi', 'periksa', 'iabee', 'capaian', 'lulusan', 'revisi', 'laporan'],
+  spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'periksa', 'iabee', 'capaian', 'lulusan', 'bloom', 'revisi', 'laporan'],
+  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'lulusan', 'laporan', 'induk'],
   admin: null,
   developer: null
 };

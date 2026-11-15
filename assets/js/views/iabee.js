@@ -3,8 +3,8 @@ import { S, ctx, can, save, remove, rerender, esc, icon, uid, saveSettings, addL
 import { APP, BUTIR_IABEE, INDIKATOR_IABEE } from '../config.js';
 import { chart, AX } from '../charts.js';
 import { detect, badge } from '../bloom.js';
-import { byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, kompetensiInti, HURUF_IABEE } from '../rules.js';
-import { head, formDrawer, ro, kpi, animateCounts, prodiName, short, stTag, prodiTag } from './ui.js';
+import { byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, kompetensiInti, lulusanRekap, HURUF_IABEE } from '../rules.js';
+import { head, formDrawer, ro, kpi, animateCounts, prodiName, short, stTag, prodiTag, unduh, loadXLSX } from './ui.js';
 
 const ST_TEKS = { ok: 'Sesuai target', near: 'Sebagian', bad: 'Jauh dari target', na: 'Belum diukur' };
 const stTagI = (k) => stTag(k, ST_TEKS[k] || k);
@@ -104,6 +104,23 @@ function kompetensiTabel(pid) {
   </tbody></table></div>`;
 }
 
+
+/* ================= Ekspor triwulan untuk SIMANTAP (angka agregat saja) ================= */
+const triwulanIni = () => { const d = new Date(); return { tahun: d.getFullYear(), tw: Math.floor(d.getMonth() / 3) + 1 }; };
+export function umpanIabee(periode) {
+  return S.prodi.map(p => { const ind = kesiapan(S, p.id);
+    return { unit: p.id, sumber: 'KUREKAM', jenis: 'kesiapan_iabee', periode, waktu: new Date().toISOString(),
+      indikator: Object.fromEntries(ind.map(i => ['iabee_' + String(i.no).padStart(2, '0'), i.no === 6 ? (i.k === 'na' ? null : lulusanRekap(S, p.id).obe) : i.nilai == null ? null : +i.nilai.toFixed(1)])),
+      status: Object.fromEntries(ind.map(i => ['iabee_' + String(i.no).padStart(2, '0'), i.k === 'na' ? 'belum_diukur' : i.k === 'ok' ? 'sesuai' : i.k === 'near' ? 'sebagian' : 'jauh'])),
+      keterangan: Object.fromEntries(ind.map(i => ['iabee_' + String(i.no).padStart(2, '0'), `${i.teks || ''}${i.ket ? ' | ' + i.ket : ''}`])) }; });
+}
+async function eksporExcel(periode) {
+  const X = await loadXLSX(), wb = X.utils.book_new(), baris = [['Periode', 'Prodi', 'No', 'Indikator', 'Nilai (%)', 'Status', 'Hasil', 'Target', 'Keterangan']];
+  S.prodi.forEach(p => kesiapan(S, p.id).forEach(i => baris.push([periode, p.id, i.no, i.nama, i.nilai == null ? '' : +i.nilai.toFixed(1), i.k === 'na' ? 'Belum diukur' : i.k === 'ok' ? 'Sesuai target' : i.k === 'near' ? 'Sebagian' : 'Jauh dari target', i.teks || '', i.target, i.ket || ''])));
+  const ws = X.utils.aoa_to_sheet(baris); ws['!cols'] = [10, 8, 5, 52, 10, 16, 30, 40, 70].map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, 'KESIAPAN IABEE');
+  unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `kurekam-iabee-${periode}.xlsx`);
+}
+
 /* ================= Menu Kesiapan IABEE ================= */
 export function kesiapanView(el) {
   const semua = S.prodi.map(p => ({ p, ind: kesiapan(S, p.id) }));
@@ -111,7 +128,7 @@ export function kesiapanView(el) {
   const adm = ['admin', 'developer'].includes(ctx.role);
   const terukur = cur.ind.filter(i => i.k !== 'na').length, sesuai = cur.ind.filter(i => i.k === 'ok').length;
   el.innerHTML = `
-  <div class="ribbon info">${icon('info')} <span>Sepuluh indikator ini menunjukkan seberapa siap tiap prodi menghadapi akreditasi IABEE. Indikator yang datanya belum masuk ditulis <b>Belum diukur</b>, bukan nol. Indikator 1 dan 2 dihitung dari isian PI, CPMK, MK inti, dan butir IABEE pada CPL. Indikator 3, 4, dan 7 dihitung dari menu Capaian CPL & Tindak Lanjut, dan indikator 10 dari bidang dan sertifikasi dosen. Capstone, lulusan, dan tracer menyusul pada tahap berikutnya.</span></div>
+  <div class="ribbon info">${icon('info')} <span>Sepuluh indikator ini menunjukkan seberapa siap tiap prodi menghadapi akreditasi IABEE. Indikator yang datanya belum masuk ditulis <b>Belum diukur</b>, bukan nol. Indikator 1 dan 2 dihitung dari isian PI, CPMK, MK inti, dan butir IABEE pada CPL. Indikator 3, 4, dan 7 dihitung dari menu Capaian CPL & Tindak Lanjut, dan indikator 10 dari bidang dan sertifikasi dosen. Indikator 5, 6, dan 8 dari menu Capstone, Lulusan & Tracer. Indikator 9 dipantau di SIMANTAP.</span></div>
   <div class="grid g4">
     ${kpi('Indikator terukur', terukur, `dari 10 indikator · ${cur.p.id}`, '#0ea5e9', 'pulse')}
     ${kpi('Sesuai target', sesuai, `${cur.p.id}`, sesuai ? '#10b981' : '#f5a524', 'check')}
@@ -124,15 +141,22 @@ export function kesiapanView(el) {
     </tbody></table></div></div>
   <div class="grid g-21" style="margin-top:18px">
     <div class="card">${head('Rincian ' + cur.p.id, esc(cur.p.nama), 'audit', '#10b981')}
-      <div class="ind-list">${cur.ind.map(v => `<div class="ind ${v.k}"><span class="ind-no">${v.no}</span><div><b>${esc(v.nama)}</b><div class="small">${v.nilai != null ? `<b>${esc(v.teks)}</b> · ` : ''}Target: ${esc(v.target)}</div><div class="small muted">${esc(v.ket || '')} Sumber data: ${esc(v.sumber)}.</div></div>${stTagI(v.k)}</div>`).join('')}</div></div>
+      <div class="ind-list">${cur.ind.map(v => `<div class="ind ${v.k}"><span class="ind-no">${v.no}</span><div><b>${esc(v.nama)}</b><div class="small">${v.k !== 'na' ? `<b>${esc(v.teks)}</b> · ` : ''}Target: ${esc(v.target)}</div><div class="small muted">${esc(v.ket || '')} Sumber data: ${esc(v.sumber)}.</div></div>${stTagI(v.k)}</div>`).join('')}</div></div>
     <div class="card">${head('Indikator 1 dan 2 per prodi', 'Persentase menuju target 100%', 'pulse', '#0ea5e9')}<div class="chart" id="c-12"></div></div>
   </div>
   <div class="card" style="margin-top:18px">${head('Kompetensi dosen untuk mata kuliah inti · ' + cur.p.id, 'Pengampu dicocokkan dengan bidang S1, S2, S3, dan sertifikasi. Kata kunci diisi pada formulir MK. Tanpa NIP.', 'user', '#f5a524')}${kompetensiTabel(cur.p.id)}</div>
+  <div class="card" style="margin-top:18px">${head('Ekspor triwulan untuk SIMANTAP', 'Berisi angka agregat 10 indikator untuk lima prodi. Tanpa nama, NIP, NIM, atau nilai per mahasiswa.', 'download', '#14b8a6')}
+    <div class="filters"><select class="inp" id="x-th">${[0, 1, 2].map(k => triwulanIni().tahun - k).map(t => `<option ${t === triwulanIni().tahun ? 'selected' : ''}>${t}</option>`).join('')}</select><select class="inp" id="x-tw">${[1, 2, 3, 4].map(q => `<option value="${q}" ${q === triwulanIni().tw ? 'selected' : ''}>Triwulan ${q}</option>`).join('')}</select>
+      <button class="btn pri sm" id="x-json">${icon('download')} Unduh JSON</button><button class="btn sm" id="x-xls">${icon('download')} Unduh Excel</button></div>
+    <p class="small muted">JSON berformat sama dengan umpan indikator kurikulum (satu entri per prodi, kolom <code>indikator</code> berisi iabee_01 sampai iabee_10). Nilai kosong berarti belum diukur. Indikator 6 berisi jumlah lulusan OBE, indikator lain berisi persen. Impor berkas ini di SIMANTAP setiap akhir triwulan.</p></div>
   <div class="card" style="margin-top:18px">${head('Matriks CPL ke butir IABEE · ' + cur.p.id, 'Diisi di menu CPL (formulir) atau Matriks Keterlacakan, tab CPL × butir IABEE', 'link', '#6366f1', `<button class="btn pri sm no-print" id="cetak">${icon('download')} Cetak / simpan PDF</button>`)}
     ${matriksIabee(cur.p.id)}</div>`;
   animateCounts(el);
   el.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { if (ctx.kunci && ctx.role === 'prodi' && ctx.akun && ctx.akun.prodi) { toast('Akun prodi hanya dapat melihat rincian prodinya sendiri. Ringkasan lima prodi tetap tampil di tabel.'); return; } ctx.prodi = b.dataset.p; saveCtx(); rerender(); });
   el.querySelector('#cetak').onclick = cetak;
+  const per = () => `${el.querySelector('#x-th').value}-T${el.querySelector('#x-tw').value}`;
+  el.querySelector('#x-json').onclick = async () => { const pr = per(); unduh(new Blob([JSON.stringify(umpanIabee(pr), null, 2)], { type: 'application/json' }), `kurekam-iabee-${pr}.json`); await addLog(`Ekspor kesiapan IABEE ${pr} (JSON)`); toast('Berkas JSON diunduh'); };
+  el.querySelector('#x-xls').onclick = async () => { const pr = per(); try { await eksporExcel(pr); await addLog(`Ekspor kesiapan IABEE ${pr} (Excel)`); toast('Berkas Excel diunduh'); } catch (e) { toast('Ekspor gagal: ' + e.message); } };
   chart(el.querySelector('#c-12'), { tooltip: { trigger: 'axis' }, legend: { top: 0 }, grid: { left: 8, right: 8, top: 34, bottom: 8, containLabel: true }, xAxis: { type: 'category', data: semua.map(x => x.p.id), ...AX }, yAxis: { type: 'value', max: 100, ...AX },
     series: [['Indikator 1', 0, '#8b5cf6'], ['Indikator 2', 1, '#0ea5e9']].map(([nm, i, c]) => ({ name: nm, type: 'bar', barWidth: 16, itemStyle: { color: c, borderRadius: [6, 6, 0, 0] }, data: semua.map(x => x.ind[i].nilai == null ? null : +x.ind[i].nilai.toFixed(1)) })) });
   const tg = el.querySelector('#tgt');

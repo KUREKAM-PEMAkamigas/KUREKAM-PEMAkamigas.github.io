@@ -334,9 +334,33 @@ export function kompetensiInti(S, pid) {
   });
 }
 
+
+/* ---------- Tahap 3: capstone, lulusan OBE, tracer dan survei pengguna (angka agregat) ---------- */
+export const RUBRIK_ST = { belum: 'Belum ada', draf: 'Draf', disahkan: 'Disahkan' };
+const terbaru = (arr) => arr.slice().sort((a, b) => String(a.tahun).localeCompare(String(b.tahun), 'id', { numeric: true })).pop() || null;
+export const capstoneProdi = (S, pid) => byProdi(S.capstone || [], pid);
+export const lulusanProdi = (S, pid) => byProdi(S.lulusan || [], pid).slice().sort((a, b) => String(a.tahun).localeCompare(String(b.tahun), 'id', { numeric: true }));
+/** Empat syarat dokumentasi capstone untuk IABEE: MK ada, bobot penilaian, rubrik, proyek nyata. */
+export function capstoneCek(S, pid) {
+  const mkCap = byProdi(S.mk, pid).filter(m => /capstone/i.test(m.nama + ' ' + (m.kel || ''))), d = terbaru(capstoneProdi(S, pid));
+  const sks = mkCap.reduce((a, m) => a + sksOf(m), 0);
+  const syarat = [
+    { k: 'mk', t: 'Mata kuliah capstone ada di kurikulum', ok: mkCap.length > 0, ket: mkCap.length ? `${mkCap.length} MK, ${sks} SKS` : 'Belum ada MK capstone' },
+    { k: 'bobot', t: 'Bobot capstone dalam penilaian dicatat', ok: !!d && +d.bobot > 0, ket: d && +d.bobot > 0 ? `${fmt(+d.bobot, 1)}%` : 'Belum diisi' },
+    { k: 'rubrik', t: 'Rubrik penilaian capstone tersedia', ok: !!d && (d.rubrik === 'draf' || d.rubrik === 'disahkan'), ket: d ? RUBRIK_ST[d.rubrik] || 'Belum ada' : 'Belum diisi' },
+    { k: 'proyek', t: 'Proyek capstone berbasis masalah nyata', ok: !!d && +d.proyek > 0, ket: d && +d.proyek > 0 ? `${d.proyek} proyek${+d.mitra > 0 ? `, ${d.mitra} mitra industri` : ''}` : 'Belum diisi' }
+  ];
+  return { mkCap, sks, d, syarat, ok: syarat.filter(x => x.ok).length };
+}
+export function lulusanRekap(S, pid) {
+  const rows = lulusanProdi(S, pid), jum = (f) => rows.reduce((a, r) => a + (+r[f] || 0), 0);
+  const jumlah = jum('jumlah'), tracer = jum('tracer'), pengguna = jum('pengguna');
+  return { rows, jumlah, obe: jum('obe'), tracer, pengguna, bekerja: jum('bekerja'), rTracer: jumlah ? tracer / jumlah * 100 : null, rPengguna: jumlah && pengguna ? pengguna / jumlah * 100 : null };
+}
+
 /** Sepuluh indikator kesiapan per prodi. nilai null berarti belum diukur (bukan nol). */
 export function kesiapan(S, pid) {
-  const t = piTrace(S, pid), target = (S.settings && S.settings.targetIabee) || {}, cap = capaianCpl(S, pid), tl = tlProdi(S, pid), ki = kompetensiInti(S, pid);
+  const t = piTrace(S, pid), target = (S.settings && S.settings.targetIabee) || {}, cap = capaianCpl(S, pid), tl = tlProdi(S, pid), ki = kompetensiInti(S, pid), cs = capstoneCek(S, pid), ll = lulusanRekap(S, pid);
   const pct = (a, b) => b ? a / b * 100 : 0;
   const st = (v) => v >= 99.5 ? 'ok' : v >= 50 ? 'near' : 'bad';
   const belum = (ket) => ({ nilai: null, teks: 'Belum diukur', k: 'na', ket });
@@ -365,15 +389,26 @@ export function kesiapan(S, pid) {
       const v = pct(cap.ok.length, cap.terukur.length);
       return { nilai: v, teks: `${cap.ok.length} dari ${cap.terukur.length} CPL memenuhi`, k: st(v), ket: `Kriteria: minimal ${fmt(cap.krit)}% mahasiswa mencapai nilai batas, dilihat pada angkatan terbaru tiap CPL.${cap.bawah.length ? ' Di bawah kriteria: ' + cap.bawah.map(h => h.c.kode).join(', ') + '.' : ''}` };
     })(),
-    5: (() => { const cap = t.mk.filter(m => /capstone/i.test(m.nama + ' ' + m.kel)); return belum(cap.length ? `Kurikulum memuat ${cap.length} MK capstone (${cap.reduce((a, m) => a + sksOf(m), 0)} SKS). Rubrik dan daftar proyek nyata dicatat pada tahap berikutnya.` : 'MK capstone belum ada di kurikulum prodi. Rubrik dan proyek nyata dicatat pada tahap berikutnya.'); })(),
-    6: belum('Menunggu data agregat lulusan dari Bagian Akademik (tahap berikutnya).'),
+    5: (() => {
+      if (!cs.d && !cs.mkCap.length) return belum('MK capstone belum ada di kurikulum dan dokumentasi capstone belum diisi (menu Capstone, Lulusan & Tracer).');
+      const v = cs.ok / cs.syarat.length * 100, kurang = cs.syarat.filter(x => !x.ok).map(x => x.t.toLowerCase());
+      return { nilai: v, teks: `${cs.ok} dari ${cs.syarat.length} syarat terpenuhi`, k: st(v), ket: kurang.length ? 'Belum: ' + kurang.join('; ') + '.' : 'Bobot, rubrik, dan proyek nyata sudah terdokumentasi.' };
+    })(),
+    6: (() => {
+      if (!ll.rows.length) return belum('Belum ada data lulusan. Bagian Akademik mengisi di menu Capstone, Lulusan & Tracer.');
+      return { nilai: null, teks: `${fmt(ll.obe)} lulusan OBE`, k: 'ok', ket: `Terdata ${ll.rows.length} tahun kelulusan dengan total ${fmt(ll.jumlah)} lulusan, ${fmt(ll.obe)} di antaranya lulusan kurikulum OBE.` };
+    })(),
     7: (() => {
       if (!tl.length) return belum('Belum ada catatan tindak lanjut. Catat di menu Capaian CPL & Tindak Lanjut, lalu hubungkan ke menu Revisi.');
       const sl = tl.filter(x => x.status === 'selesai').length, jalan = tl.length - sl;
       return sl ? { nilai: 100, teks: `${sl} siklus selesai`, k: 'ok', ket: `${tl.length} catatan tindak lanjut, ${sl} selesai${jalan ? `, ${jalan} masih direncanakan atau berjalan` : ''}. ${tl.filter(x => x.revisi).length} terhubung ke usulan revisi.` }
         : { nilai: 0, teks: `${tl.length} catatan, belum selesai`, k: 'near', ket: `Ada ${tl.length} catatan tindak lanjut, belum ada yang berstatus selesai. Satu siklus dihitung bila temuan, tindakan, dan hasilnya sudah dicatat dan ditandai selesai.` };
     })(),
-    8: belum('Menunggu ringkasan tracer dan survei pengguna dari CDC (tahap berikutnya).'),
+    8: (() => {
+      if (!ll.jumlah || !ll.tracer) return belum('Belum ada data responden tracer. CDC atau akademik mengisi jumlah responden di menu Capstone, Lulusan & Tracer.');
+      const v = ll.rPengguna == null ? ll.rTracer : Math.min(ll.rTracer, ll.rPengguna), kk = v >= 70 ? 'ok' : v >= 50 ? 'near' : 'bad';
+      return { nilai: v, teks: `Tracer ${fmt(ll.rTracer)}%${ll.rPengguna == null ? '' : `, pengguna ${fmt(ll.rPengguna)}%`}`, k: kk, ket: `Responden tracer ${fmt(ll.tracer)} dari ${fmt(ll.jumlah)} lulusan${ll.rPengguna == null ? '. Survei pengguna belum diisi, nilai hanya dari tracer' : `; responden survei pengguna ${fmt(ll.pengguna)}`}. Target respons minimal 70%.` };
+    })(),
     9: belum('Dipantau melalui daftar periksa dokumen di SIMANTAP.'),
     10: (() => {
       if (!ki.length) return belum('Mata kuliah inti belum ditandai.');

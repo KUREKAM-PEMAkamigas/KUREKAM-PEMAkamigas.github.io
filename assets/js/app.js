@@ -1,5 +1,5 @@
 /* KUREKAM PEM Akamigas · Aplikasi utama: state, peran, router, dan utilitas bersama. */
-import { APP, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
+import { APP, APP_LAIN, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
 import { DB } from './db.js';
 import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
@@ -46,7 +46,8 @@ export function userName() {
 }
 
 /** Menu yang boleh dibuka peran aktif. */
-export function bolehMenu(id) { const m = MENU_PERAN[ctx.role]; return !m || m.includes(id); }
+/* Data Induk & Pengaturan tidak tampil pada mode simulasi/demo (bukan sambungan Firestore) agar tidak terlihat saat peragaan. */
+export function bolehMenu(id) { if (id === 'induk' && (dalamSimulasi() || DB.mode !== 'firebase')) return false; const m = MENU_PERAN[ctx.role]; return !m || m.includes(id); }
 /** Peran yang boleh dipilih akun ini. Tanpa daftar pengguna (masa penyiapan atau mode demo) semua peran bisa dicoba. */
 export function peranAkun() { return ctx.kunci ? (ctx.izin || []) : Object.keys(PERAN).filter(k => k !== 'developer'); }
 let sidikDev = false;
@@ -206,6 +207,7 @@ function renderSide(cur) {
     if (r.sec !== sec) { sec = r.sec; h += `<div class="nav-sec">${sec}</div>`; }
     h += `<a href="#${r.id}" class="${r.id === cur ? 'on' : ''}" style="--c:${r.c}"><span class="chip">${icon(r.ic)}</span><span>${r.t}${r.sub ? `<small class="nsub">${r.sub}</small>` : ''}</span></a>`;
   });
+  h += `<div class="nav-sec">Aplikasi lain</div><a href="${APP_LAIN.simantap.url}" target="_blank" rel="noopener" style="--c:#8b5cf6"><span class="chip">${icon('medal')}</span><span>SIMANTAP 2.0<small class="nsub">Pemantauan mutu dan akreditasi</small></span></a>`;
   h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
   $('#side').innerHTML = h;
   $$('#side a').forEach(a => a.addEventListener('click', () => tutupSide()));

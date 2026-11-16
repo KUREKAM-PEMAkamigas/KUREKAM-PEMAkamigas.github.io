@@ -138,3 +138,6 @@ export const ACUAN = [
   'Anderson & Krathwohl (2001), A Taxonomy for Learning, Teaching, and Assessing (revisi Taksonomi Bloom)',
   'Buku Pedoman Kurikulum Sarjana Terapan PEM Akamigas 2027 (draf)'
 ];
+
+/* Aplikasi pendamping. Akun masuk sama (satu proyek Firebase), tetapi sesi masuk dipisah per situs. */
+export const APP_LAIN = { simantap: { nama: 'SIMANTAP 2.0', url: 'https://simantap-spmi.github.io/' } };

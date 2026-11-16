@@ -48,7 +48,7 @@ export const GRUP = {
 };
 export const KAT_IABEE = ['Pendidikan umum', 'Matematika dan ilmu alam', 'Teknologi informasi', 'Muatan spesifik'];
 
-/* Butir kompetensi lulusan (a) sampai (j), Kriteria IABEE 1.2.2 untuk program teknologi rekayasa
+/* Butir kompetensi lulusan (a) sampai (k), Kriteria IABEE 1.2.2 (items (a) to (k)), untuk program teknologi rekayasa
    (Sarjana Terapan/D-IV, Sydney Accord), templat evaluasi diri 2024. */
 export const BUTIR_IABEE = [
   { k: 'a', ringkas: 'Penerapan matematika, sains, komputasi, dan ilmu rekayasa', teks: 'Kemampuan mengidentifikasi dan menerapkan pengetahuan matematika, ilmu pengetahuan alam, komputasi, dasar-dasar rekayasa, dan ilmu rekayasa khusus sesuai disiplinnya terhadap prosedur, proses, sistem, atau metodologi rekayasa terapan.' },
@@ -60,13 +60,14 @@ export const BUTIR_IABEE = [
   { k: 'g', ringkas: 'Etika profesi dan kepatuhan hukum', teks: 'Kemampuan untuk secara konsisten mematuhi etika profesi, norma praktik rekayasa terapan, serta hukum nasional dan internasional, dengan menghormati keberagaman dan inklusivitas.' },
   { k: 'h', ringkas: 'Kerja individu dan tim multidisiplin', teks: 'Kemampuan berfungsi efektif sebagai individu dan sebagai anggota atau pemimpin dalam tim yang beragam, inklusif, dan multidisiplin pada berbagai lingkungan kerja.' },
   { k: 'i', ringkas: 'Komunikasi tertulis, lisan, dan grafis', teks: 'Kemampuan berkomunikasi tertulis, lisan, dan grafis secara efektif dalam kegiatan keteknikan dengan mempertimbangkan perbedaan budaya, bahasa, dan cara belajar.' },
-  { k: 'j', ringkas: 'Manajemen proyek rekayasa', teks: 'Kemampuan menerapkan prinsip manajemen rekayasa pada proyek, sebagai anggota maupun pemimpin dalam tim multidisiplin.' }
+  { k: 'j', ringkas: 'Manajemen proyek rekayasa', teks: 'Kemampuan menerapkan prinsip manajemen rekayasa pada proyek, sebagai anggota maupun pemimpin dalam tim multidisiplin.' },
+  { k: 'k', ringkas: 'Belajar sepanjang hayat dan berpikir kritis', teks: 'Kemampuan mengenali kebutuhan serta menjalankan belajar mandiri dan sepanjang hayat, dan berpikir kritis.' }
 ];
 
 /* Sepuluh indikator kesiapan IABEE. Target bawaan dapat diubah admin di menu Kesiapan IABEE. */
 export const INDIKATOR_IABEE = [
   { no: 1, nama: 'Mata kuliah inti dengan PI dan CPMK terpetakan', sumber: 'KUREKAM (PI, CPMK, RPS)', target: 'PI untuk 100% CPL lima prodi, Desember 2026' },
-  { no: 2, nama: 'CPL terpetakan ke butir IABEE (a) sampai (j)', sumber: 'KUREKAM (butir IABEE pada CPL)', target: 'Lima prodi terpetakan, Desember 2026' },
+  { no: 2, nama: 'CPL terpetakan ke butir IABEE (a) sampai (k)', sumber: 'KUREKAM (butir IABEE pada CPL)', target: 'Lima prodi terpetakan, Desember 2026' },
   { no: 3, nama: 'CPL yang datanya terukur per angkatan', sumber: 'Rekap agregat dari Excel prodi', target: 'Pengukuran mulai Januari 2027' },
   { no: 4, nama: 'Ketercapaian CPL terhadap kriteria', sumber: 'Rekap agregat dari Excel prodi', target: 'Semua CPL prodi pilot di atas kriteria' },
   { no: 5, nama: 'Capstone: bobot, rubrik, proyek nyata', sumber: 'KUREKAM dan Google Drive', target: 'Terdokumentasi 2027 sampai 2028' },

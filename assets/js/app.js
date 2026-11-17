@@ -22,11 +22,12 @@ import { piView, kesiapanView } from './views/iabee.js';
 import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
 import lulusanView from './views/lulusan.js';
+import advisoryView from './views/advisory.js';
 import bahanLedView from './views/bahanled.js';
 import panduanView from './views/panduan.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
@@ -174,6 +175,7 @@ export const ROUTES = [
   { id: 'panduan', t: 'Panduan 10 Indikator', sub: 'Cara mengisi dan contoh', ic: 'audit', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: panduanView },
   { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'lulusan', t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi', ic: 'medal', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: lulusanView },
+  { id: 'advisory', t: 'Advisory Board Industri', sub: 'Bukti pelibatan praktisi', ic: 'link', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: advisoryView },
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },

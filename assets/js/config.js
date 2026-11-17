@@ -123,7 +123,7 @@ export const MENU_PERAN = {
   prodi: ['beranda', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
   wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan'],
   spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
-  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'panduan', 'lulusan', 'skpi', 'laporan', 'induk'],
+  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,
   developer: null
 };

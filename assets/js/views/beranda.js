@@ -89,7 +89,7 @@ export default function beranda(el) {
       <div class="fbox"><span class="ico-badge" style="--c:#0ea5e9">${icon('audit')}</span><b>Dosen</b><small>Sub-CPMK, RPS 16 pertemuan, SAP per pertemuan</small></div>
       <div class="fbox"><span class="ico-badge" style="--c:#8b5cf6">${icon('medal')}</span><b>Wakil Direktur I</b><small>Pengesahan kurikulum dan keputusan usulan revisi</small></div>
       <div class="fbox"><span class="ico-badge" style="--c:#f0616d">${icon('eye')}</span><b>SPM</b><small>Memantau keterlacakan, Bloom, LAM, IABEE; memberi catatan</small></div>
-      <div class="fbox"><span class="ico-badge" style="--c:#f5a524">${icon('calendar')}</span><b>Kasubbag AK</b><small>Data induk kelas dan dosen, rekap beban SKS riil dan JP</small></div>
+      <div class="fbox"><span class="ico-badge" style="--c:#f5a524">${icon('calendar')}</span><b>Kasubbag AK</b><small>Operasional perkuliahan: data induk kelas dan dosen, beban SKS riil dan JP, pemantauan realisasi pembelajaran</small></div>
     </div>
   </div>`;
 

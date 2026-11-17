@@ -1,6 +1,7 @@
 /* KUREKAM · Aturan Buku Pedoman, keterlacakan OBE, progres, dan beban dosen riil. */
 import { PARAM_DEFAULT, KELOMPOK, GRUP, BUTIR_IABEE, INDIKATOR_IABEE } from './config.js';
 import { detect, lvNum, MIN_CPL, ANJURAN_SMT } from './bloom.js';
+import { turunanReal } from './realisasilogic.js';
 
 export const KMAP = Object.fromEntries(KELOMPOK.map(k => [k.id, k]));
 export const fmt = (v, d = 0) => v == null || Number.isNaN(v) ? '–' : Number(v).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -302,12 +303,14 @@ export const persenCap = (r) => r && +r.n > 0 ? Math.min(100, (+r.lulus || 0) / 
 const urutAngkatan = (a, b) => String(a).localeCompare(String(b), 'id', { numeric: true });
 /** Capaian tiap CPL per angkatan. Baris tingkat CPL dipakai bila ada; bila hanya ada baris PI, dipakai PI terendah. */
 export function capaianCpl(S, pid) {
-  const P = param(S), krit = P.piMinPersen, cpl = byProdi(S.cpl, pid), rows = byProdi(S.capaian || [], pid);
+  const P = param(S), krit = P.piMinPersen, cpl = byProdi(S.cpl, pid), manual = byProdi(S.capaian || [], pid);
+  /* rekap manual didahulukan; hasil turunan dari Realisasi Pembelajaran mengisi CPL dan angkatan yang belum punya rekap manual */
+  const rows = manual.concat(turunanReal(S, pid).filter(t => !manual.some(r => r.cpl === t.cpl && String(r.angkatan) === String(t.angkatan))));
   const hasil = cpl.map(c => {
     const rc = rows.filter(r => r.cpl === c.id && +r.n > 0), angk = Array.from(new Set(rc.map(r => String(r.angkatan)))).sort(urutAngkatan);
     const per = angk.map(a => {
       const lv = rc.filter(r => String(r.angkatan) === a), langsung = lv.find(r => !r.pi);
-      if (langsung) return { angkatan: a, persen: persenCap(langsung), n: +langsung.n, lulus: +langsung.lulus, dari: 'CPL', id: langsung.id };
+      if (langsung) return { angkatan: a, persen: persenCap(langsung), n: +langsung.n, lulus: +langsung.lulus, dari: 'CPL', id: langsung.id, turunan: langsung.turunan || '' };
       const terendah = lv.map(r => ({ r, p: persenCap(r) })).sort((x, y) => x.p - y.p)[0];
       return { angkatan: a, persen: terendah.p, n: +terendah.r.n, lulus: +terendah.r.lulus, dari: 'PI', id: terendah.r.id };
     });

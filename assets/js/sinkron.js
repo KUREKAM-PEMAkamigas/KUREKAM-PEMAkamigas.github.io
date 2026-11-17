@@ -8,6 +8,7 @@ import { kesiapan, progres, struktur, capstoneCek, lulusanRekap } from './rules.
 import { ledRingkas, obeProdi } from './ledbahan.js';
 import { ringkasUmpan } from './tracerlam.js';
 import { abUmpan } from './advisorylogic.js';
+import { realUmpan } from './realisasilogic.js';
 
 const KUNCI = (no) => 'iabee_' + String(no).padStart(2, '0');
 const triwulan = () => { const d = new Date(); return `${d.getFullYear()}-T${Math.floor(d.getMonth() / 3) + 1}`; };
@@ -29,7 +30,8 @@ export function susunUmpanProdi(pid) {
     led: ledRingkas(S, pid),
     obe: (({ angkatan, wisuda, lulusan }) => ({ angkatan, wisuda, lulusan }))(obeProdi(S, pid)),
     tracer: ringkasUmpan(S.lulusan.filter(x => x.prodi === pid)),
-    ab: abUmpan(S, pid)
+    ab: abUmpan(S, pid),
+    real: realUmpan(S, pid)
   };
 }
 
@@ -39,7 +41,7 @@ export async function kirimUmpan() {
   if (DB.mode !== 'firebase' || !DB.user) return { ok: false, alasan: 'Basis data bersama belum aktif.' };
   try {
     const docs = S.prodi.map(p => susunUmpanProdi(p.id));
-    const kunci = JSON.stringify(docs.map(d => [d.id, d.indikator, d.status, d.simantap, d.led, d.obe, d.tracer, d.ab]));
+    const kunci = JSON.stringify(docs.map(d => [d.id, d.indikator, d.status, d.simantap, d.led, d.obe, d.tracer, d.ab, d.real]));
     if (kunci === terakhir) return { ok: true, tanpaPerubahan: true };
     for (const d of docs) await DB.tulisLuar('kur_umpan', d);
     terakhir = kunci; return { ok: true, n: docs.length };

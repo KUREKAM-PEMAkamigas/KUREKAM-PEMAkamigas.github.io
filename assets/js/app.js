@@ -161,7 +161,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 export const ROUTES = [
   { id: 'beranda', t: 'Beranda', ic: 'home', c: '#10b981', sec: 'Ringkasan', v: beranda },
   { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
-  { id: 'mutu', t: 'Dasbor Mutu', sub: 'Satuan SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
+  { id: 'mutu', t: 'Dasbor Mutu', sub: 'SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag AK', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
   { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },
   { id: 'visi', t: 'Visi & Profil Lulusan', ic: 'flag', c: '#10b981', sec: 'Penyusunan Kurikulum', prodi: true, v: visiView },

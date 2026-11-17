@@ -105,10 +105,10 @@ export const PARAM_DEFAULT = {
 };
 
 export const PERAN = {
-  prodi: { nama: 'Tim Kurikulum Prodi', c: '#10b981' },
-  dosen: { nama: 'Dosen Pengampu', c: '#0ea5e9' },
+  prodi: { nama: 'Prodi', c: '#10b981' },
+  dosen: { nama: 'Dosen', c: '#0ea5e9' },
   wadir: { nama: 'Wakil Direktur I', c: '#8b5cf6' },
-  spm: { nama: 'Satuan Penjaminan Mutu (SPM)', c: '#f0616d' },
+  spm: { nama: 'SPM', c: '#f0616d' },
   akademik: { nama: 'Kasubbag AK', c: '#f5a524' },
   admin: { nama: 'Admin', c: '#64748b' },
   developer: { nama: 'Developer', c: '#0f172a' }

@@ -51,10 +51,10 @@ export function periksaRps(m, r) {
   const P = param(S), out = [], add = (k, butir, temuan, saran, acuan) => out.push({ k, butir, temuan, saran, acuan });
   const cp = S.cpmk.filter(c => c.mk === m.id), subs = S.sub.filter(s => s.mk === m.id), hint = prakOf(m) ? 'P' : 'C';
   const peng = S.tugas.filter(t => t.mk === m.id);
-  add(peng.length ? 'ok' : 'near', 'Dosen pengampu', peng.length ? `${peng.length} penugasan` : 'Belum ada penugasan dosen', 'Tim Kurikulum Prodi menugaskan dosen di menu Penugasan dan Beban Dosen.', AC.rps);
-  add((m.cpl || []).length ? 'ok' : 'bad', 'CPL yang dibebankan', (m.cpl || []).length ? `${m.cpl.length} CPL` : 'Mata kuliah belum dibebani CPL', 'CPL ditetapkan Tim Kurikulum Prodi di menu Mata Kuliah atau Matriks Keterlacakan.', AC.obe);
+  add(peng.length ? 'ok' : 'near', 'Dosen pengampu', peng.length ? `${peng.length} penugasan` : 'Belum ada penugasan dosen', 'Prodi menugaskan dosen di menu Penugasan dan Beban Dosen.', AC.rps);
+  add((m.cpl || []).length ? 'ok' : 'bad', 'CPL yang dibebankan', (m.cpl || []).length ? `${m.cpl.length} CPL` : 'Mata kuliah belum dibebani CPL', 'CPL ditetapkan Prodi di menu Mata Kuliah atau Matriks Keterlacakan.', AC.obe);
   /* CPMK */
-  if (!cp.length) add('bad', 'CPMK', 'Belum ada CPMK', 'CPMK dirumuskan Tim Kurikulum Prodi. Asisten dapat membuat usulan dari CPL dan tingkat semester.', AC.obe);
+  if (!cp.length) add('bad', 'CPMK', 'Belum ada CPMK', 'CPMK dirumuskan Prodi. Asisten dapat membuat usulan dari CPL dan tingkat semester.', AC.obe);
   else {
     const tak = cp.filter(c => { const b = detect(c.teks, hint); return !b || b.kabur; }), lepas = cp.filter(c => !(c.cpl || []).length);
     add(tak.length ? 'bad' : 'ok', 'Kata kerja CPMK', tak.length ? `${tak.length} CPMK tanpa kata kerja operasional terukur: ${tak.map(c => c.kode).join(', ')}` : 'Semua CPMK memakai kata kerja operasional', 'Awali dengan KKO terukur, misalnya menerapkan, menganalisis, mengoperasikan. Hindari memahami dan mengetahui.', AC.bloom);
@@ -177,7 +177,7 @@ export function bukaAsistenRps(m, draw, blankRps) {
 }
 
 /* =====================================================================
-   C. Asisten Kurikulum (halaman untuk Tim Kurikulum Prodi)
+   C. Asisten Kurikulum (halaman untuk Prodi)
    ===================================================================== */
 const defProdi = (pid) => PRODI_DEF.find(p => p.id === pid);
 const bidangOf = (p) => (p && p.bidang) || (defProdi(p && p.id) || {}).d || '';

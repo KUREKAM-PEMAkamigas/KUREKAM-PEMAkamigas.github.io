@@ -4,6 +4,7 @@
    Isi keilmuan (pokok bahasan, pustaka, penelitian) tetap berasal dari dosen dan prodi. */
 import { S, ctx, can, save, saveMany, addLog, esc, icon, toast, uid, openDrawer, rerender } from '../app.js';
 import { KELOMPOK, APP } from '../config.js';
+import { kodeBaruMk, kodeBaku } from '../kode.js';
 import { PRODI_DEF, CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci } from '../seed.js';
 import { detect, ANJURAN_SMT } from '../bloom.js';
 import { param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
@@ -190,8 +191,8 @@ function kunciProdi(pid) {
   Object.entries(SCI_SMT[pid] || {}).forEach(([n, [s, T, Pp]]) => out.push([s, n, T, Pp, 'Kunci prodi']));
   return out;
 }
-const kodeBaru = (pid, smt, tambah = 0) => { const no = byProdi(S.mk, pid).reduce((a, m) => Math.max(a, +(String(m.kode).match(/(\d{2})$/) || [0, 0])[1]), 0) + 1 + tambah; return `${pid}${smt}${pad(no % 100)}`; };
-const mkBaru = (pid, o, i) => ({ id: uid(`${pid}-MK`), prodi: pid, kode: kodeBaru(pid, o.smt, i), prasyarat: [], lokasi: +o.P > +o.T ? 'Laboratorium' : 'Kampus', kunci: '', bk: [], cpl: [], usul: true, kat: KAT[o.kel], ...o });
+const kodeBaru = (pid, o, tambah = 0) => { const k = kodeBaruMk(byProdi(S.mk, pid), { ...o, prodi: pid }); return kodeBaku(o.nama) ? k : k.slice(0, 3) + String(+k.slice(3) + tambah).padStart(3, '0'); };
+const mkBaru = (pid, o, i) => ({ id: uid(`${pid}-MK`), prodi: pid, kode: kodeBaru(pid, o, i), prasyarat: [], lokasi: +o.P > +o.T ? 'Laboratorium' : 'Kampus', kunci: '', bk: [], cpl: [], usul: true, kat: KAT[o.kel], ...o });
 
 const GEN = {
   async visi(pid, bidang) {

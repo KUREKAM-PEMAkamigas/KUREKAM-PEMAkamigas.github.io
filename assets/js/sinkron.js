@@ -4,8 +4,10 @@
    Hanya angka agregat dan keterangan; tidak ada NIP, nama, NIM, atau nilai per mahasiswa. */
 import { S } from './app.js';
 import { DB } from './db.js';
+import { UNIT_SIMANTAP } from './config.js';
 import { kesiapan, progres, struktur, capstoneCek, lulusanRekap } from './rules.js';
 
+const unitLuar = (pid) => UNIT_SIMANTAP[pid] || pid;
 const KUNCI = (no) => 'iabee_' + String(no).padStart(2, '0');
 const triwulan = () => { const d = new Date(); return `${d.getFullYear()}-T${Math.floor(d.getMonth() / 3) + 1}`; };
 
@@ -18,7 +20,7 @@ export function susunUmpanProdi(pid) {
   if (cs.d && +cs.d.mitra > 0) simantap.mitra = +cs.d.mitra;
   if (st.n) simantap.basic = +st.matSains;
   return {
-    id: pid, unit: pid, sumber: 'KUREKAM', jenis: 'kesiapan_iabee', periode: triwulan(), waktu: new Date().toISOString(),
+    id: unitLuar(pid), unit: unitLuar(pid), sumber: 'KUREKAM', jenis: 'kesiapan_iabee', periode: triwulan(), waktu: new Date().toISOString(),
     indikator: Object.fromEntries(ind.map(i => [KUNCI(i.no), i.no === 6 ? (i.k === 'na' ? null : ll.obe) : i.nilai == null ? null : +i.nilai.toFixed(1)])),
     status: Object.fromEntries(ind.map(i => [KUNCI(i.no), i.k === 'na' ? 'belum_diukur' : i.k === 'ok' ? 'sesuai' : i.k === 'near' ? 'sebagian' : 'jauh'])),
     keterangan: Object.fromEntries(ind.map(i => [KUNCI(i.no), `${i.teks || ''}${i.ket ? ' | ' + i.ket : ''}`])),
@@ -43,6 +45,6 @@ export function jadwalkanUmpan() { clearTimeout(tunda); tunda = setTimeout(kirim
 /** Temuan AMI dari SIMANTAP untuk unit prodi (hanya KTS Minor/Mayor dan Observasi). */
 export async function temuanAmi(pid) {
   const rows = await DB.bacaLuar('indikator');
-  return rows.filter(i => i.unit === pid && i.ami && ['KTS Minor', 'KTS Mayor', 'Observasi'].includes(i.ami.temuan))
+  return rows.filter(i => i.unit === unitLuar(pid) && i.ami && ['KTS Minor', 'KTS Mayor', 'Observasi'].includes(i.ami.temuan))
     .map(i => ({ id: i.id, kode: i.kode, teks: i.teks, temuan: i.ami.temuan, uraian: i.ami.uraian || '', tgl: i.ami.tgl || '' }));
 }

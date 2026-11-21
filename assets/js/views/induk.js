@@ -1,5 +1,6 @@
 /* KUREKAM · Data induk dan pengaturan: prodi dan kelas, dosen, parameter, impor/ekspor, basis data, log */
 import { muatUlangAkun, S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, uid, saveSettings, addLog, resetData, replaceData } from '../app.js';
+import { labelKel, labelGrup } from '../kode.js';
 import { DB, getFirebaseConfig, saveFirebaseConfig, buatTautanFirebase } from '../db.js';
 import { PARAM_DEFAULT, KELOMPOK, KAT_IABEE, GRUP, APP, PERAN, MENU_PERAN } from '../config.js';
 import { param, fmt, KMAP, kelasOf } from '../rules.js';
@@ -107,7 +108,7 @@ function tParam(el, ed, adm) {
     <div class="card">${head('Konversi SKS ke jam pelajaran', 'Dasar perhitungan JP mahasiswa dan JP total dosen', 'calendar', '#f5a524')}
       <div class="pform">
         <div class="pfrow"><span>1 SKS teori</span>${num('p-t', P.menitTeori, 5)}<small>menit per minggu</small></div>
-        ${GK.map(g => `<div class="pfrow"><span>1 SKS praktik ${g} <small class="muted">${GRUP[g].nama}</small></span>${num('p-' + g, P.durasiPraktik[g], 5)}<small>menit per minggu</small></div>`).join('')}
+        ${GK.map(g => `<div class="pfrow"><span>1 SKS praktik ${labelGrup(g)} <small class="muted">${GRUP[g].nama}</small></span>${num('p-' + g, P.durasiPraktik[g], 5)}<small>menit per minggu</small></div>`).join('')}
         <div class="pfrow"><span>Durasi 1 JP</span>${num('j-dur', J.dur, 5)}<small>menit</small></div>
         <div class="pfrow"><span>JP per hari</span>${num('j-day', J.perDay)}<small>JP</small></div>
         <div class="pfrow"><span>Hari kuliah per minggu</span>${num('j-days', J.days)}<small>hari</small></div>
@@ -151,7 +152,7 @@ function tImpor(el, ed, adm) {
   ${hasil ? `<div class="ribbon info" style="display:block">${hasil}</div>` : ''}
   <div class="grid g2">
     <div class="card">${head('Impor matriks kurikulum (Excel)', 'Berkas Matriks_Kurikulum_D4_PEM_Akamigas.xlsx yang sudah diisi prodi', 'upload', '#10b981')}
-      <p class="small">Lembar <b>TP, TO, TI, TM, LO</b> dibaca sebagai daftar mata kuliah rancangan baru, lembar <b>CPL</b> sebagai rumusan CPL. Hanya prodi yang lembarnya berisi nama mata kuliah yang diganti. ${ctx.role === 'prodi' ? `Peran Tim Kurikulum hanya mengganti data prodi <b>${ctx.prodi}</b>.` : ''}</p>
+      <p class="small">Lembar <b>TP, TO, TI, TM, LG</b> dibaca sebagai daftar mata kuliah rancangan baru, lembar <b>CPL</b> sebagai rumusan CPL. Hanya prodi yang lembarnya berisi nama mata kuliah yang diganti. ${ctx.role === 'prodi' ? `Peran Tim Kurikulum hanya mengganti data prodi <b>${ctx.prodi}</b>.` : ''}</p>
       <p class="note">Mengganti daftar MK suatu prodi akan menghapus CPMK, Sub-CPMK, RPS, dan penugasan dosen prodi tersebut karena terikat pada MK lama.</p>
       <div class="drawer-act"><button class="btn pri" id="i-mx" ${boleh ? '' : 'disabled'}>${icon('upload')} Pilih berkas matriks</button></div></div>
     <div class="card">${head('Impor kurikulum berjalan (Excel)', 'Format lembar DATA dari dasbor beban prodi lama', 'upload', '#0ea5e9')}
@@ -243,7 +244,7 @@ async function imporLama(X, wb) {
   let t = null; for (const n of names) { t = cariHeader(X, wb.Sheets[n], [/prodi|programstudi/, /klas|kelompok/]); if (t) break; }
   if (!t) throw new Error('Tidak ditemukan tabel dengan kolom Program Studi dan Klasifikasi. Gunakan template yang disediakan.');
   const h = t.h, c = { prodi: kol(h, /programstudi/, /prodi/), smt: kol(h, /^semester/, /^smt/, /^sem/), kode: kol(h, /^kode/), nama: kol(h, /^nama/, /matakuliah/), g: kol(h, /klasifikasi/, /kelompok/, /^klas/), T: kol(h, /sksteori/, /^teori/, /^t$/), P: kol(h, /skspraktik/, /^praktik/, /^p$/), kelas: kol(h, /kelasparalel/, /rombel/, /^kelas/) };
-  const pid = (raw) => { const s = norm(raw); const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (s === 'lg' || /logistik/.test(s)) return 'LO'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
+  const pid = (raw) => { const s = norm(raw); const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (s === 'lg' || s === 'lo' || /logistik/.test(s)) return 'LG'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
   const docs = [], lewat = [];
   for (let r = t.hi + 1; r < t.rows.length; r++) {
     const row = t.rows[r], nama = String(row[c.nama] || '').trim(), kode = String(c.kode >= 0 ? row[c.kode] : '').trim(); if (!nama && !kode) continue;
@@ -260,7 +261,7 @@ async function imporLama(X, wb) {
 
 const DOSEN_HEAD = ['Nama', 'NIP', 'NIDN', 'Jabatan', 'Pendidikan', 'Homebase', 'Prodi mengajar', 'Bidang', 'Status', 'Bidang S1', 'Bidang S2', 'Bidang S3', 'Sertifikasi'];
 const TUGAS_HEAD = ['Prodi', 'Dosen', 'Kode MK', 'Nama MK', 'Kelas', 'Porsi T', 'Porsi P', 'Koordinator'];
-const kodeProdi = (raw) => { const s = norm(raw); if (!s) return null; const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (s === 'lg' || /logistik/.test(s)) return 'LO'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
+const kodeProdi = (raw) => { const s = norm(raw); if (!s) return null; const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (s === 'lg' || s === 'lo' || /logistik/.test(s)) return 'LG'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
 const rapi = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 const cocokDosen = (nip, nidn, nama) => S.dosen.find(d => (nip && norm(d.nip) === norm(nip)) || (nidn && norm(d.nidn) === norm(nidn))) || S.dosen.find(d => norm(d.nama) === norm(nama));
 const digit = (v) => String(v == null ? '' : v).replace(/\D/g, '');

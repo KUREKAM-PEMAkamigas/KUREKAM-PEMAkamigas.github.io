@@ -41,11 +41,13 @@ export const KELOMPOK = [
   { id: 'MKK - tugas akhir', g: 'MKK', iabee: 'Muatan spesifik' }
 ];
 export const GRUP = {
-  MKU: { nama: 'Mata Kuliah Umum', c: '#f5a524' },
-  MBS: { nama: 'Basic Science', c: '#0ea5e9' },
-  MBE: { nama: 'Basic Engineering', c: '#8b5cf6' },
-  MKK: { nama: 'Kompetensi', c: '#10b981' }
+  MKU: { nama: 'Mata Kuliah Wajib (MKW)', c: '#f5a524' },
+  MBS: { nama: 'Basic Science (MKBS)', c: '#0ea5e9' },
+  MBE: { nama: 'Basic Engineering (MKBE)', c: '#8b5cf6' },
+  MKK: { nama: 'Kompetensi (MKKK)', c: '#10b981' }
 };
+/* Kode unit prodi di SIMANTAP bila berbeda dengan kode di KUREKAM. Hapus baris LG bila SIMANTAP sudah memakai LG. */
+export const UNIT_SIMANTAP = { LG: 'LO' };
 export const KAT_IABEE = ['Pendidikan umum', 'Matematika dan ilmu alam', 'Teknologi informasi', 'Muatan spesifik'];
 
 /* Butir kompetensi lulusan (a) sampai (k), Kriteria IABEE 1.2.2 (items (a) to (k)), untuk program teknologi rekayasa

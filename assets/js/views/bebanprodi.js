@@ -3,6 +3,7 @@
    insight otomatis, peringkat, profil relatif, tren, lanskap beban, komposisi kelompok, dan rincian MK.
    Dua sumber data: Rancangan 2027 (koleksi mk) dan kurikulum berjalan (koleksi lama). */
 import { S, ctx, saveCtx, can, save, remove, rerender, esc, icon, toast, uid, saveSettings, addLog } from '../app.js';
+import { labelGrup } from '../kode.js';
 import { chart, AX } from '../charts.js';
 import { param, fmt, grupOf, kelasOf, warnaGrup } from '../rules.js';
 import { GRUP } from '../config.js';
@@ -70,10 +71,10 @@ export default function bebanProdiView(el) {
     <button class="btn sm" id="xl">${icon('download')} Unduh Excel</button>
   </div>
   <details class="card sim" ${simOn ? 'open' : ''}>
-    <summary>${head('Simulasi waktu pertemuan dan kapasitas jadwal', `1 SKS teori ${c.t} menit · praktik ${GK.map(g => `${g} ${c.p[g]}`).join(' · ')} menit · kapasitas ${cap} JP per minggu ${simOn ? '· <b style="color:#f0616d">simulasi aktif, bukan parameter resmi</b>' : '· sama dengan parameter resmi'}`, 'gear', '#6366f1', `<span class="tag" style="--c:#6366f1">Buka atau tutup</span>`)}</summary>
+    <summary>${head('Simulasi waktu pertemuan dan kapasitas jadwal', `1 SKS teori ${c.t} menit · praktik ${GK.map(g => `${labelGrup(g)} ${c.p[g]}`).join(' · ')} menit · kapasitas ${cap} JP per minggu ${simOn ? '· <b style="color:#f0616d">simulasi aktif, bukan parameter resmi</b>' : '· sama dengan parameter resmi'}`, 'gear', '#6366f1', `<span class="tag" style="--c:#6366f1">Buka atau tutup</span>`)}</summary>
     <div class="sim-grid">
       <div class="simc" style="--c:#0ea5e9"><b>Teori</b><label>1 SKS teori<div class="unit"><input class="inp" type="number" id="s-t" min="30" max="120" step="5" value="${c.t}"><span>menit</span></div></label><small>berlaku untuk semua kelompok</small></div>
-      ${GK.map(g => `<div class="simc" style="--c:${warnaGrup(g)}"><b>${g}</b><label>1 SKS praktik<div class="unit"><input class="inp" type="number" id="s-${g}" min="45" max="300" step="5" value="${c.p[g]}"><span>menit</span></div></label><small>${GRUP[g].nama}</small></div>`).join('')}
+      ${GK.map(g => `<div class="simc" style="--c:${warnaGrup(g)}"><b>${labelGrup(g)}</b><label>1 SKS praktik<div class="unit"><input class="inp" type="number" id="s-${g}" min="45" max="300" step="5" value="${c.p[g]}"><span>menit</span></div></label><small>${GRUP[g].nama}</small></div>`).join('')}
     </div>
     <div class="sim-grid" style="margin-top:10px">
       <div class="simc" style="--c:#f5a524"><b>Jam pertemuan</b><label>Durasi 1 JP<div class="unit"><input class="inp" type="number" id="j-dur" min="30" max="120" step="5" value="${J.dur}"><span>menit</span></div></label></div>
@@ -183,9 +184,9 @@ function tunggal(el, sumber, c, J, ed) {
     <div class="filters">
       <div class="seg">${PR.map(p => `<button data-dp="${p.id}" class="${p.id === cur ? 'on' : ''}">${p.id}</button>`).join('')}</div>
       <select class="inp" id="d-smt"><option value="0">Semua semester</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}" ${s === dSmt ? 'selected' : ''}>Semester ${s}</option>`).join('')}</select>
-      <select class="inp" id="d-grp"><option value="">Semua kelompok</option>${GK.map(g => `<option ${g === dGrp ? 'selected' : ''}>${g}</option>`).join('')}</select>
+      <select class="inp" id="d-grp"><option value="">Semua kelompok</option>${GK.map(g => `<option value="${g}" ${g === dGrp ? 'selected' : ''}>${labelGrup(g)}</option>`).join('')}</select>
     </div>
-    <div class="grid g4 mini" style="margin-bottom:12px">${GK.map(g => `<div style="border-left:4px solid ${warnaGrup(g)};padding-left:10px"><small>${g} · ${A[cur].ng[g]} MK</small><b>${fmt(A[cur].g[g] / 60, 1)} jam</b></div>`).join('')}</div>
+    <div class="grid g4 mini" style="margin-bottom:12px">${GK.map(g => `<div style="border-left:4px solid ${warnaGrup(g)};padding-left:10px"><small>${labelGrup(g)} · ${A[cur].ng[g]} MK</small><b>${fmt(A[cur].g[g] / 60, 1)} jam</b></div>`).join('')}</div>
     <div class="tbl-wrap" style="max-height:560px"><table class="tbl"><thead><tr><th class="num">Smt</th><th>Kode</th><th>Mata kuliah</th><th>Kelompok</th><th class="num">T</th><th class="num">P</th><th class="num">Menit/minggu</th><th class="num">JP</th><th>Kelas paralel</th><th class="num">Jam mengajar</th></tr></thead><tbody>
     ${det.map(m => `<tr class="${ed && sumber === 'lama' ? 'click' : ''}" data-l="${m.id}"><td class="num">${m.smt}</td><td class="small">${esc(m.kode)}</td><td><b>${esc(short(m.nama, 60))}</b></td><td><span class="tag" style="--c:${warnaGrup(m.g)}">${m.g}</span></td><td class="num">${m.T}</td><td class="num">${m.P}</td><td class="num">${fmt(menit(m, c))}</td><td class="num">${fmt(menit(m, c) / J.dur, 1)}</td><td class="small">${esc(m.kls)}</td><td class="num">${NON_KELAS.test(m.nama) ? '<span class="muted">–</span>' : fmt(menit(m, c) * m.nk / 60, 1)}</td></tr>`).join('') || '<tr><td colspan="10" class="empty">Tidak ada mata kuliah pada saringan ini.</td></tr>'}
     </tbody></table></div></div>`;
@@ -218,7 +219,7 @@ function tunggal(el, sumber, c, J, ed) {
   }
   chart(el.querySelector('#c-st'), { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, legend: { top: 0 }, grid: { left: 8, right: 8, top: 34, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: PR.map(p => p.id), ...AX }, yAxis: { type: 'value', name: 'jam', nameTextStyle: { fontSize: 10, color: '#6b778c' }, ...AX },
-    series: GK.map((g, i) => ({ name: g, type: 'bar', stack: 'a', barWidth: 38, data: PR.map(p => +(A[p.id].g[g] / 60).toFixed(1)), itemStyle: { color: warnaGrup(g), borderRadius: i === GK.length - 1 ? [8, 8, 0, 0] : 0 } })) });
+    series: GK.map((g, i) => ({ name: labelGrup(g), type: 'bar', stack: 'a', barWidth: 38, data: PR.map(p => +(A[p.id].g[g] / 60).toFixed(1)), itemStyle: { color: warnaGrup(g), borderRadius: i === GK.length - 1 ? [8, 8, 0, 0] : 0 } })) });
   chart(el.querySelector('#c-aj'), { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: 8, right: 24, top: 10, bottom: 8, containLabel: true },
     xAxis: { type: 'value', ...AX }, yAxis: { type: 'category', data: PR.map(p => p.id).reverse(), ...AX },
     series: [{ type: 'bar', barWidth: 16, data: PR.slice().reverse().map(p => ({ value: +(A[p.id].ajar / 60).toFixed(0), itemStyle: { color: p.c, borderRadius: [0, 8, 8, 0] } })), label: { show: true, position: 'right', fontSize: 11, formatter: '{c} jam' } }] });
@@ -226,7 +227,7 @@ function tunggal(el, sumber, c, J, ed) {
 
 function formLama(x) {
   formDrawer({ title: x.id ? 'Ubah MK kurikulum berjalan' : 'Tambah MK kurikulum berjalan', sub: 'Data pembanding, tidak memengaruhi rancangan baru', obj: { ...x, kelasTxt: (x.kelas || []).join(', ') },
-    fields: [{ k: 'prodi', label: 'Prodi', type: 'select', opts: S.prodi.map(p => ({ v: p.id, t: p.id })) }, { k: 'smt', label: 'Semester', type: 'number' }, { k: 'kode', label: 'Kode MK' }, { k: 'g', label: 'Kelompok', type: 'select', opts: GK.map(g => ({ v: g, t: g + ' · ' + GRUP[g].nama })) },
+    fields: [{ k: 'prodi', label: 'Prodi', type: 'select', opts: S.prodi.map(p => ({ v: p.id, t: p.id })) }, { k: 'smt', label: 'Semester', type: 'number' }, { k: 'kode', label: 'Kode MK' }, { k: 'g', label: 'Kelompok', type: 'select', opts: GK.map(g => ({ v: g, t: GRUP[g].nama })) },
       { k: 'nama', label: 'Nama mata kuliah', full: true }, { k: 'T', label: 'SKS teori', type: 'number' }, { k: 'P', label: 'SKS praktik', type: 'number' }, { k: 'kelasTxt', label: 'Kelas paralel (pisahkan dengan koma)', full: true }],
     onSave: async (o) => {
       if (!o.nama) return 'Nama mata kuliah wajib diisi.'; if (!(o.smt >= 1 && o.smt <= 8)) return 'Semester harus 1 sampai 8.';
@@ -287,7 +288,7 @@ async function ekspor(c, J) {
   const add = (name, aoa, cols) => { const ws = X.utils.aoa_to_sheet(aoa); if (cols) ws['!cols'] = cols.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, name); };
   ['baru', 'lama'].forEach(k => {
     const list = daftar(k); if (!list.length) return;
-    const rek = [[`Rekap beban perkuliahan · ${namaSrc(k)}`], [`Teori ${c.t} menit · praktik ${GK.map(g => g + ' ' + c.p[g]).join(', ')} menit · 1 JP ${J.dur} menit · kapasitas ${cap} JP per minggu`], [],
+    const rek = [[`Rekap beban perkuliahan · ${namaSrc(k)}`], [`Teori ${c.t} menit · praktik ${GK.map(g => labelGrup(g) + ' ' + c.p[g]).join(', ')} menit · 1 JP ${J.dur} menit · kapasitas ${cap} JP per minggu`], [],
       ['Prodi', 'Jumlah MK', 'SKS teori', 'SKS praktik', 'Total SKS', 'Jam per minggu (akumulasi)', 'Porsi jam praktik %', ...[1, 2, 3, 4, 5, 6, 7, 8].map(s => `JP smt ${s}`), 'Jam mengajar × kelas']];
     S.prodi.forEach(p => { const a = hitung(list, p.id, c, 8); rek.push([p.id, a.n, a.T, a.P, a.sks, +a.jam.toFixed(1), +a.rasioJam.toFixed(1), ...[1, 2, 3, 4, 5, 6, 7, 8].map(s => +(a.smt[s].menit / J.dur).toFixed(1)), +(a.ajar / 60).toFixed(1)]); });
     add(k === 'baru' ? 'Rekap Rancangan' : 'Rekap Berjalan', rek, [10, 10, 10, 10, 10, 24, 18, 9, 9, 9, 9, 9, 9, 9, 9, 20]);

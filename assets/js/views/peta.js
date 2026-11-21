@@ -1,5 +1,6 @@
 /* KUREKAM · Peta kurikulum dan matriks keterlacakan */
 import { S, ctx, can, save, rerender, esc, icon, toast } from '../app.js';
+import { labelKel, labelGrup } from '../kode.js';
 import { GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, jpRange, trace, iabeeOf } from '../rules.js';
@@ -11,10 +12,10 @@ export function petaView(el) {
     const k = P.kerangka[s], x = R.smt[s], jr = jpRange(P, s);
     const ok = x.sks === k[0] && (k[1] == null || (x.T >= k[1] && x.T <= k[2] && x.P >= k[3] && x.P <= k[4]));
     return `<div class="pcol" data-smt="${s}"><div class="pcol-h ${ok ? 'ok' : 'bad'}"><b>Semester ${s}</b><span>${x.sks}/${k[0]} SKS</span><small>T ${x.T}${k[1] != null ? ` (${k[1]}–${k[2]})` : ''} · P ${x.P}${k[3] != null ? ` (${k[3]}–${k[4]})` : ''}</small><small>${x.n} MK · ${fmt(x.jp, 1)} JP/mg${jr ? ` (${fmt(jr[0], 0)}–${fmt(jr[1], 0)})` : ''}</small></div>
-      <div class="pcol-b">${x.mk.sort((a, b) => (b.kunci ? 1 : 0) - (a.kunci ? 1 : 0)).map(m => `<div class="mkc ${m.kunci ? 'lock' : ''}" draggable="${ed && !m.kunci}" data-id="${m.id}" style="--c:${warnaGrup(grupOf(m))}" title="${esc(m.nama)} · ${esc(m.kel)}"><b>${esc(short(m.nama, 44))}</b><span>${m.T}T + ${m.P}P · ${fmt(jpOf(m, P), 1)} JP${m.kunci ? ' · kunci' : ''}</span></div>`).join('')}</div></div>`;
+      <div class="pcol-b">${x.mk.sort((a, b) => (b.kunci ? 1 : 0) - (a.kunci ? 1 : 0)).map(m => `<div class="mkc ${m.kunci ? 'lock' : ''}" draggable="${ed && !m.kunci}" data-id="${m.id}" style="--c:${warnaGrup(grupOf(m))}" title="${esc(m.nama)} · ${esc(labelKel(m.kel))}"><b>${esc(short(m.nama, 44))}</b><span>${m.T}T + ${m.P}P · ${fmt(jpOf(m, P), 1)} JP${m.kunci ? ' · kunci' : ''}</span></div>`).join('')}</div></div>`;
   };
   el.innerHTML = `
-  <div class="card">${head('Peta kurikulum ' + ctx.prodi, prodiName() + (ed ? ' · seret kartu MK ruang prodi untuk memindah semester' : ''), 'grid4', '#6366f1', `<div class="legend">${Object.entries(GRUP).map(([g, v]) => `<span><i class="dot" style="--c:${v.c}"></i>${g}</span>`).join('')}</div>${ed ? '' : ro()}`)}
+  <div class="card">${head('Peta kurikulum ' + ctx.prodi, prodiName() + (ed ? ' · seret kartu MK ruang prodi untuk memindah semester' : ''), 'grid4', '#6366f1', `<div class="legend">${Object.entries(GRUP).map(([g, v]) => `<span><i class="dot" style="--c:${v.c}"></i>${labelGrup(g)}</span>`).join('')}</div>${ed ? '' : ro()}`)}
     <div class="peta">${[1, 2, 3, 4, 5, 6, 7, 8].map(cell).join('')}</div>
   </div>
   <div class="card" style="margin-top:18px">${head('Teori, praktik, dan JP per semester', 'Batang = SKS teori dan praktik (sumbu kiri). Garis = JP per minggu (sumbu kanan). Porsi praktik naik bertahap; JP menjaga mahasiswa full day di kampus.', 'pulse', '#10b981')}<div class="chart lg" id="c-tp"></div></div>

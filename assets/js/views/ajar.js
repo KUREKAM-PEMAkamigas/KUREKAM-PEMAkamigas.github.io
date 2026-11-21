@@ -1,5 +1,6 @@
 /* KUREKAM · CPMK, Sub-CPMK, RPS, dan SAP */
 import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, toast } from '../app.js';
+import { labelKel, labelGrup } from '../kode.js';
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
@@ -115,7 +116,7 @@ function cetakRps(m, r) {
   openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="rep-doc">${icon('download')} Unduh Word</button><button class="btn ghost" data-close>Tutup</button></div>
   <div class="report" id="rep"><div class="kop"><img src="assets/img/logo-pem-akamigas.png" alt=""><div class="t"><b>POLITEKNIK ENERGI DAN MINERAL AKAMIGAS</b><span>Program Studi ${esc(p.nama)} · Sarjana Terapan</span></div><img src="assets/img/logo-esdm.png" alt=""></div>
   <h2>RENCANA PEMBELAJARAN SEMESTER</h2><div class="meta">Kurikulum ${APP.tahunKurikulum} · Status: ${r.status}${r.tgl ? ' · ' + r.tgl : ''}</div>
-  <table class="tbl"><tbody><tr><th>Mata kuliah</th><td>${esc(m.nama)}</td><th>Kode</th><td>${esc(m.kode)}</td></tr><tr><th>Semester</th><td>${m.smt}</td><th>Bobot</th><td>${m.T} SKS teori + ${m.P} SKS praktik (${fmt(jpOf(m, P), 2)} jam/minggu)</td></tr><tr><th>Kelompok</th><td>${esc(m.kel)}</td><th>Pengampu</th><td>${esc(peng.join(', '))}</td></tr></tbody></table>
+  <table class="tbl"><tbody><tr><th>Mata kuliah</th><td>${esc(m.nama)}</td><th>Kode</th><td>${esc(m.kode)}</td></tr><tr><th>Semester</th><td>${m.smt}</td><th>Bobot</th><td>${m.T} SKS teori + ${m.P} SKS praktik (${fmt(jpOf(m, P), 2)} jam/minggu)</td></tr><tr><th>Kelompok</th><td>${esc(labelKel(m.kel))}</td><th>Pengampu</th><td>${esc(peng.join(', '))}</td></tr></tbody></table>
   <h4>Deskripsi</h4><p>${esc(r.deskripsi)}</p>
   <h4>CPL yang dibebankan</h4><ul>${(m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean).map(c => `<li><b>${c.kode}</b> ${esc(c.teks)}</li>`).join('')}</ul>
   <h4>CPMK dan Sub-CPMK</h4><ul>${cp.map(c => `<li><b>${c.kode}</b> ${esc(c.teks)} [${(detect(c.teks, hintOf(m)) || {}).code || '?'}]<ul>${subs.filter(s => s.cpmk === c.id).map(s => `<li>${s.kode}: ${esc(s.teks)} (${s.bobot}%)</li>`).join('')}</ul></li>`).join('')}</ul>

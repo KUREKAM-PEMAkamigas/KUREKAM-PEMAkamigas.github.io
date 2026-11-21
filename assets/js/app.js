@@ -3,6 +3,7 @@ import { APP, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
 import { DB } from './db.js';
 import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
+import { migrasiLG } from './kode.js';
 import { jadwalkanUmpan } from './sinkron.js';
 import { icon } from './icons.js';
 import { disposeAll, tilt } from './charts.js';
@@ -337,6 +338,11 @@ export async function start() {
   let d = await DB.loadAll();
   const st = d.settings && d.settings[0];
   if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { const simpan = d.pengguna || []; d = buildSeed(); d.pengguna = simpan; for (const c of Object.keys(d)) { if (c !== 'pengguna') await DB.replaceAll(c, d[c]); } }
+  /* kode prodi Logistik: LO diganti LG. Penggantian dilakukan di memori setiap kali muat; penulisan ke basis data hanya oleh admin. */
+  const migLG = migrasiLG(d);
+  if (ctx.prodi === 'LO') ctx.prodi = 'LG';
+  if (/-LO-|^LO-/.test(ctx.dosen || '')) ctx.dosen = ctx.dosen.replace(/\bLO\b/, 'LG');
+  saveCtx();
   /* migrasi ringan: RPS contoh mendapat isian integrasi penelitian dan PKM tanpa menghapus data pengguna */
   if (st && !st.integ5 && d.rps.length && !d.rps.some(r => (r.pertemuan || []).some(p => p.integ))) {
     const fresh = buildSeed(); let n = 0;
@@ -346,6 +352,10 @@ export async function start() {
   if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
   terapkanAkun();
+  if (migLG.length && ['admin', 'developer'].includes(ctx.role)) {
+    try { for (const c of migLG) await DB.replaceAll(c, d[c]); await addLog('Kode prodi Logistik diseragamkan dari LO menjadi LG'); toast('Kode prodi Logistik kini LG di basis data.'); }
+    catch (e) { console.warn('Penyeragaman LG ke basis data gagal:', e.message); }
+  }
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
   if (!pantau) { pantau = true; window.addEventListener('hashchange', route_); }
   route_();

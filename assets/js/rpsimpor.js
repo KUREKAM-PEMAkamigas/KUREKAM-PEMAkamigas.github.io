@@ -38,7 +38,7 @@ function barisTabel(xml) {
   return rows;
 }
 
-const kodeProdi = (raw) => { const s = norm(raw); const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (/logistik/.test(s)) return 'LO'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
+const kodeProdi = (raw) => { const s = norm(raw); const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (s === 'lg' || s === 'lo' || /logistik/.test(s)) return 'LG'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
 const angka = (s) => { const m = String(s || '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : 0; };
 
 /** Mengurai satu berkas RPS menjadi objek terstruktur. */

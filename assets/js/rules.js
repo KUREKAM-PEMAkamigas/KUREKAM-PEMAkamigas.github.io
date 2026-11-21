@@ -1,4 +1,5 @@
 /* KUREKAM · Aturan Buku Pedoman, keterlacakan OBE, progres, dan beban dosen riil. */
+import { formatKode, awalanKode, kodeBaku, awalPraktik } from './kode.js';
 import { PARAM_DEFAULT, KELOMPOK, GRUP, BUTIR_IABEE, INDIKATOR_IABEE } from './config.js';
 import { detect, lvNum, MIN_CPL, ANJURAN_SMT } from './bloom.js';
 
@@ -74,6 +75,39 @@ export function cekStruktur(S, pid) {
   out.push({ grp: 'Akreditasi', label: 'Matematika dan ilmu alam', val: fmt(R.matSains) + ' SKS', target: `≥ ${P.matSainsMin} SKS`, k: st(R.matSains >= P.matSainsMin, false), acuan: 'LAM Teknik butir 19' });
   out.push({ grp: 'Akreditasi', label: 'Teknologi informasi', val: fmt(R.ti) + ' SKS', target: '> 0 SKS', k: st(R.ti > 0, false), acuan: 'IABEE 2.1.1' });
   out.push({ grp: 'Akreditasi', label: 'Porsi jam praktik (smt 1–6)', val: fmt(R.praktikJam, 1) + '%', target: `${P.praktikMin}–${P.praktikMax}%`, k: st(R.praktikJam >= P.praktikMin && R.praktikJam <= P.praktikMax, R.praktikJam >= P.praktikMin - 5), acuan: 'LAM Teknik butir 18' });
+  return out.concat(cekKode(S, pid));
+}
+
+/* ---------- Kode dan penamaan MK (Pedoman Kode MK, keputusan 21 Nov 2026) ---------- */
+const khusus = (m) => /magang|tugas akhir/i.test(m.kel || '') || /^(tugas akhir|magang|praktik kerja lapangan|pkl)\b/i.test(m.nama || '');
+export function cekKode(S, pid) {
+  const mk = byProdi(S.mk, pid), out = [], G = 'Kode dan penamaan', A = 'Pedoman Kode MK';
+  if (!mk.length) return out;
+  const salahFormat = mk.filter(m => !formatKode(m.kode));
+  const salahAwalan = mk.filter(m => formatKode(m.kode) && m.kode.slice(0, 3) !== awalanKode(m));
+  const n1 = salahFormat.length + salahAwalan.length;
+  out.push({ grp: G, label: 'Kode MK sesuai pola Pedoman (2 huruf + 1 angka kelompok + 3 angka)', val: n1 ? `${n1} MK perlu disesuaikan` : 'semua sesuai', target: '0 MK', k: st(n1 === 0, n1 <= 3), acuan: A });
+  const hitung = {}; mk.forEach(m => { hitung[m.kode] = (hitung[m.kode] || 0) + 1; });
+  const ganda = Object.keys(hitung).filter(k => hitung[k] > 1);
+  out.push({ grp: G, label: 'Kode MK tidak ganda dalam satu prodi', val: ganda.length ? `${ganda.length} kode ganda` : 'tidak ada', target: '0', k: st(!ganda.length, false), acuan: A });
+  const bakuBeda = mk.filter(m => { const b = kodeBaku(m.nama); return b && m.kode !== b; });
+  out.push({ grp: G, label: 'MK bersama memakai kode baku', val: bakuBeda.length ? `${bakuBeda.length} MK berbeda` : 'sesuai', target: '0', k: st(!bakuBeda.length, bakuBeda.length <= 2), acuan: A });
+  const praktikMurni = mk.filter(m => +m.T === 0 && +m.P > 0 && !khusus(m) && !/capstone/i.test(m.nama));
+  const tanpaAwal = praktikMurni.filter(m => !awalPraktik(m.nama));
+  out.push({ grp: G, label: 'Nama MK praktik diawali "Praktik" atau "Praktikum"', val: tanpaAwal.length ? `${tanpaAwal.length} MK` : 'sesuai', target: '0 MK', k: st(!tanpaAwal.length, tanpaAwal.length <= 3), acuan: 'Keputusan 21 Nov 2026' });
+  const campur = mk.filter(m => +m.T > 0 && +m.P > 0 && !khusus(m));
+  out.push({ grp: G, label: 'Teori dan praktik dipisah menjadi MK tersendiri', val: campur.length ? `${campur.length} MK masih gabungan` : 'terpisah', target: '0 MK', k: st(!campur.length, campur.length <= 5), acuan: A });
+  const lebih = mk.filter(m => +m.P > 3 && !khusus(m));
+  out.push({ grp: G, label: 'SKS praktik per MK maksimal 3', val: lebih.length ? `${lebih.length} MK melebihi` : 'sesuai', target: '≤ 3 SKS', k: st(!lebih.length, false), acuan: 'Keputusan 21 Nov 2026' });
+  const cap = mk.filter(m => /capstone/i.test(m.nama) && !/tugas akhir/i.test(m.nama));
+  if (cap.length) { const t = cap.reduce((a, m) => a + (+m.T || 0) + (+m.P || 0), 0); out.push({ grp: G, label: 'Total SKS Capstone Design (semester 6, 7, 8)', val: `${fmt(t)} SKS`, target: '= 4 SKS', k: st(t === 4, Math.abs(t - 4) <= 1), acuan: 'Keputusan 21 Nov 2026' }); }
+  const mg = mk.filter(m => /magang|praktik kerja lapangan|^pkl\b/i.test(m.nama + ' ' + (m.kel || '')) && !/tugas akhir/i.test(m.kel || ''));
+  if (mg.length) {
+    const konv = mg.filter(m => /konversi/i.test(m.nama)), inti = mg.filter(m => !/konversi/i.test(m.nama));
+    const sk = (a) => a.reduce((x, m) => x + (+m.T || 0) + (+m.P || 0), 0);
+    out.push({ grp: G, label: 'Magang berdampak: PKL (inti) 10 SKS', val: `${fmt(sk(inti))} SKS`, target: '= 10 SKS', k: st(sk(inti) === 10, false), acuan: 'Keputusan 21 Nov 2026' });
+    out.push({ grp: G, label: 'Magang berdampak: MK konversi usulan prodi 10 SKS', val: `${fmt(sk(konv))} SKS`, target: '= 10 SKS', k: st(sk(konv) === 10, false), acuan: 'Keputusan 21 Nov 2026' });
+  }
   return out;
 }
 

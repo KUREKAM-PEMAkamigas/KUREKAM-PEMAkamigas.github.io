@@ -5,6 +5,7 @@
 import { APP, PARAM_DEFAULT, KELOMPOK } from './config.js';
 import { detect } from './bloom.js';
 import { buildLama } from './lama.js';
+import { usulKodeProdi } from './kode.js';
 
 const KAT = Object.fromEntries(KELOMPOK.map(k => [k.id, k.iabee]));
 function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -31,7 +32,7 @@ export const PRODI_DEF = [
     bk: [['Mekanika Teknik dan Material', 2], ['Termofluida', 2], ['Peralatan Statis Kilang', 3], ['Peralatan Putar Kilang', 3], ['Pemeliharaan dan Keandalan', 3], ['Manufaktur dan Pengelasan', 3]],
     sci: { 'Matematika Teknik': 0, 'Termodinamika Teknik': 1 },
     mk: [['Gambar Teknik Mesin', 'p', 0], ['Pengetahuan Bahan Teknik', 'tp', 0], ['Proses Manufaktur', 'tp', 5], ['Kalkulus Terapan', 't', 'g0'], ['Statika Struktur', 't', 0], ['Kerja Bangku dan Pelat', 'p', 5], ['Menggambar dengan CAD', 'p', 0], ['Mekanika Fluida', 'tp', 1], ['Kekuatan Material', 'tp', 0], ['Elemen Mesin', 'tp', 0], ['Pengelasan', 'p', 5], ['Perpindahan Panas', 't', 1], ['Pemesinan', 'p', 5], ['Pompa dan Kompresor', 'tp', 3], ['Bejana Tekan dan Alat Penukar Kalor', 'tp', 2], ['Turbin dan Penggerak', 'tp', 3], ['Sistem Perpipaan', 'tp', 2], ['Metrologi dan Inspeksi', 'p', 4], ['Pemeliharaan Mesin', 'tp', 4], ['Analisis Getaran', 'p', 4], ['Inspeksi Peralatan Statis', 'p', 2], ['Korosi dan Integritas Material', 't', 2], ['Overhaul Pompa', 'p', 3], ['Overhaul Kompresor', 'p', 3], ['Uji Tak Rusak (NDT)', 'p', 2], ['Pelumasan dan Tribologi', 'p', 4], ['Manajemen Pemeliharaan', 't', 'g5'], ['Analisis Keandalan Aset', 'p', 4], ['Simulasi Struktur dengan Perangkat Lunak', 'p', 0], ['Alignment dan Balancing', 'p', 3], ['Praktik Perpipaan', 'p', 2], ['Hidrolik dan Pneumatik', 'p', 3], ['Root Cause Failure Analysis', 'p', 4], ['Regulasi dan Etika Profesi Migas', 't', 'g5'], ['Perancangan Komponen Mesin', 'p', 'g4'], ['Kewirausahaan Teknologi', 't', 'g5'], ['Praktik Overhaul Turbin', 'p', 3], ['Praktik Inspeksi Lanjut', 'p', 2]] },
-  { id: 'LO', nama: 'Logistik Minyak dan Gas', c: '#f0616d', d: 'rantai pasok, penyimpanan, dan distribusi migas', kelas: { 1: 4, 2: 2, 3: 2, 4: 2 },
+  { id: 'LG', nama: 'Logistik Minyak dan Gas', c: '#f0616d', d: 'rantai pasok, penyimpanan, dan distribusi migas', kelas: { 1: 4, 2: 2, 3: 2, 4: 2 },
     pl: ['Logistics Engineer / Analis Rantai Pasok Migas', 'Supervisor Terminal, Depot, dan Distribusi', 'Perencana Pengadaan dan Technopreneur Logistik'],
     bk: [['Manajemen Rantai Pasok', 3], ['Pergudangan dan Persediaan', 3], ['Transportasi dan Distribusi Migas', 3], ['Sistem Informasi Logistik', 2], ['Pengadaan dan Kontrak', 3], ['Ekonomi dan Bisnis Migas', 2]],
     sci: { 'Statistika Industri 1': 0, 'Statistika Industri 2': 0, 'Matematika Optimasi': 0 },
@@ -47,8 +48,8 @@ const KUNCI = {
   8: [['Capstone Design III', 0, 2, 'Kunci bersama'], ['Tugas Akhir', 0, 8, 'Kunci bersama']]
 };
 /* MK bergilir: [nama, T, P, prodi smt pertama, smt, prodi smt kedua, smt] */
-const ROT = [['Matematika Dasar', 2, 0, ['TM', 'TI', 'LO'], 1, ['TO', 'TP'], 2], ['Fisika Dasar', 2, 0, ['TP', 'TM', 'TI'], 1, ['TO', 'LO'], 2], ['Kimia Dasar', 2, 0, ['TO', 'TP', 'LO'], 1, ['TM', 'TI'], 2], ['Bahasa Inggris', 1, 1, ['TI', 'TO', 'TM'], 1, ['TP', 'LO'], 2], ['Praktikum Fisika Dasar', 0, 1, ['TP', 'TM', 'TI'], 2, ['TO', 'LO'], 3], ['Praktikum Kimia Dasar', 0, 1, ['TO', 'TP', 'LO'], 2, ['TI', 'TM'], 3]];
-const SCI_SMT = { TP: { 'Termodinamika': [2, 1, 0], 'Mekanika Fluida': [2, 1, 0], 'Praktik Termodinamika': [3, 0, 1], 'Praktik Mekanika Fluida': [3, 0, 1] }, TO: { 'Kimia Organik': [2, 1, 0], 'Kimia Analisis': [2, 1, 0], 'Praktikum Kimia Organik': [3, 0, 1], 'Praktikum Kimia Analisis': [3, 0, 1], 'Kimia Fisika': [3, 1, 0] }, TI: { 'Statistika dan Probabilitas': [2, 2, 0], 'Rangkaian Listrik': [2, 1, 0], 'Praktikum Rangkaian Listrik': [3, 0, 2] }, TM: { 'Matematika Teknik': [2, 2, 0], 'Termodinamika Teknik': [2, 2, 0] }, LO: { 'Statistika Industri 1': [2, 2, 0], 'Statistika Industri 2': [3, 1, 1], 'Matematika Optimasi': [3, 1, 1] } };
+const ROT = [['Matematika Dasar', 2, 0, ['TM', 'TI', 'LG'], 1, ['TO', 'TP'], 2], ['Fisika Dasar', 2, 0, ['TP', 'TM', 'TI'], 1, ['TO', 'LG'], 2], ['Kimia Dasar', 2, 0, ['TO', 'TP', 'LG'], 1, ['TM', 'TI'], 2], ['Bahasa Inggris', 1, 1, ['TI', 'TO', 'TM'], 1, ['TP', 'LG'], 2], ['Praktikum Fisika Dasar', 0, 1, ['TP', 'TM', 'TI'], 2, ['TO', 'LG'], 3], ['Praktikum Kimia Dasar', 0, 1, ['TO', 'TP', 'LG'], 2, ['TI', 'TM'], 3]];
+const SCI_SMT = { TP: { 'Termodinamika': [2, 1, 0], 'Mekanika Fluida': [2, 1, 0], 'Praktik Termodinamika': [3, 0, 1], 'Praktik Mekanika Fluida': [3, 0, 1] }, TO: { 'Kimia Organik': [2, 1, 0], 'Kimia Analisis': [2, 1, 0], 'Praktikum Kimia Organik': [3, 0, 1], 'Praktikum Kimia Analisis': [3, 0, 1], 'Kimia Fisika': [3, 1, 0] }, TI: { 'Statistika dan Probabilitas': [2, 2, 0], 'Rangkaian Listrik': [2, 1, 0], 'Praktikum Rangkaian Listrik': [3, 0, 2] }, TM: { 'Matematika Teknik': [2, 2, 0], 'Termodinamika Teknik': [2, 2, 0] }, LG: { 'Statistika Industri 1': [2, 2, 0], 'Statistika Industri 2': [3, 1, 1], 'Matematika Optimasi': [3, 1, 1] } };
 
 function kelompokKunci(n) {
   const s = n.toLowerCase();
@@ -111,7 +112,7 @@ export function buildSeed() {
     CPL_T.forEach(([ranah, k, t, ia]) => {
       let teks = t.replace('{d}', pd.d);
       if (pid === 'TM' && k === 'P1') teks = 'Memahami konsep teoretis matematika, sains, dan rekayasa yang mendasari ' + pd.d + '.';
-      if (pid === 'LO' && k === 'KK3') teks = 'Mampu membuat rancangan sistem logistik migas yang efisien dengan mempertimbangkan biaya, keselamatan, dan lingkungan.';
+      if (pid === 'LG' && k === 'KK3') teks = 'Mampu membuat rancangan sistem logistik migas yang efisien dengan mempertimbangkan biaya, keselamatan, dan lingkungan.';
       D.cpl.push({ id: cplId(k), prodi: pid, kode: k, ranah, teks, iabee: ia, pl: PL_CPL.map((a, i) => a.includes(k) ? `${pid}-PL${i + 1}` : null).filter(Boolean) });
     });
     BOK.forEach(([n, s], i) => D.bok.push({ id: `${pid}-BOK${i + 1}`, prodi: pid, kode: `BOK${i + 1}`, nama: i === 2 ? `Keilmuan Inti ${pd.nama}` : n, sumber: s }));
@@ -164,10 +165,11 @@ export function buildSeed() {
       if (m.nama === 'Capstone Design II') m.prasyarat.push(mkList.find(x => x.nama === 'Capstone Design I').id);
       if (m.nama === 'Capstone Design III') m.prasyarat.push(mkList.find(x => x.nama === 'Capstone Design II').id);
     });
+    { const kd = usulKodeProdi(mkList); mkList.forEach(m => { m.kode = kd.get(m.id) || m.kode; }); }
     D.mk.push(...mkList);
 
     /* CPMK dan Sub-CPMK */
-    const subDepth = { TP: 4, TO: 4, TI: 3, TM: 2, LO: 2 }[pid];
+    const subDepth = { TP: 4, TO: 4, TI: 3, TM: 2, LG: 2 }[pid];
     mkList.forEach(m => {
       if (/magang|tugas akhir/i.test(m.kel)) return;
       const prak = m.P > m.T; const smt = /capstone design iii/i.test(m.nama) ? 8 : m.smt;
@@ -193,7 +195,7 @@ export function buildSeed() {
     });
 
     /* RPS + SAP */
-    const rpsSmt = { TP: 2, TO: 2, TI: 1, TM: 1, LO: 0 }[pid];
+    const rpsSmt = { TP: 2, TO: 2, TI: 1, TM: 1, LG: 0 }[pid];
     mkList.filter(m => m.smt <= rpsSmt && !/magang|tugas akhir/i.test(m.kel)).forEach((m, idx) => {
       const ss = D.sub.filter(s => s.mk === m.id); if (!ss.length) return;
       const prak = m.P > m.T; const pert = [];
@@ -215,7 +217,7 @@ export function buildSeed() {
     const sharedOf = (m) => /MKU/.test(m.kel) ? (/bahasa inggris/i.test(m.nama) ? 'BHS' : 'MKU') : /K3/.test(m.kel) ? 'K3' : /matematika dan sains dasar/.test(m.kel) ? 'SAINS' : null;
     const sp = { MKU: 0, SAINS: 0, K3: 0, BHS: 0 };
     mkList.filter(m => m.smt <= 6).forEach((m, i) => {
-      if (pid === 'LO' && m.smt === 6 && i % 3 === 0 && !m.kunci) return; // contoh MK belum ada pengampu
+      if (pid === 'LG' && m.smt === 6 && i % 3 === 0 && !m.kunci) return; // contoh MK belum ada pengampu
       const kls = pd.kelas[Math.ceil(m.smt / 2)];
       const sh = sharedOf(m);
       const next = () => { if (sh) { const a = pool[sh]; const d = a[(sp[sh] + pi) % a.length]; sp[sh]++; return d; } rr++; return dpool[(pid === 'TP' && rr % 7 === 0 ? 0 : rr) % dpool.length]; };
@@ -237,7 +239,7 @@ export function buildSeed() {
   D.revisi.push(
     { id: 'REV-001', prodi: 'TP', objek: 'Mata kuliah', uraian: 'Menggabungkan Metode Penelitian ke dalam Capstone Design I', alasan: 'Menjaga total 144 SKS dan memperkuat capstone sesuai IABEE', oleh: 'Tim Kurikulum TP', tgl: '2026-11-09', status: 'disetujui', putusan: 'Disetujui Wadir 1, 10 November 2026' },
     { id: 'REV-002', prodi: 'TO', objek: 'CPL', uraian: 'Menambah CPL keterampilan khusus tentang transisi energi dan biorefinery', alasan: 'Masukan pengguna lulusan dan tracer study 2025', oleh: 'Tim Kurikulum TO', tgl: '2026-11-11', status: 'menunggu', putusan: '' },
-    { id: 'REV-003', prodi: 'LO', objek: 'Mata kuliah', uraian: 'Memindahkan Pemasaran Digital dari semester 6 ke semester 5', alasan: 'Mendukung Capstone Design I', oleh: 'Tim Kurikulum LO', tgl: '2026-11-11', status: 'menunggu', putusan: '' }
+    { id: 'REV-003', prodi: 'LG', objek: 'Mata kuliah', uraian: 'Memindahkan Pemasaran Digital dari semester 6 ke semester 5', alasan: 'Mendukung Capstone Design I', oleh: 'Tim Kurikulum LG', tgl: '2026-11-11', status: 'menunggu', putusan: '' }
   );
   D.log.push({ id: 'LOG' + Date.now(), t: new Date().toISOString(), user: 'Sistem', aksi: 'Data contoh KUREKAM dimuat' });
   D.settings.push({ id: 'app', seedVersi: APP.seedVersi, paritas: 'ganjil', param: {} });

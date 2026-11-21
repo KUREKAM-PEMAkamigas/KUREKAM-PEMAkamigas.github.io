@@ -1,11 +1,12 @@
 /* KUREKAM · Penyusunan: Visi & PL, CPL, BoK & BK, Mata Kuliah */
-import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, addLog } from '../app.js';
+import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, addLog } from '../app.js';
+import { labelKel, labelGrup, kodeBaruMk, usulKodeProdi, KODE_USULAN, awalPraktik } from '../kode.js';
 import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { detect } from '../bloom.js';
 import { badge } from '../bloom.js';
 import { iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
-import { head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar } from './ui.js';
+import { head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
 
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
 const RANAH_HINT = { S: 'A', P: 'C', KU: 'C', KK: 'C' };
@@ -122,17 +123,17 @@ export function mkView(el) {
     ${kpi('Muatan spesifik', R.spesifik, `MBE + MKK, minimal ${P.muatanSpesifikMin}% (IABEE)`, '#8b5cf6', 'medal', 1)}
     ${kpi('Porsi jam praktik', R.praktikJam, `semester 1–6, LAM ${P.praktikMin}–${P.praktikMax}%`, '#f5a524', 'bolt', 1)}
   </div>
-  <div class="card" style="margin-top:18px">${head('Daftar mata kuliah', prodiName() + ' · JP dihitung otomatis: teori 60 menit, praktik MKU/MBS 120 menit, MBE/MKK 170 menit per SKS', 'book', '#14b8a6',
-    `<button class="btn sm" id="calc">${icon('sim')} Kalkulator SKS</button>${ed ? `<button class="btn pri sm" id="add">${icon('plus')} Mata kuliah</button>` : ro()}`)}
+  <div class="card" style="margin-top:18px">${head('Daftar mata kuliah', prodiName() + ' · JP dihitung otomatis: teori 60 menit, praktik MKW/MKBS 120 menit, MKBE/MKKK 170 menit per SKS', 'book', '#14b8a6',
+    `<button class="btn sm" id="calc">${icon('sim')} Kalkulator SKS</button>${ed ? `<button class="btn sm" id="kode">${icon('check')} Selaraskan kode sesuai Pedoman</button>` : ''}${ed ? `<button class="btn pri sm" id="add">${icon('plus')} Mata kuliah</button>` : ro()}`)}
     <div class="filters"><div class="search">${icon('search')}<input class="inp" id="q" placeholder="Cari nama atau kode MK"></div>
       <select class="inp" id="f-smt"><option value="">Semua semester</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">Semester ${s}</option>`).join('')}</select>
-      <select class="inp" id="f-kel"><option value="">Semua kelompok</option>${Object.keys(GRUP).map(g => `<option value="${g}">${g}</option>`).join('')}</select></div>
+      <select class="inp" id="f-kel"><option value="">Semua kelompok</option>${Object.keys(GRUP).map(g => `<option value="${g}">${labelGrup(g)}</option>`).join('')}</select></div>
     <div class="tbl-wrap" style="max-height:620px"><table class="tbl" id="t-mk"></table></div>
   </div>`;
   const draw = () => {
     const rows = all.filter(m => (!st.smt || m.smt === +st.smt) && (!st.kel || grupOf(m) === st.kel) && (!st.q || (m.nama + m.kode).toLowerCase().includes(st.q))).sort((a, b) => a.smt - b.smt || a.kode.localeCompare(b.kode));
     el.querySelector('#t-mk').innerHTML = `<thead><tr><th>Smt</th><th>Kode</th><th>Mata kuliah</th><th>Kelompok</th><th class="num">T</th><th class="num">P</th><th class="num">SKS</th><th class="num">JP/mg</th><th>Kategori IABEE</th><th title="Mata kuliah inti untuk asesmen CPL (IABEE)">Inti</th><th>CPL</th><th>BK</th><th>Prasyarat</th></tr></thead><tbody>
-    ${rows.map(m => `<tr class="${m.kunci ? 'locked' : ''} ${ed && (!m.kunci || ['admin', 'developer'].includes(ctx.role)) ? 'click' : ''}" data-id="${m.id}"><td class="num">${m.smt}</td><td class="small">${esc(m.kode)}</td><td><b>${esc(m.nama)}</b>${m.kunci ? `<div><span class="tag" style="--c:#64748b">${icon('info')} ${esc(m.kunci)}</span></div>` : ''}</td><td><span class="tag" style="--c:${warnaGrup(grupOf(m))}">${esc(m.kel)}</span></td><td class="num">${m.T}</td><td class="num">${m.P}</td><td class="num"><b>${sksOf(m)}</b></td><td class="num">${fmt(jpOf(m, P), 2)}</td><td class="small">${esc(m.kat)}</td><td>${ed ? `<label class="inti-tg" title="Tandai sebagai mata kuliah inti"><input type="checkbox" data-inti="${m.id}" ${m.inti ? 'checked' : ''}> ${m.inti ? 'Inti' : ''}</label>` : (m.inti ? '<span class="tag" style="--c:#8b5cf6">Inti</span>' : '')}</td><td class="small">${(m.cpl || []).map(id => (S.cpl.find(c => c.id === id) || {}).kode).join(', ') || '<span class="st bad">–</span>'}</td><td class="small">${(m.bk || []).map(id => (S.bk.find(c => c.id === id) || {}).kode).join(', ')}</td><td class="small">${(m.prasyarat || []).map(id => short((S.mk.find(c => c.id === id) || {}).nama, 24)).join(', ')}</td></tr>`).join('')}
+    ${rows.map(m => `<tr class="${m.kunci ? 'locked' : ''} ${ed && (!m.kunci || ['admin', 'developer'].includes(ctx.role)) ? 'click' : ''}" data-id="${m.id}"><td class="num">${m.smt}</td><td class="small" style="white-space:nowrap">${esc(m.kode)}</td><td><b>${esc(m.nama)}</b>${m.kunci ? `<div><span class="tag" style="--c:#64748b">${icon('info')} ${esc(m.kunci)}</span></div>` : ''}</td><td><span class="tag" style="--c:${warnaGrup(grupOf(m))}">${esc(labelKel(m.kel))}</span></td><td class="num">${m.T}</td><td class="num">${m.P}</td><td class="num"><b>${sksOf(m)}</b></td><td class="num">${fmt(jpOf(m, P), 2)}</td><td class="small">${esc(m.kat)}</td><td>${ed ? `<label class="inti-tg" title="Tandai sebagai mata kuliah inti"><input type="checkbox" data-inti="${m.id}" ${m.inti ? 'checked' : ''}> ${m.inti ? 'Inti' : ''}</label>` : (m.inti ? '<span class="tag" style="--c:#8b5cf6">Inti</span>' : '')}</td><td class="small">${(m.cpl || []).map(id => (S.cpl.find(c => c.id === id) || {}).kode).join(', ') || '<span class="st bad">–</span>'}</td><td class="small">${(m.bk || []).map(id => (S.bk.find(c => c.id === id) || {}).kode).join(', ')}</td><td class="small">${(m.prasyarat || []).map(id => short((S.mk.find(c => c.id === id) || {}).nama, 24)).join(', ')}</td></tr>`).join('')}
     <tr class="sum"><td colspan="4">Jumlah (${rows.length} MK)</td><td class="num">${rows.reduce((a, m) => a + m.T, 0)}</td><td class="num">${rows.reduce((a, m) => a + m.P, 0)}</td><td class="num">${rows.reduce((a, m) => a + sksOf(m), 0)}</td><td class="num">${fmt(rows.reduce((a, m) => a + jpOf(m, P), 0), 1)}</td><td></td><td class="num">${rows.filter(m => m.inti).length}</td><td colspan="3"></td></tr></tbody>`;
     if (ed) el.querySelectorAll('#t-mk tr.click').forEach(r => r.onclick = (e) => { if (e.target.closest('.inti-tg')) return; form({ ...S.mk.find(m => m.id === r.dataset.id) }); });
     if (ed) el.querySelectorAll('[data-inti]').forEach(i => { i.onclick = (e) => e.stopPropagation(); i.onchange = async () => { const m = S.mk.find(x => x.id === i.dataset.inti); const doc = { ...m, inti: i.checked }; await save('mk', doc, `${i.checked ? 'Tandai' : 'Lepas'} MK inti ${m.nama} (${ctx.prodi})`); Object.assign(m, doc); draw(); }; });
@@ -143,7 +144,7 @@ export function mkView(el) {
   draw(); animateCounts(el);
   const form = (x = { smt: 1, kel: 'MKK - kompetensi penciri', kat: 'Muatan spesifik', T: 2, P: 0, cpl: [], bk: [], prasyarat: [], lokasi: 'Kampus' }) => formDrawer({ title: x.id ? 'Ubah mata kuliah' : 'Mata kuliah baru', sub: prodiName(), obj: { ...x, inti: x.inti ? '1' : '' }, wide: true,
     fields: [{ k: 'kode', label: 'Kode MK' }, { k: 'nama', label: 'Nama mata kuliah' }, { k: 'smt', label: 'Semester', type: 'select', opts: [1, 2, 3, 4, 5, 6, 7, 8].map(v => ({ v, t: 'Semester ' + v })) },
-      { k: 'kel', label: 'Kelompok', type: 'select', opts: KELOMPOK.map(k => ({ v: k.id, t: k.id })) }, { k: 'kat', label: 'Kategori IABEE', type: 'select', opts: KAT_IABEE.map(v => ({ v, t: v })) },
+      { k: 'kel', label: 'Kelompok', type: 'select', opts: KELOMPOK.map(k => ({ v: k.id, t: labelKel(k.id) })) }, { k: 'kat', label: 'Kategori IABEE', type: 'select', opts: KAT_IABEE.map(v => ({ v, t: v })) },
       { k: 'lokasi', label: 'Lokasi', type: 'select', opts: ['Kampus', 'Laboratorium', 'Industri'].map(v => ({ v, t: v })) },
       { k: 'inti', label: 'Mata kuliah inti (asesmen CPL)', type: 'select', opts: [{ v: '', t: 'Bukan MK inti' }, { v: '1', t: 'Ya, MK inti' }], help: 'MK inti menjadi tempat utama pengukuran CPL melalui PI. Biasanya MK kompetensi penciri dan capstone.' },
       { k: 'kompetensi', label: 'Kompetensi dosen untuk MK inti (kata kunci)', type: 'textarea', rows: 2, ph: 'Misalnya: reservoir, well control, petrofisika', help: 'Pisahkan dengan koma. Dicocokkan dengan bidang S1, S2, S3, dan sertifikasi dosen pengampu (indikator 10 IABEE). Bila kosong, aplikasi memakai kata pada nama MK.' },
@@ -152,14 +153,15 @@ export function mkView(el) {
       { k: 'prasyarat', label: 'Prasyarat', type: 'multi', opts: all.filter(m => m.id !== x.id && m.smt < +x.smt + 1).map(m => ({ v: m.id, t: short(m.nama, 30) })) }],
     onSave: async (o) => {
       o.smt = +o.smt; o.T = +o.T || 0; o.P = +o.P || 0; o.inti = o.inti === true || o.inti === '1';
-      if (!o.nama) return 'Nama MK wajib diisi.'; if (o.P > 3 && !/magang|tugas akhir/i.test(o.kel)) return 'MK praktik dibatasi 1–3 SKS (Buku Pedoman).';
-      o.id = o.id || uid(ctx.prodi + '-MK'); o.prodi = ctx.prodi; o.kode = o.kode || `${ctx.prodi}${o.smt}${String(all.length + 1).padStart(2, '0')}`;
+      if (!o.nama) return 'Nama MK wajib diisi.'; if (o.P > 3 && !/magang|tugas akhir/i.test(o.kel)) return 'MK praktik dibatasi 1–3 SKS (Buku Pedoman).'; if (o.T === 0 && o.P > 0 && !/magang|tugas akhir/i.test(o.kel) && !awalPraktik(o.nama)) return 'Nama MK praktik harus diawali "Praktik" atau "Praktikum" (keputusan 21 Nov 2026).';
+      o.id = o.id || uid(ctx.prodi + '-MK'); o.prodi = ctx.prodi; o.kode = o.kode || kodeBaruMk(byProdi(S.mk, ctx.prodi).filter(m => m.id !== o.id), o);
       await save('mk', o, `Simpan MK ${o.nama} (${ctx.prodi})`); rerender();
     },
     onDelete: x.id ? async () => { await remove('mk', x.id, `Hapus MK ${x.nama}`); rerender(); } : null });
   const jpHelp = () => { const d = document.querySelector('#fd'); if (!d) return ''; const T = +d.querySelector('[name=T]').value || 0, Pp = +d.querySelector('[name=P]').value || 0; const kel = d.querySelector('[name=kel]').value; const m = { T, P: Pp, kel }; return `SKS ${T + Pp} · JP ${fmt(jpOf(m, P), 2)} jam/minggu · praktik ${durasi(m, P)} menit per SKS`; };
   if (ed) el.querySelector('#add').onclick = () => form();
   el.querySelector('#calc').onclick = () => kalkulator();
+  if (ed) el.querySelector('#kode').onclick = () => selaraskanKode();
 }
 
 /** Kalkulator konversi kebutuhan belajar menjadi SKS (Panduan Teknis Bab III). */
@@ -167,7 +169,7 @@ export function kalkulator() {
   const P = param(S);
   openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#8b5cf6">${icon('sim')}</span><div><h3>Kalkulator kebutuhan SKS</h3><div class="sub">1 SKS = 45 jam kegiatan per semester (Permendiktisaintek 39/2025), 16 pertemuan termasuk UTS dan UAS</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
   <div class="form-grid">
-    <div class="field"><label>Kelompok MK</label><select class="inp" id="k-g">${Object.keys(GRUP).map(g => `<option>${g}</option>`).join('')}</select></div>
+    <div class="field"><label>Kelompok MK</label><select class="inp" id="k-g">${Object.keys(GRUP).map(g => `<option value="${g}">${labelGrup(g)}</option>`).join('')}</select></div>
     <div class="field"><label>Jam tatap muka teori per minggu</label><input class="inp" id="k-t" type="number" value="2" step="0.5"></div>
     <div class="field"><label>Jam praktik per minggu (di lab)</label><input class="inp" id="k-p" type="number" value="2.83" step="0.01"></div>
     <div class="field"><label>Jumlah kelas paralel</label><input class="inp" id="k-k" type="number" value="3"></div>
@@ -181,3 +183,18 @@ export function kalkulator() {
   });
 }
 export { kelasOf, bar, addLog };
+
+/** Menyelaraskan kode MK prodi dengan Pedoman Kode MK: pratinjau, tabel konversi (CSV), lalu terapkan. */
+function selaraskanKode() {
+  const all = byProdi(S.mk, ctx.prodi), usul = usulKodeProdi(all);
+  const ubah = all.filter(m => usul.get(m.id) !== m.kode).sort((a, b) => a.smt - b.smt || String(usul.get(a.id)).localeCompare(String(usul.get(b.id))));
+  const baris = ubah.map(m => { const k = usul.get(m.id); return `<tr><td class="num">${m.smt}</td><td class="small" style="white-space:nowrap">${esc(m.kode)}</td><td class="small"><b>${esc(k)}</b>${KODE_USULAN.has(k) ? ' <span class="tag" style="--c:#f5a524">usulan</span>' : ''}</td><td>${esc(m.nama)}</td></tr>`; }).join('');
+  openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#14b8a6">${icon('check')}</span><div><h3>Selaraskan kode sesuai Pedoman</h3><div class="sub">${prodiName()} · pola 2 huruf + 1 angka kelompok + 3 angka urut</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
+  <p class="small">Kode MK bersama (Agama, Pancasila, Matematika Dasar, dan seterusnya) memakai awalan <b>AK</b> dengan nomor baku. Kode capstone, PKL, dan Tugas Akhir berstatus <b>usulan</b> sampai rapat menetapkan; bila berubah, cukup jalankan penyelarasan ini lagi. Kode yang sudah sesuai tidak diubah.</p>
+  ${ubah.length ? `<p class="small"><b>${ubah.length}</b> dari ${all.length} mata kuliah akan berganti kode.</p><div style="max-height:46vh;overflow:auto"><table class="tbl"><thead><tr><th>Smt</th><th>Kode lama</th><th>Kode baru</th><th>Mata kuliah</th></tr></thead><tbody>${baris}</tbody></table></div>
+  <div class="row" style="margin-top:14px;gap:8px"><button class="btn sm" id="kd-csv">${icon('download')} Unduh tabel konversi</button><div class="sp"></div><button class="btn pri" id="kd-ok">Terapkan ${ubah.length} perubahan kode</button></div>` : '<div class="ribbon ok">Semua kode MK prodi ini sudah sesuai Pedoman.</div>'}`, (d) => {
+    if (!ubah.length) return;
+    d.querySelector('#kd-csv').onclick = () => { const csv = '\ufeff' + [['Semester', 'Kode lama', 'Kode baru', 'Mata kuliah']].concat(ubah.map(m => [m.smt, m.kode, usul.get(m.id), m.nama])).map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(';')).join('\n'); unduh(new Blob([csv], { type: 'text/csv' }), `konversi-kode-mk-${ctx.prodi}.csv`); };
+    d.querySelector('#kd-ok').onclick = async () => { await saveMany('mk', ubah.map(m => ({ ...m, kode: usul.get(m.id) })), `Selaraskan kode ${ubah.length} MK ${ctx.prodi} sesuai Pedoman Kode MK`); closeDrawer(); rerender(); };
+  }, true);
+}

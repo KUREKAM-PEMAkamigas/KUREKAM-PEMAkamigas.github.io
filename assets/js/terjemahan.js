@@ -10,7 +10,7 @@ const D_EN = {
   TO: 'oil, gas, and petrochemical processing',
   TI: 'refinery instrumentation, control, and automation systems',
   TM: 'refinery mechanical equipment, maintenance, and reliability',
-  LO: 'oil and gas supply chain, storage, and distribution'
+  LG: 'oil and gas supply chain, storage, and distribution'
 };
 const CPL_EN = {
   S1: 'Demonstrates a responsible attitude toward work in their field of expertise, independently, upholding safety and professional ethics.',
@@ -244,14 +244,14 @@ Simulasi Sistem Logistik = Logistics System Simulation
 Manajemen Armada = Fleet Management
 Praktik Pergudangan = Warehousing Practicum
 Kewirausahaan Logistik = Logistics Entrepreneurship
-Praktik Terpadu LO 1 = Integrated Practicum LO 1
-Praktik Terpadu LO 2 = Integrated Practicum LO 2
-Praktik Terpadu LO 3 = Integrated Practicum LO 3
-Praktik Terpadu LO 4 = Integrated Practicum LO 4
-Praktik Terpadu LO 5 = Integrated Practicum LO 5
-Praktik Terpadu LO 6 = Integrated Practicum LO 6
-Praktik Terpadu LO 7 = Integrated Practicum LO 7
-Praktik Terpadu LO 8 = Integrated Practicum LO 8
+Praktik Terpadu LG 1 = Integrated Practicum LG 1
+Praktik Terpadu LG 2 = Integrated Practicum LG 2
+Praktik Terpadu LG 3 = Integrated Practicum LG 3
+Praktik Terpadu LG 4 = Integrated Practicum LG 4
+Praktik Terpadu LG 5 = Integrated Practicum LG 5
+Praktik Terpadu LG 6 = Integrated Practicum LG 6
+Praktik Terpadu LG 7 = Integrated Practicum LG 7
+Praktik Terpadu LG 8 = Integrated Practicum LG 8
 Manajemen Risiko Rantai Pasok = Supply Chain Risk Management
 Praktik Pengadaan Elektronik = Electronic Procurement Practicum
 Perencanaan Kebutuhan Material = Material Requirements Planning
@@ -275,10 +275,10 @@ const CPL_INDEX = (() => {
     CPL_T.forEach(([, k, t]) => {
       let id = t.replace('{d}', pd.d);
       if (pd.id === 'TM' && k === 'P1') id = 'Memahami konsep teoretis matematika, sains, dan rekayasa yang mendasari ' + pd.d + '.';
-      if (pd.id === 'LO' && k === 'KK3') id = 'Mampu membuat rancangan sistem logistik migas yang efisien dengan mempertimbangkan biaya, keselamatan, dan lingkungan.';
+      if (pd.id === 'LG' && k === 'KK3') id = 'Mampu membuat rancangan sistem logistik migas yang efisien dengan mempertimbangkan biaya, keselamatan, dan lingkungan.';
       const en = CPL_EN[k].replace('{d}', D_EN[pd.id] || '');
       if (pd.id === 'TM' && k === 'P1') m.set(kunci(id), { en: 'Understands the theoretical concepts of mathematics, science, and engineering that underlie ' + D_EN.TM + '.', s: SING[k][0], se: SING[k][1] });
-      else if (pd.id === 'LO' && k === 'KK3') m.set(kunci(id), { en: 'Is able to produce efficient oil and gas logistics system designs considering cost, safety, and the environment.', s: SING[k][0], se: SING[k][1] });
+      else if (pd.id === 'LG' && k === 'KK3') m.set(kunci(id), { en: 'Is able to produce efficient oil and gas logistics system designs considering cost, safety, and the environment.', s: SING[k][0], se: SING[k][1] });
       else m.set(kunci(id), { en, s: SING[k][0], se: SING[k][1] });
     });
   });

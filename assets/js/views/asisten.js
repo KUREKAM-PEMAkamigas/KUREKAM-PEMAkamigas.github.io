@@ -7,6 +7,7 @@ import { KELOMPOK, APP } from '../config.js';
 import { kodeBaruMk, kodeBaku } from '../kode.js';
 import { PRODI_DEF, CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci } from '../seed.js';
 import { detect, ANJURAN_SMT } from '../bloom.js';
+import { ringkasIntegrasi } from '../riset.js';
 import { param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
 import { usulanProdi, bolehSetuju, setujui, hapusSlotKosong } from '../usulan.js';
 import { head, bar, pctColor, kTag, tanya, prodiName, ro } from './ui.js';
@@ -85,7 +86,9 @@ export function periksaRps(m, r) {
   [['deskripsi', 'Deskripsi mata kuliah', 'bad'], ['bahan', 'Bahan kajian', 'near'], ['pustaka', 'Pustaka', 'bad']].forEach(([f, n, k]) => add(String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'ok' : k, n, String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'Terisi' : 'Belum diisi', f === 'pustaka' ? 'Tulis pustaka utama dan pendukung. Asisten tidak mengarang pustaka.' : 'Bisa diisi otomatis lalu disunting.', AC.rps));
   if (String(r.pustaka || '').trim()) { const th = (r.pustaka.match(/\b(19|20)\d{2}\b/g) || []).map(Number), now = new Date().getFullYear(); if (th.length && !th.some(y => y >= now - 10)) add('near', 'Kemutakhiran pustaka', `Terbitan terbaru ${Math.max(...th)}`, 'Tambahkan paling sedikit satu pustaka atau standar terbitan sepuluh tahun terakhir.', AC.rps); }
   const ni = integrasiOf(r), min = P.integrasiMinPertemuan || 2;
-  add(ni >= min ? 'ok' : 'near', 'Integrasi penelitian dan PKM', `${ni} pertemuan, minimal ${min}`, ni >= min ? '' : 'Pilih pertemuan yang memakai hasil penelitian dosen sebagai bahan ajar atau melibatkan mahasiswa di PKM, lalu isi judulnya di Deskripsi dan pustaka.', AC.integ);
+  const ri = ringkasIntegrasi(S, m, r);
+  add(ni >= min ? 'ok' : 'near', 'Integrasi penelitian dan PKM', `${ni} pertemuan, minimal ${min}`, ni >= min ? '' : 'Pilih pertemuan yang memakai hasil penelitian dosen sebagai bahan ajar atau melibatkan mahasiswa di PKM, lalu pilih penelitian atau PKM dari daftar di pertemuan itu (menu Penelitian & PKM Dosen).', AC.integ);
+  if (ri.bad.length || ri.near.length) add(ri.bad.length ? 'bad' : 'near', 'Kecocokan integrasi dengan materi', ri.bad.length ? `Belum nyambung di pertemuan ${ri.bad.map(x => x.m).join(', ')}` : `Perlu dicek di pertemuan ${ri.near.map(x => x.m).join(', ')}`, 'Pilih penelitian atau PKM yang topiknya sesuai materi pertemuan, atau tulis kaitannya di kolom Kaitan dengan materi.', AC.integ);
   const aktif = non.some(p => /kasus|case|proyek|project|problem|pbl|praktik|praktikum|simulasi/i.test(`${p.metode} ${p.tatap || ''}`));
   add(aktif ? 'ok' : 'near', 'Pembelajaran aktif', aktif ? 'Ada metode kasus, proyek, atau praktik' : 'Belum ada metode kasus, proyek, atau praktik', aktif ? '' : 'Masukkan case method, team-based project, atau praktik terbimbing pada beberapa pertemuan.', AC.vokasi);
   const sap = non.filter(p => !(p.sap && String(p.sap.inti || '').trim())).length;

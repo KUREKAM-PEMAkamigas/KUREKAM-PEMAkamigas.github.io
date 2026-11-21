@@ -70,3 +70,6 @@ Menu **Jadwal & Pemantauan** (semua peran). Wakil Direktur I (dan Admin) menetap
 
 ## Unduh RPS format templat
 Tombol **Cetak / Unduh RPS** (menu RPS & SAP, tersedia untuk dosen, Prodi, SPM, Kasubbag Akademik, Wakil Direktur I) menghasilkan berkas Word lanskap A4 dengan susunan templat: kepala, identitas MK, jumlah jam dan otorisasi, CPL/CPMK/Sub-CPMK, korelasi, deskripsi dan pustaka, rencana 16 pertemuan berkolom (1) sampai (8), serta SAP. Kode ada di `assets/js/rpsdok.js`.
+
+## Penelitian dan PKM dosen, dipilih dari daftar di RPS
+Menu **Penelitian & PKM Dosen** (koleksi `kur_riset`): dosen mengisi sendiri, atau Prodi mengunggah Excel untuk dosen prodinya (templat dari tombol Templat Excel). Isian dirapikan otomatis (spasi, huruf kapital semua, jenis, tahun), kata kunci diambil dari judul bila kosong, judul kembar dilewati. Di RPS, tiap pertemuan memilih entri dari daftar pengampu (bukan mengetik judul), dan kotak "Penelitian dan PKM yang diintegrasikan" terisi otomatis. Kecocokan dicek dengan kata kunci terhadap materi pertemuan, Sub-CPMK, dan bahan kajian: Sesuai, Perlu dicek (cocok dengan MK atau dijelaskan dosen), atau Belum nyambung. Pengajuan RPS ke kaprodi ditolak bila integrasi kurang dari minimal pertemuan atau ada yang Belum nyambung. Logika di `assets/js/riset.js`.

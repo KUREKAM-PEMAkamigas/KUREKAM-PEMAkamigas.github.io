@@ -45,7 +45,7 @@ export function badanRps(m, r, logo = false) {
     <tr><th>Pustaka</th><td>${pust ? ba(pust) : kosong}</td></tr>
     <tr><th>Dosen Pengampu</th><td>${esc(peng.join('; ')) || kosong}</td></tr>
     <tr><th>Matakuliah syarat</th><td>${esc(r.syarat) || '-'}</td></tr>
-    <tr><th>Integrasi penelitian dan PKM</th><td>${r.penelitian || r.pkm ? `<b>Penelitian:</b> ${ba(r.penelitian) || '-'}<br><b>PKM:</b> ${ba(r.pkm) || '-'}` : kosong}${r.pertemuan.filter(x => x.integ).map(x => `<br>Pertemuan ${x.m} (${esc(x.integ)}): ${esc(x.integUraian || '')}`).join('')}</td></tr></tbody></table>`;
+    <tr><th>Integrasi penelitian dan PKM</th><td>${r.penelitian || r.pkm ? `<b>Penelitian:</b> ${ba(r.penelitian) || '-'}<br><b>PKM:</b> ${ba(r.pkm) || '-'}` : kosong}${r.pertemuan.filter(x => x.integ).map(x => `<br>Pertemuan ${x.m}${(x.riset || []).length ? ' (' + x.riset.map(id => { const e = (S.riset || []).find(y => y.id === id); return e ? esc(e.jenis + ': ' + e.judul) : ''; }).filter(Boolean).join('; ') + ')' : ' (' + esc(x.integ) + ')'}: ${esc(x.integUraian || '')}`).join('')}</td></tr></tbody></table>`;
   const baris = (x) => {
     if (x.ujian) return `<tr><td class="c">${x.m}</td><td colspan="6"><b>${esc(x.ujian)}</b>${x.materi ? ' · ' + esc(x.materi) : ''}${(x.sub || []).length ? '<br>' + (x.sub || []).map(subK).filter(Boolean).join(', ') : ''}<br>${esc(x.asesmen || '')} ${x.metode ? '· ' + esc(x.metode) : ''}</td><td class="c">${fmt(x.bobot, 1)}</td></tr>`;
     const sk = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).map(s => `<b>${esc(s.kode)}</b><br>${esc(s.teks)}`).join('<br>');

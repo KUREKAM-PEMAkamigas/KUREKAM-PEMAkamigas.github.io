@@ -24,6 +24,7 @@ import { piView, kesiapanView } from './views/iabee.js';
 import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
 import jadwalView, { bannerPengingat } from './views/jadwal.js';
+import risetView from './views/riset.js';
 import lulusanView from './views/lulusan.js';
 import advisoryView from './views/advisory.js';
 import realisasiView from './views/realisasi.js';
@@ -32,7 +33,7 @@ import bahanLedView from './views/bahanled.js';
 import panduanView from './views/panduan.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], jadwal: [], pengguna: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], jadwal: [], riset: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
@@ -102,6 +103,11 @@ export function can(action, obj = {}) {
     case 'real': {                                                                            // realisasi pembelajaran
       if (r === 'prodi') return (obj.prodi || ctx.prodi) === ctx.prodi;
       if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen);
+      return false;
+    }
+    case 'riset': {                                                                           // daftar penelitian dan PKM dosen
+      if (r === 'dosen') return !!obj.dosen && obj.dosen === ctx.dosen;
+      if (r === 'prodi') { const d = S.dosen.find(x => x.id === obj.dosen); return !!d && (d.homebase === ctx.prodi || (d.prodiAjar || []).includes(ctx.prodi) || S.tugas.some(t => t.dosen === d.id && (S.mk.find(m => m.id === t.mk) || {}).prodi === ctx.prodi)); }
       return false;
     }
     case 'sahkanRps': return r === 'prodi' && obj.prodi === ctx.prodi;
@@ -180,6 +186,7 @@ export const ROUTES = [
   { id: 'cpmk', t: 'CPMK & Sub-CPMK', ic: 'spark', c: '#0ea5e9', sec: 'Pembelajaran', prodi: true, v: cpmkView },
   { id: 'realisasi', t: 'Realisasi Pembelajaran', sub: 'Hasil, bukti, dan tindak lanjut per MK', ic: 'check', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: realisasiView },
   { id: 'rps', t: 'RPS & SAP', ic: 'audit', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: rpsView },
+  { id: 'riset', t: 'Penelitian & PKM Dosen', sub: 'Daftar untuk integrasi di RPS', ic: 'book', c: '#14b8a6', sec: 'Pembelajaran', v: risetView },
   { id: 'beban', t: 'Penugasan & Beban Dosen', ic: 'user', c: '#f5a524', sec: 'Beban Dosen & Prodi', v: bebanView },
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },

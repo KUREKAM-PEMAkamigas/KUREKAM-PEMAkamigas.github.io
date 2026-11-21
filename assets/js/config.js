@@ -134,10 +134,10 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 
 /* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
 export const MENU_PERAN = {
-  dosen: ['beranda', 'jadwal', 'peta', 'cpmk', 'rps', 'realisasi', 'beban', 'bloom'],
-  prodi: ['beranda', 'jadwal', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
-  wadir: ['beranda', 'jadwal', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
-  spm: ['beranda', 'jadwal', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk'],
+  dosen: ['beranda', 'jadwal', 'peta', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bloom'],
+  prodi: ['beranda', 'jadwal', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  wadir: ['beranda', 'jadwal', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
+  spm: ['beranda', 'jadwal', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk'],
   akademik: ['beranda', 'jadwal', 'akademik', 'mk', 'peta', 'rps', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,
   developer: null

@@ -206,10 +206,10 @@ export function rpsOf(S, mkId) { return S.rps.find(r => r.mk === mkId); }
 export function rpsLengkap(r) {
   if (!r || !r.pertemuan) return 0;
   const isi = r.pertemuan.filter(p => (p.materi || '').trim() || p.ujian).length;
-  return isi / 16 * 100;
+  return Math.min(100, isi / 16 * 100);
 }
 export const INTEG = ['', 'Penelitian', 'PKM', 'Penelitian dan PKM'];
-export const integrasiOf = (r) => r && r.pertemuan ? r.pertemuan.filter(p => !p.ujian && p.integ).length : 0;
+export const integrasiOf = (r) => r && r.pertemuan ? r.pertemuan.filter(p => !p.ujian && (p.integ || (p.riset || []).length)).length : 0;
 export function cekIntegrasi(S, pid) {
   const P = param(S), min = P.integrasiMinPertemuan || 2;
   const rp = S.rps.filter(r => r.prodi === pid && rpsLengkap(r) > 0);
@@ -220,7 +220,7 @@ export function cekIntegrasi(S, pid) {
 export function sapLengkap(r) {
   if (!r || !r.pertemuan) return 0;
   const isi = r.pertemuan.filter(p => p.ujian || (p.sap && (p.sap.inti || '').trim())).length;
-  return isi / 16 * 100;
+  return Math.min(100, isi / 16 * 100);
 }
 
 /* ---------- Progres tahap penyusunan ---------- */

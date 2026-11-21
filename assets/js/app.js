@@ -23,6 +23,7 @@ import asistenView from './views/asisten.js';
 import { piView, kesiapanView } from './views/iabee.js';
 import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
+import jadwalView, { bannerPengingat } from './views/jadwal.js';
 import lulusanView from './views/lulusan.js';
 import advisoryView from './views/advisory.js';
 import realisasiView from './views/realisasi.js';
@@ -31,7 +32,7 @@ import bahanLedView from './views/bahanled.js';
 import panduanView from './views/panduan.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], jadwal: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
@@ -164,6 +165,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 /* ---------------- navigasi ---------------- */
 export const ROUTES = [
   { id: 'beranda', t: 'Beranda', ic: 'home', c: '#10b981', sec: 'Ringkasan', v: beranda },
+  { id: 'jadwal', t: 'Jadwal & Pemantauan', sub: 'Tahapan evaluasi dan progres', ic: 'calendar', c: '#8b5cf6', sec: 'Ringkasan', v: jadwalView },
   { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
   { id: 'mutu', t: 'Dasbor Mutu', sub: 'SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag AK', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
@@ -267,6 +269,7 @@ export function route_() {
   if (dalamSimulasi()) view.innerHTML = `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <b>MODE SIMULASI.</b> Data contoh hanya ada di peramban ini. Perubahan di sini tidak disimpan ke Firebase dan tidak terlihat pengguna lain. Klik Keluar simulasi untuk kembali ke data asli.</div>`;
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah) view.innerHTML += `<div class="ribbon info">${icon('info')} Anda masih memakai kata sandi awal dari admin. Demi keamanan, ganti lewat tombol Kata sandi di kanan atas.</div>`;
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
+  if (r.id === 'beranda' || r.id === 'rps') view.insertAdjacentHTML('beforeend', bannerPengingat());
   const holder = document.createElement('div'); view.appendChild(holder);
   try { r.v(holder); } catch (e) { console.error(e); holder.innerHTML = `<div class="card empty">Terjadi kesalahan saat memuat halaman: ${esc(e.message)}</div>`; }
   tilt(view);

@@ -64,3 +64,9 @@ Menu Generator Usulan membuat usulan MK inti, PI per CPL, dan tindak lanjut CPL 
 ## Parameter pedoman yang dapat diubah setelah rapat
 
 Nilai sementara mengikuti Pedoman Kurikulum edisi 2027 (kerangka SKS semester 1 sampai 8 = 20, 20, 20, 20, 18, 15, 21, 10; praktik maksimal 3 SKS per MK; capstone 4 SKS; magang 10 + 10 SKS; masa studi 8 sampai 14 semester; ambang PI 65 dan 70 persen; kode baku MK bersama). Semua nilai itu ada di Data Induk > Parameter dan dapat diubah oleh Admin, Wakil Direktur I, dan SPM tanpa mengubah kode aplikasi. Tim kurikulum prodi mengubah kode MK prodinya di menu Mata Kuliah. Nilai bawaan lama yang belum pernah diubah pengguna diganti otomatis dengan nilai pedoman satu kali; nilai yang sudah diubah dipertahankan.
+
+## Jadwal tahapan dan pemantauan progres
+Menu **Jadwal & Pemantauan** (semua peran). Wakil Direktur I (dan Admin) menetapkan tanggal mulai evaluasi lewat tombol Atur jadwal; tanggal tiap tahap = tanggal mulai + hari ke-n dan dapat digeser kapan saja. Sebelum tanggal mulai diisi, tahap belum berjalan dan belum ada tenggat. Progres dihitung otomatis: pemetaan CPL ke MK, pelanggaran aturan pedoman, dan RPS terisi per dosen (target minimal dan persentase terisi dapat diatur). Tahap verifikasi SPM, cek beban dan kelas Akademik, serta finalisasi Wakil Direktur I ditandai pemiliknya (koleksi `kur_jadwal`, satu dokumen per tahap per prodi). Pengingat berupa banner di Beranda dan RPS & SAP sesuai peran.
+
+## Unduh RPS format templat
+Tombol **Cetak / Unduh RPS** (menu RPS & SAP, tersedia untuk dosen, Prodi, SPM, Kasubbag Akademik, Wakil Direktur I) menghasilkan berkas Word lanskap A4 dengan susunan templat: kepala, identitas MK, jumlah jam dan otorisasi, CPL/CPMK/Sub-CPMK, korelasi, deskripsi dan pustaka, rencana 16 pertemuan berkolom (1) sampai (8), serta SAP. Kode ada di `assets/js/rpsdok.js`.

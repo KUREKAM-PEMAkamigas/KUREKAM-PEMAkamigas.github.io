@@ -663,3 +663,28 @@ body.side-open #sideBg { opacity: 1; pointer-events: auto; }
 .gen-tx{width:100%;margin:8px 0;box-sizing:border-box}
 .gen-cek{list-style:none;margin:6px 0 0;padding:0;font-size:13px}
 .gen-cek li{padding:2px 0}.gen-cek .ya b{color:#10b981}.gen-cek .tdk b{color:#f0616d}
+
+/* Dokumen RPS berformat templat */
+.rps-doc table.tbl { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px; }
+.rps-doc table.tbl td, .rps-doc table.tbl th { border: 1px solid #18233a55; padding: 4px 6px; vertical-align: top; text-align: left; }
+.rps-doc table.tbl th { background: #e4ebf7; text-align: center; }
+.rps-doc table.tbl tr.no th { background: #fff; font-size: 10.5px; }
+.rps-doc .c { text-align: center !important; }
+.rps-doc .mut, .rps-doc .kos { color: var(--muted); }
+.rps-doc table.kopt td { border: none; text-align: center; }
+.rps-doc table.kopt td.kl { width: 70px; } .rps-doc table.kopt td.kl img { height: 46px; }
+.rps-doc table.kopt td.jd { border: 1px solid #18233a55; background: #e4ebf7; font-weight: 700; font-size: 14px; padding: 6px; }
+.rps-doc td.ttd { height: 56px; text-align: center; vertical-align: bottom; }
+
+/* Jadwal tahapan */
+.gantt { overflow: hidden; }
+.g-row, .g-axis { display: grid; grid-template-columns: minmax(150px, 30%) 1fr; gap: 10px; align-items: center; padding: 5px 0; border-top: 1px solid rgba(24,35,58,.07); }
+.g-axis { border-top: 0; padding-bottom: 0; }
+.g-lbl b { display: block; font-size: 12.5px; line-height: 1.25; } .g-lbl small { color: var(--muted); font-size: 11px; }
+.g-track { position: relative; height: 22px; background: rgba(24,35,58,.04); border-radius: 6px; }
+.g-axis .g-track { background: none; height: 16px; } .g-axis .g-track span { position: absolute; font-size: 10px; color: var(--muted); transform: translateX(-30%); white-space: nowrap; }
+.g-bar { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; background: var(--c, #8b5cf6); opacity: .9; }
+.g-bar.ms { background: transparent; border: 2px solid var(--c); min-width: 10px; }
+.g-now { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #f0616d; text-decoration: none; z-index: 2; }
+details.dtl { border-top: 1px solid rgba(24,35,58,.08); padding: 8px 0; } details.dtl summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 700px) { .g-row, .g-axis { grid-template-columns: 1fr; gap: 3px; } .g-axis .g-lbl { display: none; } }

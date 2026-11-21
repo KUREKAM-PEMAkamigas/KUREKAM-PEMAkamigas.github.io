@@ -3,6 +3,7 @@ import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, closeD
 import { labelKel, labelGrup } from '../kode.js';
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
+import { badanRps, berkasWordRps, namaBerkasRps } from '../rpsdok.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
 import { detect, badge } from '../bloom.js';
@@ -78,7 +79,7 @@ export function rpsView(el) {
       <div class="filters" style="margin-top:12px">
         ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
-        <button class="btn sm" id="print">${icon('download')} Cetak RPS</button>
+        <button class="btn sm" id="print">${icon('download')} Cetak / Unduh RPS</button>
         ${ed && r.status === 'draf' && can('rps', { prodi: m.prodi, mk: m.id }) ? `<button class="btn vio sm" id="aju">${icon('upload')} Ajukan ke kaprodi</button>` : ''}
         ${r.status === 'diajukan' && can('sahkanRps', m) ? `<button class="btn pri sm" id="sah">${icon('check')} Sahkan RPS</button><button class="btn sm danger" id="tolak">Kembalikan ke dosen</button>` : ''}
         ${r.status === 'disahkan' && can('sahkanRps', m) ? `<button class="btn sm danger" id="batal">Batalkan pengesahan</button>` : ''}
@@ -111,25 +112,9 @@ export function rpsView(el) {
 }
 
 function cetakRps(m, r) {
-  const P = param(S), p = S.prodi.find(x => x.id === m.prodi), cp = S.cpmk.filter(c => c.mk === m.id), subs = S.sub.filter(s => s.mk === m.id);
-  const peng = S.tugas.filter(t => t.mk === m.id).map(t => (S.dosen.find(d => d.id === t.dosen) || {}).nama).filter(Boolean);
-  openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="rep-doc">${icon('download')} Unduh Word</button><button class="btn ghost" data-close>Tutup</button></div>
-  <div class="report" id="rep"><div class="kop"><img src="assets/img/logo-pem-akamigas.png" alt=""><div class="t"><b>POLITEKNIK ENERGI DAN MINERAL AKAMIGAS</b><span>Program Studi ${esc(p.nama)} · Sarjana Terapan</span></div><img src="assets/img/logo-esdm.png" alt=""></div>
-  <h2>RENCANA PEMBELAJARAN SEMESTER</h2><div class="meta">Kurikulum ${APP.tahunKurikulum} · Status: ${r.status}${r.tgl ? ' · ' + r.tgl : ''}</div>
-  <table class="tbl"><tbody><tr><th>Mata kuliah</th><td>${esc(m.nama)}</td><th>Kode</th><td>${esc(m.kode)}</td></tr><tr><th>Semester</th><td>${m.smt}</td><th>Bobot</th><td>${m.T} SKS teori + ${m.P} SKS praktik (${fmt(jpOf(m, P), 2)} jam/minggu)</td></tr><tr><th>Kelompok</th><td>${esc(labelKel(m.kel))}</td><th>Pengampu</th><td>${esc(peng.join(', '))}</td></tr></tbody></table>
-  <h4>Deskripsi</h4><p>${esc(r.deskripsi)}</p>
-  <h4>CPL yang dibebankan</h4><ul>${(m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean).map(c => `<li><b>${c.kode}</b> ${esc(c.teks)}</li>`).join('')}</ul>
-  <h4>CPMK dan Sub-CPMK</h4><ul>${cp.map(c => `<li><b>${c.kode}</b> ${esc(c.teks)} [${(detect(c.teks, hintOf(m)) || {}).code || '?'}]<ul>${subs.filter(s => s.cpmk === c.id).map(s => `<li>${s.kode}: ${esc(s.teks)} (${s.bobot}%)</li>`).join('')}</ul></li>`).join('')}</ul>
-  <h4>Rencana pembelajaran mingguan</h4><table class="tbl"><thead><tr><th>Mg</th><th>Kemampuan akhir tiap tahap (Sub-CPMK)</th><th>Indikator</th><th>Kriteria dan teknik penilaian</th><th>Bentuk, metode, penugasan, dan waktu</th><th>Materi pembelajaran</th><th>Penelitian/PKM</th><th>Bobot</th></tr></thead><tbody>${r.pertemuan.map(x => `<tr><td>${x.m}</td><td>${x.ujian ? `<b>${x.ujian}</b>` : (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).map(s => `<b>${esc(s.kode)}</b> ${esc(s.teks)}`).join('<br>')}</td><td>${esc(x.indikator || '')}</td><td>${esc(x.asesmen)}</td><td>${esc(x.tatap || x.metode)}${x.daring ? '<br>Daring: ' + esc(x.daring) : ''}</td><td>${esc(x.materi)}</td><td>${esc(x.integ || '')}</td><td>${fmt(x.bobot, 1)}%</td></tr>`).join('')}</tbody></table>
-  <h4>Satuan Acara Perkuliahan</h4>${r.pertemuan.filter(x => x.sap && x.sap.inti).map(x => `<p><b>Pertemuan ${x.m}.</b> Pendahuluan: ${esc(x.sap.pendahuluan || '')}. Inti: ${esc(x.sap.inti)}. Penutup: ${esc(x.sap.penutup || '')}. Media: ${esc(x.sap.media || '')}.</p>`).join('') || '<p class="muted">SAP belum diisi.</p>'}
-  <h4>Integrasi penelitian dan PKM</h4><p><b>Penelitian:</b> ${esc(r.penelitian) || '–'}<br><b>PKM:</b> ${esc(r.pkm) || '–'}</p>${r.pertemuan.filter(x => x.integ).map(x => `<p>Pertemuan ${x.m} (${x.integ}): ${esc(x.integUraian || '')}</p>`).join('')}
-  <h4>Bahan kajian</h4><p>${esc(r.bahan || '')}</p><h4>Pustaka</h4><p style="white-space:pre-line">${esc(r.pustaka)}</p>
-  <div class="ttd"><div><span>Dosen pengampu</span><b>${esc(peng[0] || '....................')}</b></div><div><span>Ketua Program Studi</span><b>....................</b></div></div></div>`, (dr) => {
-    dr.querySelector('#rep-doc').onclick = () => {
-      const isi = dr.querySelector('#rep').innerHTML.replace(/<img[^>]*>/g, '');
-      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page{size:841.9pt 595.3pt;margin:42pt}body{font:10pt Arial}h2{text-align:center;font-size:13pt}h4{margin:10pt 0 3pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3pt 4pt;font:9.5pt Arial;vertical-align:top;text-align:left}.kop{text-align:center;font-size:11pt}.meta{text-align:center}</style></head><body>${isi}</body></html>`;
-      unduh(new Blob(['\ufeff', html], { type: 'application/msword' }), `RPS_${m.kode}_${m.nama.replace(/[^A-Za-z0-9]+/g, '_')}.doc`);
-    };
+  openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="rep-doc">${icon('download')} Unduh Word (format templat)</button><button class="btn ghost" data-close>Tutup</button></div>
+  <div class="report rps-doc" id="rep">${badanRps(m, r, true)}</div>`, (dr) => {
+    dr.querySelector('#rep-doc').onclick = () => unduh(new Blob(['\ufeff', berkasWordRps(m, r)], { type: 'application/msword' }), namaBerkasRps(m));
   }, true);
   void closeDrawer;
 }

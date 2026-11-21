@@ -107,10 +107,10 @@ export const PARAM_DEFAULT = {
 };
 
 export const PERAN = {
-  prodi: { nama: 'Tim Kurikulum Prodi', c: '#10b981' },
-  dosen: { nama: 'Dosen Pengampu', c: '#0ea5e9' },
+  prodi: { nama: 'Prodi', c: '#10b981' },
+  dosen: { nama: 'Dosen', c: '#0ea5e9' },
   wadir: { nama: 'Wakil Direktur I', c: '#8b5cf6' },
-  spm: { nama: 'Satuan Penjaminan Mutu (SPM)', c: '#f0616d' },
+  spm: { nama: 'SPM', c: '#f0616d' },
   akademik: { nama: 'Kasubbag AK', c: '#f5a524' },
   admin: { nama: 'Admin', c: '#64748b' },
   developer: { nama: 'Developer', c: '#0f172a' }
@@ -121,11 +121,11 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 
 /* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
 export const MENU_PERAN = {
-  dosen: ['beranda', 'peta', 'cpmk', 'rps', 'beban', 'bloom'],
-  prodi: ['beranda', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'beban', 'bebanprodi', 'periksa', 'iabee', 'generator', 'panduan', 'capaian', 'lulusan', 'bloom', 'revisi', 'laporan'],
-  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'beban', 'bebanprodi', 'periksa', 'iabee', 'generator', 'panduan', 'capaian', 'lulusan', 'revisi', 'laporan'],
-  spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'periksa', 'iabee', 'generator', 'panduan', 'capaian', 'lulusan', 'bloom', 'revisi', 'laporan'],
-  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'panduan', 'lulusan', 'laporan', 'induk'],
+  dosen: ['beranda', 'peta', 'cpmk', 'rps', 'realisasi', 'beban', 'bloom'],
+  prodi: ['beranda', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan'],
+  spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,
   developer: null
 };
@@ -140,3 +140,6 @@ export const ACUAN = [
   'Anderson & Krathwohl (2001), A Taxonomy for Learning, Teaching, and Assessing (revisi Taksonomi Bloom)',
   'Buku Pedoman Kurikulum Sarjana Terapan PEM Akamigas 2027 (draf)'
 ];
+
+/* Aplikasi pendamping. Akun masuk sama (satu proyek Firebase), tetapi sesi masuk dipisah per situs. */
+export const APP_LAIN = { simantap: { nama: 'SIMANTAP 2.0', url: 'https://simantap-spmi.github.io/' } };

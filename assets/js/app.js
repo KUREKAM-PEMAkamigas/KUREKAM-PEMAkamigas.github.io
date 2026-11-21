@@ -1,5 +1,5 @@
 /* KUREKAM PEM Akamigas · Aplikasi utama: state, peran, router, dan utilitas bersama. */
-import { APP, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
+import { APP, APP_LAIN, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
 import { DB } from './db.js';
 import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
@@ -23,10 +23,14 @@ import { piView, kesiapanView } from './views/iabee.js';
 import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
 import lulusanView from './views/lulusan.js';
+import advisoryView from './views/advisory.js';
+import realisasiView from './views/realisasi.js';
+import skpiView from './views/skpi.js';
+import bahanLedView from './views/bahanled.js';
 import panduanView from './views/panduan.js';
 
 /* ---------------- state ---------------- */
-export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
+export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], pengguna: [], log: [], settings: {} };
 const CTX_KEY = 'kurekam_ctx';
 export const ctx = (() => {
   const d = { role: 'wadir', prodi: 'TP', dosen: 'D-TP-01' };
@@ -47,7 +51,8 @@ export function userName() {
 }
 
 /** Menu yang boleh dibuka peran aktif. */
-export function bolehMenu(id) { const m = MENU_PERAN[ctx.role]; return !m || m.includes(id); }
+/* Data Induk & Pengaturan tidak tampil pada mode simulasi/demo (bukan sambungan Firestore) agar tidak terlihat saat peragaan. */
+export function bolehMenu(id) { if (id === 'induk' && (dalamSimulasi() || DB.mode !== 'firebase')) return false; const m = MENU_PERAN[ctx.role]; return !m || m.includes(id); }
 /** Peran yang boleh dipilih akun ini. Tanpa daftar pengguna (masa penyiapan atau mode demo) semua peran bisa dicoba. */
 export function peranAkun() { return ctx.kunci ? (ctx.izin || []) : Object.keys(PERAN).filter(k => k !== 'developer'); }
 let sidikDev = false;
@@ -87,6 +92,11 @@ export function can(action, obj = {}) {
   switch (action) {
     case 'susun': return r === 'prodi' && (obj.prodi || ctx.prodi) === ctx.prodi;          // visi s.d. CPMK, penugasan
     case 'rps': {                                                                             // Sub-CPMK, RPS, SAP
+      if (r === 'prodi') return (obj.prodi || ctx.prodi) === ctx.prodi;
+      if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen);
+      return false;
+    }
+    case 'real': {                                                                            // realisasi pembelajaran
       if (r === 'prodi') return (obj.prodi || ctx.prodi) === ctx.prodi;
       if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen);
       return false;
@@ -152,7 +162,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 export const ROUTES = [
   { id: 'beranda', t: 'Beranda', ic: 'home', c: '#10b981', sec: 'Ringkasan', v: beranda },
   { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
-  { id: 'mutu', t: 'Dasbor Mutu', sub: 'Satuan SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
+  { id: 'mutu', t: 'Dasbor Mutu', sub: 'SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag AK', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
   { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },
   { id: 'visi', t: 'Visi & Profil Lulusan', ic: 'flag', c: '#10b981', sec: 'Penyusunan Kurikulum', prodi: true, v: visiView },
@@ -163,15 +173,19 @@ export const ROUTES = [
   { id: 'peta', t: 'Peta Kurikulum', ic: 'grid4', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: petaView },
   { id: 'matriks', t: 'Matriks Keterlacakan', ic: 'link', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: matriksView },
   { id: 'cpmk', t: 'CPMK & Sub-CPMK', ic: 'spark', c: '#0ea5e9', sec: 'Pembelajaran', prodi: true, v: cpmkView },
+  { id: 'realisasi', t: 'Realisasi Pembelajaran', sub: 'Hasil, bukti, dan tindak lanjut per MK', ic: 'check', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: realisasiView },
   { id: 'rps', t: 'RPS & SAP', ic: 'audit', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: rpsView },
   { id: 'beban', t: 'Penugasan & Beban Dosen', ic: 'user', c: '#f5a524', sec: 'Beban Dosen & Prodi', v: bebanView },
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },
   { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
+  { id: 'bahanled', t: 'Bahan LED IABEE', sub: 'Tabel suplemen A1–C2', ic: 'book', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bahanLedView },
   { id: 'generator', t: 'Generator Usulan', sub: 'MK inti, PI, tindak lanjut', ic: 'spark', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: generatorView },
   { id: 'panduan', t: 'Panduan 10 Indikator', sub: 'Cara mengisi dan contoh', ic: 'audit', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: panduanView },
   { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'lulusan', t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi', ic: 'medal', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: lulusanView },
+  { id: 'skpi', t: 'SKPI Lulusan', sub: 'Surat pendamping ijazah dwibahasa', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: skpiView },
+  { id: 'advisory', t: 'Advisory Board Industri', sub: 'Bukti pelibatan praktisi', ic: 'link', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: advisoryView },
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },
@@ -207,6 +221,7 @@ function renderSide(cur) {
     if (r.sec !== sec) { sec = r.sec; h += `<div class="nav-sec">${sec}</div>`; }
     h += `<a href="#${r.id}" class="${r.id === cur ? 'on' : ''}" style="--c:${r.c}"><span class="chip">${icon(r.ic)}</span><span>${r.t}${r.sub ? `<small class="nsub">${r.sub}</small>` : ''}</span></a>`;
   });
+  h += `<div class="nav-sec">Aplikasi lain</div><a href="${APP_LAIN.simantap.url}" target="_blank" rel="noopener" style="--c:#8b5cf6"><span class="chip">${icon('medal')}</span><span>SIMANTAP 2.0<small class="nsub">Pemantauan mutu dan akreditasi</small></span></a>`;
   h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
   $('#side').innerHTML = h;
   $$('#side a').forEach(a => a.addEventListener('click', () => tutupSide()));

@@ -6,6 +6,10 @@ import { S } from './app.js';
 import { DB } from './db.js';
 import { UNIT_SIMANTAP } from './config.js';
 import { kesiapan, progres, struktur, capstoneCek, lulusanRekap } from './rules.js';
+import { ledRingkas, obeProdi } from './ledbahan.js';
+import { ringkasUmpan } from './tracerlam.js';
+import { abUmpan } from './advisorylogic.js';
+import { realUmpan } from './realisasilogic.js';
 
 const unitLuar = (pid) => UNIT_SIMANTAP[pid] || pid;
 const KUNCI = (no) => 'iabee_' + String(no).padStart(2, '0');
@@ -24,7 +28,12 @@ export function susunUmpanProdi(pid) {
     indikator: Object.fromEntries(ind.map(i => [KUNCI(i.no), i.no === 6 ? (i.k === 'na' ? null : ll.obe) : i.nilai == null ? null : +i.nilai.toFixed(1)])),
     status: Object.fromEntries(ind.map(i => [KUNCI(i.no), i.k === 'na' ? 'belum_diukur' : i.k === 'ok' ? 'sesuai' : i.k === 'near' ? 'sebagian' : 'jauh'])),
     keterangan: Object.fromEntries(ind.map(i => [KUNCI(i.no), `${i.teks || ''}${i.ket ? ' | ' + i.ket : ''}`])),
-    simantap
+    simantap,
+    led: ledRingkas(S, pid),
+    obe: (({ angkatan, wisuda, lulusan }) => ({ angkatan, wisuda, lulusan }))(obeProdi(S, pid)),
+    tracer: ringkasUmpan(S.lulusan.filter(x => x.prodi === pid)),
+    ab: abUmpan(S, pid),
+    real: realUmpan(S, pid)
   };
 }
 
@@ -34,7 +43,7 @@ export async function kirimUmpan() {
   if (DB.mode !== 'firebase' || !DB.user) return { ok: false, alasan: 'Basis data bersama belum aktif.' };
   try {
     const docs = S.prodi.map(p => susunUmpanProdi(p.id));
-    const kunci = JSON.stringify(docs.map(d => [d.id, d.indikator, d.status, d.simantap]));
+    const kunci = JSON.stringify(docs.map(d => [d.id, d.indikator, d.status, d.simantap, d.led, d.obe, d.tracer, d.ab, d.real]));
     if (kunci === terakhir) return { ok: true, tanpaPerubahan: true };
     for (const d of docs) await DB.tulisLuar('kur_umpan', d);
     terakhir = kunci; return { ok: true, n: docs.length };
@@ -48,3 +57,6 @@ export async function temuanAmi(pid) {
   return rows.filter(i => i.unit === unitLuar(pid) && i.ami && ['KTS Minor', 'KTS Mayor', 'Observasi'].includes(i.ami.temuan))
     .map(i => ({ id: i.id, kode: i.kode, teks: i.teks, temuan: i.ami.temuan, uraian: i.ami.uraian || '', tgl: i.ami.tgl || '' }));
 }
+
+/** Ringkasan LED dari SIMANTAP (koleksi simantap_led, satu dokumen per prodi, hanya angka). */
+export async function ledSimantap() { return (await DB.bacaLuar('simantap_led')).filter(d => d && d.id); }

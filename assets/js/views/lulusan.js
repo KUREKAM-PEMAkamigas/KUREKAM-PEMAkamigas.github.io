@@ -4,9 +4,10 @@ import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast } from 
 import { chart, AX } from '../charts.js';
 import { fmt, capstoneCek, lulusanRekap, RUBRIK_ST } from '../rules.js';
 import { head, formDrawer, ro, kpi, animateCounts, stTag, tanya, unduh, loadXLSX } from './ui.js';
+import { tTracer } from './tracer.js';
 
 let tab = 'capstone';
-const TABS = [['capstone', 'Capstone'], ['lulusan', 'Lulusan dan tracer']];
+const TABS = [['capstone', 'Capstone'], ['lulusan', 'Lulusan dan tracer'], ['tracer', 'Tracer format LAM']];
 const nz = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -16,7 +17,8 @@ export default function lulusanView(el) {
   el.innerHTML = `<div class="seg scroll" style="margin-bottom:14px">${TABS.map(([k, t]) => `<button class="${k === tab ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</div><div id="ll-b"></div>`;
   el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { tab = b.dataset.t; rerender(); });
   const b = el.querySelector('#ll-b');
-  if (tab === 'lulusan') tLulusan(b, pid, p, can('susun', { prodi: pid }) || ctx.role === 'akademik');
+  if (tab === 'tracer') tTracer(b, pid, p, can('susun', { prodi: pid }) || ctx.role === 'akademik');
+  else if (tab === 'lulusan') tLulusan(b, pid, p, can('susun', { prodi: pid }) || ctx.role === 'akademik');
   else tCapstone(b, pid, p, can('susun', { prodi: pid }));
 }
 

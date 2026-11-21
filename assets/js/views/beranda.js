@@ -17,17 +17,17 @@ function panelPeran() {
   if (r === 'dosen') {
     const d = S.dosen.find(x => x.id === ctx.dosen), mk = Array.from(new Set(S.tugas.filter(t => t.dosen === ctx.dosen).map(t => t.mk))).map(id => S.mk.find(m => m.id === id)).filter(m => m && !/magang|tugas akhir/i.test(m.kel)).sort((a, b) => a.smt - b.smt);
     return `<div class="card" style="margin-top:18px">${kepala('Tugas Anda sebagai dosen pengampu', d ? esc(d.nama) + ' · ' + mk.length + ' mata kuliah' : 'Akun belum dipasangkan dengan data dosen')}
-      ${mk.length ? `<div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Mata kuliah</th><th>Prodi</th><th>Smt</th><th>SKS</th><th>Status RPS</th><th>Saran asisten</th></tr></thead><tbody>${mk.map(m => { const rp = rpsOf(S, m.id), k = periksaRps(m, rp).filter(x => x.k !== 'ok').length; return `<tr><td><b>${esc(m.nama)}</b></td><td>${m.prodi}</td><td>${m.smt}</td><td>${m.T}T + ${m.P}P</td><td>${statusTag(rp ? rp.status : '')}</td><td>${k ? `<span class="st near">${k} butir</span>` : '<span class="st ok">lengkap</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty small">Belum ada mata kuliah yang ditugaskan kepada Anda. Penugasan dibuat Tim Kurikulum Prodi.</p>'}
+      ${mk.length ? `<div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Mata kuliah</th><th>Prodi</th><th>Smt</th><th>SKS</th><th>Status RPS</th><th>Saran asisten</th></tr></thead><tbody>${mk.map(m => { const rp = rpsOf(S, m.id), k = periksaRps(m, rp).filter(x => x.k !== 'ok').length; return `<tr><td><b>${esc(m.nama)}</b></td><td>${m.prodi}</td><td>${m.smt}</td><td>${m.T}T + ${m.P}P</td><td>${statusTag(rp ? rp.status : '')}</td><td>${k ? `<span class="st near">${k} butir</span>` : '<span class="st ok">lengkap</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty small">Belum ada mata kuliah yang ditugaskan kepada Anda. Penugasan dibuat Prodi.</p>'}
       ${langkah(['Buka menu <a href="#rps"><b>RPS & SAP</b></a> dan pilih mata kuliah.', 'Unggah RPS lama dari Word supaya tidak mengetik ulang, atau buat draf otomatis dengan Asisten RPS.', 'Buka Asisten RPS, ikuti saran pengisiannya, lalu sunting bagian yang belum sesuai.', 'Ajukan ke kaprodi. RPS yang dikembalikan bisa direvisi lagi.'])}</div>`;
   }
   if (r === 'prodi') {
     const mk = S.mk.filter(m => m.prodi === ctx.prodi), aju = S.rps.filter(x => x.prodi === ctx.prodi && x.status === 'diajukan').length, g = progres(S, ctx.prodi);
-    return `<div class="card" style="margin-top:18px">${kepala('Tugas Tim Kurikulum Prodi ' + esc(ctx.prodi), `Kemajuan penyusunan ${g.total}% · ${mk.length} mata kuliah · ${aju} RPS menunggu pengesahan`)}
+    return `<div class="card" style="margin-top:18px">${kepala('Tugas Prodi ' + esc(ctx.prodi), `Kemajuan penyusunan ${g.total}% · ${mk.length} mata kuliah · ${aju} RPS menunggu pengesahan`)}
       <div class="grid g4 mini" style="margin-top:8px">${g.tahap.map(x => `<div><small>${x.n}</small><b>${x.v}%</b>${bar(x.v, x.v >= 85 ? '#10b981' : x.v >= 60 ? '#f5a524' : '#f0616d')}</div>`).join('')}</div>
       ${langkah(['Buka <a href="#asisten"><b>Asisten Kurikulum</b></a> dan kerjakan tujuh langkahnya, dengan mengisi sendiri atau memakai usulan otomatis.', 'Tugaskan dosen pengampu di menu Penugasan dan Beban Dosen.', 'Tinjau dan sahkan RPS yang diajukan dosen di menu RPS & SAP.', 'Periksa di Pemeriksa Kurikulum, lalu ajukan lewat Revisi dan Pengesahan.'])}</div>`;
   }
   const info = { wadir: ['Ruang kerja Wakil Direktur I', `${S.revisi.filter(x => x.status === 'menunggu').length} usulan revisi menunggu putusan · ${S.prodi.filter(p => p.status === 'diajukan').length} kurikulum prodi diajukan`, ['Pantau kemajuan lima prodi di <a href="#pimpinan"><b>Dasbor Pimpinan</b></a>.', 'Putuskan usulan revisi dan sahkan kurikulum di <a href="#revisi"><b>Revisi & Pengesahan</b></a>.', 'Lihat kecukupan dosen di Beban Dosen dan Beban Prodi.']],
-    spm: ['Ruang kerja Satuan SPM', 'Pemeriksaan kesesuaian terhadap LAM Teknik dan IABEE', ['Lihat kesesuaian tiap prodi di <a href="#mutu"><b>Dasbor Mutu</b></a>.', 'Telusuri temuan di Pemeriksa Kurikulum dan Taksonomi Bloom.', 'Tulis catatan mutu untuk prodi di Revisi & Pengesahan.']],
+    spm: ['Ruang kerja SPM', 'Pemeriksaan kesesuaian terhadap LAM Teknik dan IABEE', ['Lihat kesesuaian tiap prodi di <a href="#mutu"><b>Dasbor Mutu</b></a>.', 'Telusuri temuan di Pemeriksa Kurikulum dan Taksonomi Bloom.', 'Tulis catatan mutu untuk prodi di Revisi & Pengesahan.']],
     akademik: ['Ruang kerja Kasubbag AK', 'Data induk, kelas, dosen, dan beban mengajar', ['Mutakhirkan prodi, kelas, dan dosen di <a href="#induk"><b>Data Induk</b></a>.', 'Impor data dosen, pengampu, dan matriks kurikulum dari Excel.', 'Pantau jadwal dan kapasitas di <a href="#akademik"><b>Dasbor Akademik</b></a>.']],
     admin: ['Ruang kerja Admin', 'Semua menu terbuka', ['Daftarkan akun dan perannya di <a href="#induk"><b>Data Induk</b></a>, tab Pengguna & peran.', 'Atur parameter kurikulum dan basis data.', 'Unduh cadangan secara berkala.']] }[r === 'developer' ? 'admin' : r];
   return `<div class="card" style="margin-top:18px">${kepala(info[0], info[1])}${langkah(info[2])}</div>`;
@@ -85,11 +85,11 @@ export default function beranda(el) {
 
   <div class="card" style="margin-top:18px">${head('Siapa mengerjakan apa', 'Alur peran di KUREKAM', 'user', '#14b8a6')}
     <div class="flow">
-      <div class="fbox" style="--c:#10b981"><span class="ico-badge" style="--c:#10b981">${icon('flag')}</span><b>Tim Kurikulum Prodi</b><small>Visi, PL, CPL, BoK, BK, MK, peta, CPMK, penugasan dosen, pengesahan RPS</small></div>
-      <div class="fbox"><span class="ico-badge" style="--c:#0ea5e9">${icon('audit')}</span><b>Dosen Pengampu</b><small>Sub-CPMK, RPS 16 pertemuan, SAP per pertemuan</small></div>
+      <div class="fbox" style="--c:#10b981"><span class="ico-badge" style="--c:#10b981">${icon('flag')}</span><b>Prodi</b><small>Visi, PL, CPL, BoK, BK, MK, peta, CPMK, penugasan dosen, pengesahan RPS</small></div>
+      <div class="fbox"><span class="ico-badge" style="--c:#0ea5e9">${icon('audit')}</span><b>Dosen</b><small>Sub-CPMK, RPS 16 pertemuan, SAP per pertemuan</small></div>
       <div class="fbox"><span class="ico-badge" style="--c:#8b5cf6">${icon('medal')}</span><b>Wakil Direktur I</b><small>Pengesahan kurikulum dan keputusan usulan revisi</small></div>
-      <div class="fbox"><span class="ico-badge" style="--c:#f0616d">${icon('eye')}</span><b>Satuan SPM</b><small>Memantau keterlacakan, Bloom, LAM, IABEE; memberi catatan</small></div>
-      <div class="fbox"><span class="ico-badge" style="--c:#f5a524">${icon('calendar')}</span><b>Kasubbag AK</b><small>Data induk kelas dan dosen, rekap beban SKS riil dan JP</small></div>
+      <div class="fbox"><span class="ico-badge" style="--c:#f0616d">${icon('eye')}</span><b>SPM</b><small>Memantau keterlacakan, Bloom, LAM, IABEE; memberi catatan</small></div>
+      <div class="fbox"><span class="ico-badge" style="--c:#f5a524">${icon('calendar')}</span><b>Kasubbag AK</b><small>Operasional perkuliahan: data induk kelas dan dosen, beban SKS riil dan JP, pemantauan realisasi pembelajaran</small></div>
     </div>
   </div>`;
 

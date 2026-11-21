@@ -4,7 +4,7 @@
    Seluruh data dimuat ke memori saat mulai; setiap perubahan ditulis per dokumen. */
 import { FIREBASE_CONFIG } from './config.js';
 
-export const COLLECTIONS = ['prodi', 'dosen', 'pl', 'cpl', 'pi', 'capaian', 'tl', 'capstone', 'lulusan', 'bok', 'bk', 'mk', 'cpmk', 'sub', 'rps', 'tugas', 'revisi', 'lama', 'ajar', 'pengguna', 'log', 'settings'];
+export const COLLECTIONS = ['prodi', 'dosen', 'pl', 'cpl', 'pi', 'capaian', 'tl', 'capstone', 'lulusan', 'ab', 'real', 'bok', 'bk', 'mk', 'cpmk', 'sub', 'rps', 'tugas', 'revisi', 'lama', 'ajar', 'pengguna', 'log', 'settings'];
 const PFX = 'kur_';
 const LS = 'kurekam_';
 const LS_FBCFG = 'kurekam_firebase_config';

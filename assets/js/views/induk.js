@@ -36,14 +36,14 @@ function tAkun(el, ed, adm) {
   if (!adm) return;
   const form = (u) => formDrawer({ title: u.id ? 'Ubah pengguna' : 'Tambah pengguna', sub: 'Email harus sama dengan email akun masuk', obj: u,
     fields: [{ k: 'email', label: 'Email akun', type: 'email' }, { k: 'nama', label: 'Nama' }, { k: 'peran', label: 'Peran (boleh lebih dari satu, misalnya dosen yang juga tim kurikulum)', type: 'multi', opts: Object.keys(PERAN).filter(k => k !== 'developer' || ctx.role === 'developer').map(k => ({ v: k, t: PERAN[k].nama })) },
-      { k: 'prodi', label: 'Prodi (untuk Tim Kurikulum Prodi)', type: 'select', opts: [{ v: '', t: 'Tidak terikat prodi' }, ...S.prodi.map(p => ({ v: p.id, t: p.id + ' · ' + p.nama }))] },
+      { k: 'prodi', label: 'Prodi (untuk peran Prodi)', type: 'select', opts: [{ v: '', t: 'Tidak terikat prodi' }, ...S.prodi.map(p => ({ v: p.id, t: p.id + ' · ' + p.nama }))] },
       { k: 'dosen', label: 'Data dosen (untuk peran dosen)', type: 'select', opts: [{ v: '', t: 'Tidak ada' }, ...S.dosen.slice().sort((a, b) => a.nama.localeCompare(b.nama)).map(d => ({ v: d.id, t: d.nama }))] },
 ],
     extra: u.id && DB.mode === 'firebase' ? `<div class="filters" style="margin-top:10px"><button class="btn sm" id="u-akun">${icon('plus')} Buatkan akun masuk</button><button class="btn sm" id="u-reset">${icon('upload')} Kirim email atur ulang kata sandi</button></div><div class="small muted" style="margin-top:6px">Buatkan akun masuk dipakai untuk pengguna yang didaftarkan sebelum fitur ini ada. Kata sandi awalnya sama dengan alamat email. Akun yang sudah ada tidak diubah.</div>` : DB.mode === 'firebase' ? '<div class="ribbon info" style="margin-top:10px">Saat disimpan, akun masuk dibuat otomatis. Nama pengguna dan kata sandi awalnya sama, yaitu alamat email ini dalam huruf kecil. Pada login pertama pengguna wajib membuat kata sandi sendiri. Bila email sudah punya akun (misalnya akun SIMANTAP), kata sandinya tidak diubah.</div>' : '',
     onSave: async (o) => {
       o.email = (o.email || '').toLowerCase(); if (!/^\S+@\S+\.\S+$/.test(o.email)) return 'Email belum benar.';
       if (!(o.peran || []).length) return 'Pilih paling sedikit satu peran.';
-      if (o.peran.includes('prodi') && !o.prodi) return 'Pilih prodi untuk peran Tim Kurikulum Prodi.';
+      if (o.peran.includes('prodi') && !o.prodi) return 'Pilih prodi untuk peran Prodi.';
       if (o.peran.includes('dosen') && !o.dosen) return 'Pilih data dosen untuk peran dosen.';
       const id = o.id || 'U-' + o.email.replace(/[^a-z0-9]/g, '_');
       if (!o.id && S.pengguna.some(x => x.id === id)) return 'Email ini sudah terdaftar.';

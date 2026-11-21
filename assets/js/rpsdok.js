@@ -12,21 +12,25 @@ const kosong = '<span class="kos">......................</span>';
 
 export const namaBerkasRps = (m) => `RPS_${m.kode}_${String(m.nama).replace(/[^A-Za-z0-9]+/g, '_')}.doc`;
 
+const CATATAN_JUDUL = 'Catatan sesuai dengan SN Dikti (Permendiktisaintek No. 39 Tahun 2025 jo. Permendiktisaintek No. 10 Tahun 2026):';
 const CATATAN_RPS = [
-  'Capaian Pembelajaran Lulusan PRODI (CPL-PRODI) adalah kemampuan yang dimiliki oleh setiap lulusan PRODI yang merupakan internalisasi dari sikap, penguasaan pengetahuan dan keterampilan sesuai dengan jenjang prodinya yang diperoleh melalui proses pembelajaran.',
-  'CPL yang dibebankan pada mata kuliah adalah beberapa capaian pembelajaran lulusan program studi (CPL-PRODI) yang digunakan untuk pembentukan atau pengembangan sebuah mata kuliah yang terdiri dari aspek sikap, keterampilan umum, keterampilan khusus dan pengetahuan.',
+  ['Capaian Pembelajaran Lulusan PRODI (CPL-PRODI) adalah rumusan standar kompetensi lulusan yang dimiliki oleh setiap lulusan PRODI sesuai jenjangnya (Pasal 6–7), yang mencakup kompetensi terintegrasi meliputi:',
+    'penguasaan ilmu pengetahuan dan teknologi, serta kecakapan/keterampilan spesifik dan aplikasinya;',
+    'kecakapan umum sebagai dasar penguasaan ilmu pengetahuan, teknologi, dan bidang kerja yang relevan;',
+    'pengetahuan dan keterampilan yang dibutuhkan untuk dunia kerja, studi lanjut, dan/atau sertifikasi profesi; serta',
+    'kemampuan intelektual untuk berpikir secara mandiri dan kritis sebagai pembelajar sepanjang hayat (dengan tetap berlandaskan sikap beriman, bertakwa, berakhlak mulia, dan berkarakter Pancasila).'],
+  'CPL yang dibebankan pada mata kuliah adalah beberapa capaian pembelajaran lulusan program studi (CPL-PRODI) yang dibebankan pada suatu mata kuliah sebagai acuan pembentukan/pengembangan mata kuliah tersebut, yang merepresentasikan keterpaduan aspek sikap, pengetahuan, kecakapan umum, dan kecakapan/keterampilan spesifik.',
   'CP Mata Kuliah (CPMK) adalah kemampuan yang dijabarkan secara spesifik dari CPL yang dibebankan pada mata kuliah, dan bersifat spesifik terhadap bahan kajian atau materi pembelajaran mata kuliah tersebut.',
-  'Sub-CP Mata Kuliah (Sub-CPMK) adalah kemampuan yang dijabarkan secara spesifik dari CPMK yang dapat diukur atau diamati dan merupakan kemampuan akhir yang direncanakan pada tiap tahap pembelajaran. Sub-CPMK dalam RPS ini ditulis dengan level kognitif Taksonomi Bloom yang sesuai (C4: Analisis, C5: Evaluasi atau Sintesis, C6: Mencipta).',
+  'Sub-CP Mata Kuliah (Sub-CPMK) adalah kemampuan yang dijabarkan secara spesifik dari CPMK yang dapat diukur atau diamati dan merupakan kemampuan akhir yang direncanakan pada tiap tahap pembelajaran. Sub-CPMK dalam RPS ini ditulis dengan level kognitif Taksonomi Bloom yang sesuai (C4: Analisis, C5: Evaluasi/Sintesis, C6: Mencipta).',
   'Indikator penilaian kemampuan dalam proses maupun hasil belajar mahasiswa adalah pernyataan spesifik dan terukur yang mengidentifikasi kemampuan atau kinerja hasil belajar mahasiswa yang disertai bukti-bukti.',
-  'Kriteria Penilaian adalah patokan yang digunakan sebagai ukuran atau tolok ukur ketercapaian pembelajaran dalam penilaian berdasarkan indikator-indikator yang telah ditetapkan. Kriteria penilaian merupakan pedoman bagi penilai agar penilaian konsisten dan tidak bias. Kriteria dapat berupa kuantitatif ataupun kualitatif.',
-  'Teknik penilaian: Tes tulis, Tes lisan, Observasi, Partisipasi, Laporan, dan Presentasi.',
-  'Bentuk pembelajaran: Kuliah, Responsi, Tutorial, Seminar atau yang setara, Praktikum, Praktik Studio, Praktik Bengkel, Praktik Lapangan, Penelitian, Pengabdian Kepada Masyarakat dan/atau bentuk pembelajaran lain yang setara.',
-  'Metode Pembelajaran: Small Group Discussion, Role-Play dan Simulation, Discovery Learning, Self-Directed Learning, Cooperative Learning, Collaborative Learning, Contextual Learning, Project-Based Learning, Case-Based Learning, dan metode lainnya yang setara.',
-  'Materi Pembelajaran adalah rincian atau uraian dari bahan kajian yang dapat disajikan dalam bentuk beberapa pokok dan sub-pokok bahasan. Setiap pertemuan dalam RPS ini dilengkapi dengan konteks industri migas dan, bila relevan, referensi simulasi untuk memperkuat relevansi industri.',
-  'Bobot penilaian adalah persentase penilaian terhadap setiap pencapaian Sub-CPMK yang besarnya proporsional dengan tingkat kesulitan pencapaian Sub-CPMK tersebut, dan totalnya 100%.',
-  'TM = Tatap Muka; PT = Penugasan Terstruktur; BM = Belajar Mandiri; TB = Belajar Terbimbing.',
+  'Kriteria Penilaian adalah patokan yang digunakan sebagai ukuran atau tolok ukur ketercapaian pembelajaran dalam penilaian berdasarkan indikator-indikator yang telah ditetapkan. Kriteria penilaian merupakan pedoman bagi penilai agar penilaian konsisten, objektif, akuntabel, dan tidak bias. Kriteria dapat berupa kuantitatif ataupun kualitatif.',
+  'Teknik penilaian mencakup penilaian formatif dan sumatif (Pasal 27) yang dilakukan melalui Tes tulis, Tes lisan, Observasi, Partisipasi, Unjuk kerja, Laporan, dan Presentasi (dengan instrumen berupa rubrik dan/atau portofolio).',
+  'Bentuk pembelajaran sesuai Pasal 16 ayat (1) meliputi: Kuliah, Responsi, Tutorial, Seminar, Praktikum, Praktik, Studio, Penelitian, Perancangan, Pengembangan, Tugas Akhir, Pelatihan Bela Negara, Pertukaran Pelajar, Magang, Wirausaha, Pengabdian kepada Masyarakat, dan/atau bentuk pembelajaran lain yang setara.',
+  'Metode Pembelajaran yang berpusat pada mahasiswa (student-centered learning) meliputi: Small Group Discussion, Role-Play & Simulation, Discovery Learning, Self-Directed Learning, Cooperative Learning, Collaborative Learning, Contextual Learning, Project-Based Learning, Case-Based Learning, dan metode lainnya yang setara.',
+  'Materi Pembelajaran adalah rincian atau uraian dari bahan kajian yang dapat disajikan dalam bentuk beberapa pokok dan sub-pokok bahasan. Setiap pertemuan dalam RPS ini dilengkapi dengan konteks kilang dan referensi simulasi (LTSpice) untuk memperkuat relevansi industri.',
+  'Bobot penilaian adalah persentase penilaian terhadap setiap pencapaian Sub-CPMK yang besarnya proporsional dengan tingkat kesulitan dan kedalaman pencapaian Sub-CPMK tersebut, dengan total keseluruhan 100%.',
+  'Singkatan kegiatan belajar (Pasal 16 ayat 2): TM = Tatap Muka; TB = Belajar Terbimbing; PT = Penugasan Terstruktur; BM = Belajar Mandiri (dengan beban 1 SKS setara 45 jam per semester).',
 ];
-const CATATAN_DASAR = 'Catatan ini selaras dengan SN Dikti dalam Permendiktisaintek Nomor 39 Tahun 2025 serta perubahannya dalam Permendiktisaintek Nomor 10 Tahun 2026. Kerangka penurunan CPL ke CPMK dan Sub-CPMK pada kurikulum berbasis capaian (OBE) tetap sama; terdapat penyesuaian pada cakupan kompetensi CPL (Pasal 7), ragam bentuk pembelajaran (Pasal 16), serta penegasan penilaian formatif dan sumatif (Pasal 27).';
 
 /** Isi dokumen RPS sebagai HTML (tanpa gambar). logo=true menambahkan logo untuk pratinjau layar. */
 export function badanRps(m, r, logo = false) {
@@ -71,7 +75,8 @@ export function badanRps(m, r, logo = false) {
   const tot = r.pertemuan.reduce((a, x) => a + (+x.bobot || 0), 0);
   const rencana = `<table class="tbl"><thead><tr><th>Mg Ke-</th><th>Kemampuan akhir tiap tahapan belajar (Sub-CPMK)</th><th>Penilaian: Indikator</th><th>Penilaian: Kriteria &amp; Teknik</th><th>Bentuk Pembelajaran; Metode Pembelajaran; Penugasan Mahasiswa [Estimasi Waktu]<br>Tatap Muka</th><th>Daring</th><th>Materi Pembelajaran [Pustaka]</th><th>Bobot Penilaian (%)</th></tr>
     <tr class="no">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<th>(${n})</th>`).join('')}</tr></thead><tbody>${r.pertemuan.map(baris).join('')}<tr><td colspan="7" class="c"><b>Jumlah bobot penilaian</b></td><td class="c"><b>${fmt(tot, 1)}</b></td></tr></tbody></table>`;
-  const catH = `<h4>Catatan</h4><ol style="margin-top:0">${CATATAN_RPS.map(c => `<li>${esc(c)}</li>`).join('')}</ol><p>${esc(CATATAN_DASAR)}</p>`;
+  const li = (c) => Array.isArray(c) ? `<li>${esc(c[0])}<ul>${c.slice(1).map(x => `<li>${esc(x)}</li>`).join('')}</ul></li>` : `<li>${esc(c)}</li>`;
+  const catH = `<h4>${esc(CATATAN_JUDUL)}</h4><ol style="margin-top:0">${CATATAN_RPS.map(li).join('')}</ol>`;
   const sap = r.pertemuan.filter(x => x.sap && (x.sap.inti || x.sap.pendahuluan));
   const sapH = sap.length ? `<h4>Satuan Acara Perkuliahan (SAP)</h4><table class="tbl"><thead><tr><th>Mg</th><th>Pendahuluan</th><th>Kegiatan inti</th><th>Penutup</th><th>Media dan alat</th></tr></thead><tbody>${sap.map(x => `<tr><td class="c">${x.m}</td><td>${ba(x.sap.pendahuluan)}</td><td>${ba(x.sap.inti)}</td><td>${ba(x.sap.penutup)}</td><td>${ba(x.sap.media)}</td></tr>`).join('')}</tbody></table>` : '';
   return `${kop}${ident}${jam}${cap}${kor}${des}<p></p>${rencana}${catH}${sapH}<p class="mut" style="margin-top:8pt">Kurikulum ${APP.tahunKurikulum} · Status RPS: ${esc(r.status || 'draf')}${r.tgl ? ' · ' + esc(r.tgl) : ''} · Dihasilkan dari KUREKAM.</p>`;

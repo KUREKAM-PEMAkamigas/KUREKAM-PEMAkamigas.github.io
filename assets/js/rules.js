@@ -211,11 +211,10 @@ export function rpsLengkap(r) {
 export const INTEG = ['', 'Penelitian', 'PKM', 'Penelitian dan PKM'];
 export const integrasiOf = (r) => r && r.pertemuan ? r.pertemuan.filter(p => !p.ujian && (p.integ || (p.riset || []).length)).length : 0;
 export function cekIntegrasi(S, pid) {
-  const P = param(S), min = P.integrasiMinPertemuan || 2;
+  /* Informasi saja: integrasi penelitian dan PKM bersifat opsional per mata kuliah, jadi tidak menjadi temuan. */
   const rp = S.rps.filter(r => r.prodi === pid && rpsLengkap(r) > 0);
-  const kurang = rp.filter(r => integrasiOf(r) < min).map(r => ({ kode: ((S.mk.find(m => m.id === r.mk) || {}).kode) || r.mk }));
-  const L = (a) => a.map(x => x.kode).slice(0, 6).join(', ') + (a.length > 6 ? ', …' : '');
-  return [{ grp: 'Pembelajaran', label: `RPS dengan integrasi penelitian atau PKM kurang dari ${min} pertemuan`, val: kurang.length ? `${kurang.length} dari ${rp.length}: ${L(kurang)}` : (rp.length ? 'Tidak ada' : 'Belum ada RPS'), target: '0', k: kurang.length ? 'near' : 'ok', acuan: 'SN Dikti (standar proses), LAM Teknik butir penelitian dan PkM' }];
+  const dist = [0, 1, 2, 3].map(n => rp.filter(r => (n === 3 ? integrasiOf(r) >= 3 : integrasiOf(r) === n)).length);
+  return [{ grp: 'Pembelajaran', label: 'Sebaran integrasi penelitian dan PKM per RPS (informasi)', val: rp.length ? `Tidak ada ${dist[0]}, 1 pertemuan ${dist[1]}, 2 pertemuan ${dist[2]}, 3 atau lebih ${dist[3]}` : 'Belum ada RPS', target: 'opsional', k: 'ok', acuan: 'SN Dikti (standar proses), LAM Teknik butir penelitian dan PkM' }];
 }
 export function sapLengkap(r) {
   if (!r || !r.pertemuan) return 0;

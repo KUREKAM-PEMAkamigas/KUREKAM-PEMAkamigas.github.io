@@ -26,7 +26,7 @@ const CATATAN_RPS = [
   'Bobot penilaian adalah persentase penilaian terhadap setiap pencapaian Sub-CPMK yang besarnya proporsional dengan tingkat kesulitan pencapaian Sub-CPMK tersebut, dan totalnya 100%.',
   'TM = Tatap Muka; PT = Penugasan Terstruktur; BM = Belajar Mandiri; TB = Belajar Terbimbing.',
 ];
-const CATATAN_DASAR = 'Catatan ini selaras dengan SN Dikti dalam Permendiktisaintek Nomor 39 Tahun 2025 (yang mencabut Permendikbudristek Nomor 53 Tahun 2023) serta perubahannya dalam Permendiktisaintek Nomor 10 Tahun 2026. Kerangka penurunan CPL ke CPMK dan Sub-CPMK pada kurikulum berbasis capaian (OBE) tetap sama; terdapat penyesuaian pada cakupan kompetensi CPL (Pasal 7), ragam bentuk pembelajaran (Pasal 16), serta penegasan penilaian formatif dan sumatif (Pasal 27).';
+const CATATAN_DASAR = 'Catatan ini selaras dengan SN Dikti dalam Permendiktisaintek Nomor 39 Tahun 2025 serta perubahannya dalam Permendiktisaintek Nomor 10 Tahun 2026. Kerangka penurunan CPL ke CPMK dan Sub-CPMK pada kurikulum berbasis capaian (OBE) tetap sama; terdapat penyesuaian pada cakupan kompetensi CPL (Pasal 7), ragam bentuk pembelajaran (Pasal 16), serta penegasan penilaian formatif dan sumatif (Pasal 27).';
 
 /** Isi dokumen RPS sebagai HTML (tanpa gambar). logo=true menambahkan logo untuk pratinjau layar. */
 export function badanRps(m, r, logo = false) {

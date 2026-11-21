@@ -14,11 +14,13 @@ const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/
 const pad = (n) => String(n).padStart(2, '0');
 
 export default function indukView(el) {
-  const edI = can('induk') || ['admin', 'developer'].includes(ctx.role), adm = ['admin', 'developer'].includes(ctx.role);
-  el.innerHTML = `<div class="filters"><div class="seg scroll">${TABS.map(([k, t]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${t}</button>`).join('')}</div><div class="sp"></div>${edI ? '' : ro()}</div><div id="ib"></div>`;
+  const edI = can('induk') || ['admin', 'developer'].includes(ctx.role), adm = ['admin', 'developer'].includes(ctx.role), admP = can('parameter');
+  const tabs = adm || ctx.role === 'akademik' ? TABS : TABS.filter(([k]) => k === 'param');
+  if (!tabs.some(([k]) => k === tab)) tab = tabs[0][0];
+  el.innerHTML = `<div class="filters"><div class="seg scroll">${tabs.map(([k, t]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${t}</button>`).join('')}</div><div class="sp"></div>${edI ? '' : ro()}</div><div id="ib"></div>`;
   el.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; hasil = ''; rerender(); });
   const b = el.querySelector('#ib');
-  ({ prodi: tProdi, dosen: tDosen, param: tParam, impor: tImpor, db: tDb, akun: tAkun, log: tLog })[tab](b, edI, adm);
+  ({ prodi: tProdi, dosen: tDosen, param: tParam, impor: tImpor, db: tDb, akun: tAkun, log: tLog })[tab](b, edI, tab === 'param' ? admP : adm);
 }
 
 /* ---------- pengguna dan peran ---------- */
@@ -108,7 +110,7 @@ function tParam(el, ed, adm) {
     <div class="card">${head('Konversi SKS ke jam pelajaran', 'Dasar perhitungan JP mahasiswa dan JP total dosen', 'calendar', '#f5a524')}
       <div class="pform">
         <div class="pfrow"><span>1 SKS teori</span>${num('p-t', P.menitTeori, 5)}<small>menit per minggu</small></div>
-        ${GK.map(g => `<div class="pfrow"><span>1 SKS praktik ${labelGrup(g)} <small class="muted">${GRUP[g].nama}</small></span>${num('p-' + g, P.durasiPraktik[g], 5)}<small>menit per minggu</small></div>`).join('')}
+        ${GK.map(g => `<div class="pfrow"><span>1 SKS praktik <b>${GRUP[g].nama}</b></span>${num('p-' + g, P.durasiPraktik[g], 5)}<small>menit per minggu</small></div>`).join('')}
         <div class="pfrow"><span>Durasi 1 JP</span>${num('j-dur', J.dur, 5)}<small>menit</small></div>
         <div class="pfrow"><span>JP per hari</span>${num('j-day', J.perDay)}<small>JP</small></div>
         <div class="pfrow"><span>Hari kuliah per minggu</span>${num('j-days', J.days)}<small>hari</small></div>
@@ -127,6 +129,19 @@ function tParam(el, ed, adm) {
         <div class="pfrow"><span>Jumlah PI per CPL</span><span class="duo">${num('p-pimin', P.piPerCplMin)}${num('p-pimax', P.piPerCplMax)}</span><small>minimal dan maksimal</small></div>
       </div></div>
   </div>
+  <div class="card" style="margin-top:18px">${head('Ketentuan Pedoman: praktik, capstone, magang, masa studi', 'Nilai sementara mengikuti Pedoman edisi 2027; dapat diubah setelah rapat oleh yang berhak', 'book', '#10b981')}
+    <div class="pform">
+      <div class="pfrow"><span>SKS praktik per mata kuliah, maksimal</span>${num('p-pmaxs', P.praktikMaxSks)}<small>SKS (Bab VIII)</small></div>
+      <div class="pfrow"><span>Total SKS Praktik Capstone Design</span>${num('p-caps', P.capstoneSks)}<small>SKS (Bab XIII)</small></div>
+      <div class="pfrow"><span>Magang Berdampak: PKL inti dan konversi</span><span class="duo">${num('p-mgi', P.magangInti)}${num('p-mgk', P.magangKonversi)}</span><small>SKS inti dan SKS konversi</small></div>
+      <div class="pfrow"><span>Masa studi normal dan maksimal</span><span class="duo">${num('p-msn', P.masaStudiNormal)}${num('p-msm', P.masaStudiMaks)}</span><small>semester</small></div>
+    </div>
+    <h4 style="margin:16px 0 6px">Kode baku mata kuliah bersama (Pedoman Bab IX)</h4>
+    <p class="small muted">Satu baris untuk satu mata kuliah bersama. Pola nama dibaca tanpa membedakan huruf besar dan kecil (contoh: <code>^agama</code> berarti nama diawali "Agama"). Kosongkan kode untuk menghapus baris. Perubahan berlaku pada pemeriksa, MK baru, dan tombol Selaraskan kode.</p>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Pola nama</th><th>Kode</th><th>Nama baku</th></tr></thead><tbody>
+    ${[...(P.kodeBaku || []), { p: '', k: '', n: '' }, { p: '', k: '', n: '' }].map((x, i) => `<tr><td><input class="inp" id="kb-p-${i}" value="${esc(x.p)}" ${adm ? '' : 'disabled'}></td><td><input class="inp" id="kb-k-${i}" value="${esc(x.k)}" style="width:96px" ${adm ? '' : 'disabled'}></td><td><input class="inp" id="kb-n-${i}" value="${esc(x.n)}" ${adm ? '' : 'disabled'}></td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="note">Yang berhak mengubah: Admin, Wakil Direktur I, dan SPM. Tim kurikulum prodi dapat mengubah kode mata kuliah prodinya sendiri di menu Mata Kuliah.</p></div>
   <div class="card" style="margin-top:18px">${head('Kerangka per semester', 'Rentang wajib yang seragam untuk semua prodi (Pedoman Bab IV)', 'grid4', '#6366f1')}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Semester</th><th class="num">SKS</th><th class="num">T min</th><th class="num">T maks</th><th class="num">P min</th><th class="num">P maks</th><th class="num">MK min</th><th class="num">MK maks</th></tr></thead><tbody>
     ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<tr><td><b>Semester ${s}</b></td>${P.kerangka[s].map((v, i) => `<td class="num">${num(`k-${s}-${i}`, v)}</td>`).join('')}</tr>`).join('')}
@@ -137,8 +152,10 @@ function tParam(el, ed, adm) {
   const v = (id) => { const x = el.querySelector('#' + id).value; return x === '' ? null : +x; };
   el.querySelector('#p-save').onclick = async () => {
     const ker = {}; for (let s = 1; s <= 8; s++) ker[s] = P.kerangka[s].map((_, i) => v(`k-${s}-${i}`));
+    const kodeBakuForm = () => { const out = []; for (let i = 0; el.querySelector('#kb-p-' + i); i++) { const p = el.querySelector('#kb-p-' + i).value.trim(), k = el.querySelector('#kb-k-' + i).value.trim(), n = el.querySelector('#kb-n-' + i).value.trim(); if (p && k) out.push({ p, k, n }); } return out; };
+    for (const x of kodeBakuForm()) { try { new RegExp(x.p, 'i'); } catch (e) { toast('Pola nama tidak sah: ' + x.p); return; } if (!/^(AK|TP|TO|TM|TI|LG)[1-4]\d{3}$/i.test(x.k)) { toast('Kode tidak sesuai pola: ' + x.k); return; } }
     if (!(v('p-t') > 0) || GK.some(g => !(v('p-' + g) > 0))) { toast('Durasi harus lebih dari nol'); return; }
-    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), kerangka: ker };
+    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), praktikMaxSks: v('p-pmaxs') || 3, capstoneSks: v('p-caps') || 4, magangInti: v('p-mgi') || 10, magangKonversi: v('p-mgk') || 10, masaStudiNormal: v('p-msn') || 8, masaStudiMaks: v('p-msm') || 14, kodeBaku: kodeBakuForm(), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), kerangka: ker };
     S.settings.jp = { dur: v('j-dur') || JP_DEFAULT.dur, perDay: v('j-day') || JP_DEFAULT.perDay, days: v('j-days') || JP_DEFAULT.days };
     await saveSettings(); await addLog('Ubah parameter kurikulum'); toast('Parameter tersimpan'); rerender();
   };

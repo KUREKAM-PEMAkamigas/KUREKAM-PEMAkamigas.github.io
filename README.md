@@ -60,3 +60,7 @@ Menu Generator Usulan membuat usulan MK inti, PI per CPL, dan tindak lanjut CPL 
 - Kode Praktik Capstone Design I/II/III (AK1010, AK1013, AK1014), PKL magang berdampak (AK1011), dan Tugas Akhir (AK1012) berstatus usulan; ubah di `KODE_BAKU` bila rapat menetapkan lain.
 - Prodi Logistik memakai kode LG. Data lama berkode LO dibaca otomatis sebagai LG dan ditulis ulang ke basis data saat admin masuk. SIMANTAP juga memakai LG; `UNIT_SIMANTAP` di `config.js` kosong dan hanya dipakai bila kode unit keduanya berbeda lagi.
 - Menu Mata Kuliah & SKS memiliki tombol "Selaraskan kode sesuai Pedoman" (pratinjau, tabel konversi CSV, lalu terapkan).
+
+## Parameter pedoman yang dapat diubah setelah rapat
+
+Nilai sementara mengikuti Pedoman Kurikulum edisi 2027 (kerangka SKS semester 1 sampai 8 = 20, 20, 20, 20, 18, 15, 21, 10; praktik maksimal 3 SKS per MK; capstone 4 SKS; magang 10 + 10 SKS; masa studi 8 sampai 14 semester; ambang PI 65 dan 70 persen; kode baku MK bersama). Semua nilai itu ada di Data Induk > Parameter dan dapat diubah oleh Admin, Wakil Direktur I, dan SPM tanpa mengubah kode aplikasi. Tim kurikulum prodi mengubah kode MK prodinya di menu Mata Kuliah. Nilai bawaan lama yang belum pernah diubah pengguna diganti otomatis dengan nilai pedoman satu kali; nilai yang sudah diubah dipertahankan.

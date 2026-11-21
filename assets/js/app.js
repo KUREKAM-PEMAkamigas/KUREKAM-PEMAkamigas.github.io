@@ -3,7 +3,8 @@ import { APP, APP_LAIN, PERAN, MENU_PERAN, DEVELOPER_SHA } from './config.js';
 import { DB } from './db.js';
 import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
-import { migrasiLG } from './kode.js';
+import { migrasiLG, setKodeBaku } from './kode.js';
+import { param } from './rules.js';
 import { jadwalkanUmpan } from './sinkron.js';
 import { icon } from './icons.js';
 import { disposeAll, tilt } from './charts.js';
@@ -90,6 +91,7 @@ export function can(action, obj = {}) {
   const r = ctx.role;
   if (r === 'admin' || r === 'developer') return true;
   switch (action) {
+    case 'parameter': return ['wadir', 'spm'].includes(r);                                    // admin dan developer sudah lolos di atas
     case 'susun': return r === 'prodi' && (obj.prodi || ctx.prodi) === ctx.prodi;          // visi s.d. CPMK, penugasan
     case 'rps': {                                                                             // Sub-CPMK, RPS, SAP
       if (r === 'prodi') return (obj.prodi || ctx.prodi) === ctx.prodi;
@@ -131,7 +133,7 @@ export async function remove(col, id, aksi) {
   jadwalkanUmpan();
   if (aksi) await addLog(aksi);
 }
-export async function saveSettings() { const doc = Object.assign({ id: 'app' }, S.settings); try { await DB.put('settings', doc, [doc]); } catch (e) { toast('Gagal menyimpan pengaturan'); } }
+export async function saveSettings() { setKodeBaku(param(S).kodeBaku); const doc = Object.assign({ id: 'app' }, S.settings); try { await DB.put('settings', doc, [doc]); } catch (e) { toast('Gagal menyimpan pengaturan'); } }
 export async function addLog(aksi) {
   const doc = { id: 'LOG' + Date.now() + Math.floor(Math.random() * 1000), t: new Date().toISOString(), user: userName() + (DB.user && DB.user.email ? ' · ' + DB.user.email : ''), aksi };
   S.log.unshift(doc); if (S.log.length > 400) S.log.length = 400;
@@ -143,6 +145,7 @@ function load(d) {
   Object.keys(S).forEach(k => { if (k === 'pengguna' && !d[k]) return; if (k !== 'settings') S[k] = d[k] || []; });
   S.settings = (d.settings && d.settings[0]) || { id: 'app', paritas: 'ganjil', param: {} };
   S.log.sort((a, b) => (b.t || '').localeCompare(a.t || ''));
+  setKodeBaku(param(S).kodeBaku);
 }
 
 /* ---------------- drawer ---------------- */
@@ -366,6 +369,15 @@ export async function start() {
   }
   if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
+  /* Pedoman 2027: nilai bawaan lama yang belum pernah diubah pengguna diganti nilai pedoman; nilai yang sudah diubah dipertahankan. */
+  if (S.settings.pedoman !== 2027) {
+    const u = S.settings.param || {}, KR = { 6: [16, 6, 7, 9, 10, 7, 10], 7: [20, null, null, null, null, null, null] };
+    if (u.kerangka) ['6', '7'].forEach(s => { if (u.kerangka[s] && JSON.stringify(u.kerangka[s]) === JSON.stringify(KR[s])) delete u.kerangka[s]; });
+    if (u.kerangka && !Object.keys(u.kerangka).length) delete u.kerangka;
+    if (u.piMinNilai === 60) delete u.piMinNilai;
+    S.settings.param = u; S.settings.pedoman = 2027; setKodeBaku(param(S).kodeBaku);
+    if (['admin', 'developer'].includes(ctx.role) || !DB.tersambung) { try { await DB.replaceAll('settings', [Object.assign({ id: 'app' }, S.settings)]); } catch (e) { /* abaikan */ } }
+  }
   terapkanAkun();
   if (migLG.length && ['admin', 'developer'].includes(ctx.role)) {
     try { for (const c of migLG) await DB.replaceAll(c, d[c]); await addLog('Kode prodi Logistik diseragamkan dari LO menjadi LG'); toast('Kode prodi Logistik kini LG di basis data.'); }

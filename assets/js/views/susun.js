@@ -148,12 +148,12 @@ export function mkView(el) {
       { k: 'lokasi', label: 'Lokasi', type: 'select', opts: ['Kampus', 'Laboratorium', 'Industri'].map(v => ({ v, t: v })) },
       { k: 'inti', label: 'Mata kuliah inti (asesmen CPL)', type: 'select', opts: [{ v: '', t: 'Bukan MK inti' }, { v: '1', t: 'Ya, MK inti' }], help: 'MK inti menjadi tempat utama pengukuran CPL melalui PI. Biasanya MK kompetensi penciri dan capstone.' },
       { k: 'kompetensi', label: 'Kompetensi dosen untuk MK inti (kata kunci)', type: 'textarea', rows: 2, ph: 'Misalnya: reservoir, well control, petrofisika', help: 'Pisahkan dengan koma. Dicocokkan dengan bidang S1, S2, S3, dan sertifikasi dosen pengampu (indikator 10 IABEE). Bila kosong, aplikasi memakai kata pada nama MK.' },
-      { k: 'T', label: 'SKS teori', type: 'number', live: () => jpHelp() }, { k: 'P', label: 'SKS praktik (1–3)', type: 'number', live: () => jpHelp() },
+      { k: 'T', label: 'SKS teori', type: 'number', live: () => jpHelp() }, { k: 'P', label: `SKS praktik (1–${P.praktikMaxSks})`, type: 'number', live: () => jpHelp() },
       { k: 'bk', label: 'Bahan kajian', type: 'multi', opts: opts(byProdi(S.bk, ctx.prodi)) }, { k: 'cpl', label: 'CPL yang didukung', type: 'multi', opts: opts(byProdi(S.cpl, ctx.prodi), c => c.teks) },
       { k: 'prasyarat', label: 'Prasyarat', type: 'multi', opts: all.filter(m => m.id !== x.id && m.smt < +x.smt + 1).map(m => ({ v: m.id, t: short(m.nama, 30) })) }],
     onSave: async (o) => {
       o.smt = +o.smt; o.T = +o.T || 0; o.P = +o.P || 0; o.inti = o.inti === true || o.inti === '1';
-      if (!o.nama) return 'Nama MK wajib diisi.'; if (o.P > 3 && !/magang|tugas akhir/i.test(o.kel)) return 'MK praktik dibatasi 1–3 SKS (Buku Pedoman).'; if (o.T === 0 && o.P > 0 && !/magang|tugas akhir/i.test(o.kel) && !awalPraktik(o.nama)) return 'Nama MK praktik harus diawali "Praktik" atau "Praktikum" (keputusan 21 Nov 2026).';
+      if (!o.nama) return 'Nama MK wajib diisi.'; if (o.P > P.praktikMaxSks && !/magang|tugas akhir/i.test(o.kel)) return `MK praktik dibatasi 1–${P.praktikMaxSks} SKS (Pedoman).`; if (o.T === 0 && o.P > 0 && !/magang|tugas akhir/i.test(o.kel) && !awalPraktik(o.nama)) return 'Nama MK praktik harus diawali "Praktik" atau "Praktikum" (keputusan 21 Nov 2026).';
       o.id = o.id || uid(ctx.prodi + '-MK'); o.prodi = ctx.prodi; o.kode = o.kode || kodeBaruMk(byProdi(S.mk, ctx.prodi).filter(m => m.id !== o.id), o);
       await save('mk', o, `Simpan MK ${o.nama} (${ctx.prodi})`); rerender();
     },

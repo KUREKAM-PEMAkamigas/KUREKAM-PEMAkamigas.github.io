@@ -91,8 +91,8 @@ export const PARAM_DEFAULT = {
     3: [20, 11, 13, 7, 9, 9, 12],
     4: [20, 10, 12, 8, 10, 9, 12],
     5: [18, 8, 9, 9, 10, 8, 11],
-    6: [16, 6, 7, 9, 10, 7, 10],
-    7: [20, null, null, null, null, null, null],
+    6: [15, 5, 6, 9, 10, 6, 9],
+    7: [21, null, null, null, null, null, null],
     8: [10, null, null, null, null, null, null]
   },
   mkProdiMin: 60, mkProdiMax: 72,
@@ -101,7 +101,20 @@ export const PARAM_DEFAULT = {
   /* RPS: jumlah pertemuan minimal yang memuat integrasi penelitian atau PKM */
   integrasiMinPertemuan: 2,
   /* PI dan CPL: tercapai bila minimal piMinPersen % mahasiswa bernilai minimal piMinNilai. PI per CPL 2 sampai 4. */
-  piMinPersen: 70, piMinNilai: 60, piPerCplMin: 2, piPerCplMax: 4,
+  piMinPersen: 70, piMinNilai: 65, piPerCplMin: 2, piPerCplMax: 4,
+  /* Pedoman edisi 2027: batas praktik, capstone, magang, masa studi (dapat diubah admin, SPM, dan Wakil Direktur I di Data Induk > Parameter) */
+  praktikMaxSks: 3, capstoneSks: 4, magangInti: 10, magangKonversi: 10, masaStudiNormal: 8, masaStudiMaks: 14,
+  /* Kode baku MK bersama: p = pola nama (regex, huruf besar kecil diabaikan), k = kode, n = nama baku. Urutan penting: pola yang lebih khusus lebih dulu. */
+  kodeBaku: [
+    { p: '^agama\\b', k: 'AK1001', n: 'Agama' }, { p: '^pancasila\\b', k: 'AK1002', n: 'Pancasila' }, { p: '^kewarganegaraan\\b', k: 'AK1003', n: 'Kewarganegaraan' },
+    { p: '^bahasa indonesia\\b', k: 'AK1004', n: 'Bahasa Indonesia' }, { p: '^praktik(um)?\\s+bahasa inggris', k: 'AK1006', n: 'Praktik Bahasa Inggris' }, { p: '^bahasa inggris', k: 'AK1005', n: 'Bahasa Inggris' },
+    { p: '^praktik(um)?\\s+(k3|keselamatan dan kesehatan|kesehatan dan keselamatan)', k: 'AK1008', n: 'Praktik K3' }, { p: '^(k3\\b|keselamatan dan kesehatan|kesehatan dan keselamatan)', k: 'AK1007', n: 'Keselamatan dan Kesehatan Kerja (K3)' },
+    { p: '^pengantar industri migas', k: 'AK1009', n: 'Pengantar Industri Migas dan Energi Terbarukan' },
+    { p: 'capstone design\\s*iii\\b', k: 'AK1014', n: 'Praktik Capstone Design III' }, { p: 'capstone design\\s*ii\\b', k: 'AK1013', n: 'Praktik Capstone Design II' }, { p: 'capstone design(\\s*i)?\\s*$', k: 'AK1010', n: 'Praktik Capstone Design I' },
+    { p: '^tugas akhir', k: 'AK1012', n: 'Tugas Akhir' }, { p: '(praktik kerja lapangan|^pkl\\b|magang berdampak.*(inti|pkl)|^magang berdampak\\s*$)', k: 'AK1011', n: 'Magang Berdampak: PKL (inti)' },
+    { p: '^praktik(um)?\\s+fisika dasar', k: 'AK2004', n: 'Praktikum Fisika Dasar' }, { p: '^praktik(um)?\\s+kimia dasar', k: 'AK2005', n: 'Praktikum Kimia Dasar' },
+    { p: '^matematika dasar', k: 'AK2001', n: 'Matematika Dasar' }, { p: '^fisika dasar', k: 'AK2002', n: 'Fisika Dasar' }, { p: '^kimia dasar', k: 'AK2003', n: 'Kimia Dasar' }
+  ],
   /* Beban dosen: JP total = SKS teori + SKS praktik x (durasi / 60), dikali kelas dan porsi. */
   bebanRiilMin: 9, bebanRiilMax: 16, jpMingguMax: 24
 };
@@ -123,8 +136,8 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 export const MENU_PERAN = {
   dosen: ['beranda', 'peta', 'cpmk', 'rps', 'realisasi', 'beban', 'bloom'],
   prodi: ['beranda', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
-  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan'],
-  spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  wadir: ['beranda', 'pimpinan', 'mutu', 'akademik', 'pi', 'peta', 'matriks', 'rps', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
+  spm: ['beranda', 'mutu', 'visi', 'cpl', 'pi', 'peta', 'matriks', 'cpmk', 'rps', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk'],
   akademik: ['beranda', 'akademik', 'mk', 'peta', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,
   developer: null

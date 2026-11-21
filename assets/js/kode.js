@@ -5,6 +5,7 @@
    - tanpa kode semester; teori dan praktik adalah MK terpisah dengan kode terpisah.
    Fungsi di sini murni (tanpa akses data) agar dapat dipakai seed, pemeriksa, dan layar penyusunan. */
 
+import { PARAM_DEFAULT } from './config.js';
 export const KODE_PRODI = ['TP', 'TO', 'TM', 'TI', 'LG'];
 export const DIGIT_GRUP = { MKU: 1, MBS: 2, MKK: 3, MBE: 4 };
 /** Nama kelompok sesuai Pedoman Kode MK (tampilan). Kunci internal data tetap MKU, MBS, MBE, MKK. */
@@ -14,28 +15,12 @@ export const NAMA_GRUP = { MKU: 'Mata Kuliah Wajib', MBS: 'Mata Kuliah Basic Sci
 /** Prodi lama "LO" dibaca sebagai "LG" (Logistik Migas). */
 export const kodeProdi = (pid) => (pid === 'LO' ? 'LG' : pid);
 
-/** Kode baku dari Pedoman Kode MK. Capstone, PKL/Magang inti, dan Tugas Akhir adalah usulan sampai rapat menetapkan. */
-export const KODE_BAKU = [
-  [/^agama\b/i, 'AK1001'],
-  [/^pancasila\b/i, 'AK1002'],
-  [/^kewarganegaraan\b/i, 'AK1003'],
-  [/^bahasa indonesia\b/i, 'AK1004'],
-  [/^praktik(um)?\s+bahasa inggris/i, 'AK1006'],
-  [/^bahasa inggris/i, 'AK1005'],
-  [/^praktik(um)?\s+(k3|keselamatan dan kesehatan|kesehatan dan keselamatan)/i, 'AK1008'],
-  [/^(k3\b|keselamatan dan kesehatan|kesehatan dan keselamatan)/i, 'AK1007'],
-  [/^pengantar industri migas/i, 'AK1009'],
-  [/capstone design\s*iii\b/i, 'AK1014'],
-  [/capstone design\s*ii\b/i, 'AK1013'],
-  [/capstone design(\s*i)?\s*$/i, 'AK1010'],
-  [/^tugas akhir/i, 'AK1012'],
-  [/(praktik kerja lapangan|^pkl\b|magang berdampak.*(inti|pkl)|^magang berdampak\s*$)/i, 'AK1011'],
-  [/^praktik(um)?\s+fisika dasar/i, 'AK2004'],
-  [/^praktik(um)?\s+kimia dasar/i, 'AK2005'],
-  [/^matematika dasar/i, 'AK2001'],
-  [/^fisika dasar/i, 'AK2002'],
-  [/^kimia dasar/i, 'AK2003']
-];
+/** Kode baku dari Pedoman Kode MK. Tabelnya dapat diubah admin, SPM, dan Wakil Direktur I (Data Induk > Parameter); bawaan ada di PARAM_DEFAULT.kodeBaku. */
+let KODE_BAKU = [];
+export function setKodeBaku(list) {
+  KODE_BAKU = (list || []).map(x => { try { return [new RegExp(x.p, 'i'), String(x.k || '').trim().toUpperCase()]; } catch (e) { return null; } }).filter(x => x && x[1]);
+}
+setKodeBaku(PARAM_DEFAULT.kodeBaku);
 /** Usulan (belum ditetapkan rapat): kode yang tidak berasal dari daftar awal Pedoman. */
 export const KODE_USULAN = new Set(['AK1010', 'AK1011', 'AK1012', 'AK1013', 'AK1014']);
 

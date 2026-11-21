@@ -58,5 +58,5 @@ Menu Generator Usulan membuat usulan MK inti, PI per CPL, dan tindak lanjut CPL 
 
 - Kode MK mengikuti Pedoman Kode MK: 2 huruf (TP, TO, TM, TI, LG, atau AK untuk MK bersama) + 1 angka kelompok (1 MKW, 2 MKBS, 3 MKKK, 4 MKBE) + 3 angka urut. Logika ada di `assets/js/kode.js`.
 - Kode Praktik Capstone Design I/II/III (AK1010, AK1013, AK1014), PKL magang berdampak (AK1011), dan Tugas Akhir (AK1012) berstatus usulan; ubah di `KODE_BAKU` bila rapat menetapkan lain.
-- Prodi Logistik memakai kode LG. Data lama berkode LO dibaca otomatis sebagai LG dan ditulis ulang ke basis data saat admin masuk. `UNIT_SIMANTAP` di `config.js` memetakan LG ke unit LO selama SIMANTAP belum diganti.
+- Prodi Logistik memakai kode LG. Data lama berkode LO dibaca otomatis sebagai LG dan ditulis ulang ke basis data saat admin masuk. SIMANTAP juga memakai LG; `UNIT_SIMANTAP` di `config.js` kosong dan hanya dipakai bila kode unit keduanya berbeda lagi.
 - Menu Mata Kuliah & SKS memiliki tombol "Selaraskan kode sesuai Pedoman" (pratinjau, tabel konversi CSV, lalu terapkan).

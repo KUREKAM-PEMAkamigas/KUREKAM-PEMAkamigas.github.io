@@ -46,8 +46,8 @@ export const GRUP = {
   MBE: { nama: 'Basic Engineering (MKBE)', c: '#8b5cf6' },
   MKK: { nama: 'Kompetensi (MKKK)', c: '#10b981' }
 };
-/* Kode unit prodi di SIMANTAP bila berbeda dengan kode di KUREKAM. Hapus baris LG bila SIMANTAP sudah memakai LG. */
-export const UNIT_SIMANTAP = { LG: 'LO' };
+/* Pemetaan kode prodi KUREKAM ke unit SIMANTAP bila berbeda. Kosong karena keduanya memakai LG. */
+export const UNIT_SIMANTAP = {};
 export const KAT_IABEE = ['Pendidikan umum', 'Matematika dan ilmu alam', 'Teknologi informasi', 'Muatan spesifik'];
 
 /* Butir kompetensi lulusan (a) sampai (k), Kriteria IABEE 1.2.2 (items (a) to (k)), untuk program teknologi rekayasa

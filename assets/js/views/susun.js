@@ -124,7 +124,7 @@ export function mkView(el) {
     ${kpi('Porsi jam praktik', R.praktikJam, `semester 1–6, LAM ${P.praktikMin}–${P.praktikMax}%`, '#f5a524', 'bolt', 1)}
   </div>
   <div class="card" style="margin-top:18px">${head('Daftar mata kuliah', prodiName() + ' · JP dihitung otomatis: teori 60 menit, praktik MKW/MKBS 120 menit, MKBE/MKKK 170 menit per SKS', 'book', '#14b8a6',
-    `<button class="btn sm" id="calc">${icon('sim')} Kalkulator SKS</button>${ed ? `<button class="btn sm" id="kode">${icon('check')} Selaraskan kode sesuai Pedoman</button>` : ''}${ed ? `<button class="btn pri sm" id="add">${icon('plus')} Mata kuliah</button>` : ro()}`)}
+    `<button class="btn sm" id="calc">${icon('sim')} Kalkulator SKS</button>${ed ? `<button class="btn sm" id="kode">${icon('check')} Selaraskan kode sesuai Pedoman</button><button class="btn sm" id="pisah">${icon('grid4')} Pisahkan MK teori dan praktik</button>` : ''}${ed ? `<button class="btn pri sm" id="add">${icon('plus')} Mata kuliah</button>` : ro()}`)}
     <div class="filters"><div class="search">${icon('search')}<input class="inp" id="q" placeholder="Cari nama atau kode MK"></div>
       <select class="inp" id="f-smt"><option value="">Semua semester</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">Semester ${s}</option>`).join('')}</select>
       <select class="inp" id="f-kel"><option value="">Semua kelompok</option>${Object.keys(GRUP).map(g => `<option value="${g}">${labelGrup(g)}</option>`).join('')}</select></div>
@@ -161,7 +161,7 @@ export function mkView(el) {
   const jpHelp = () => { const d = document.querySelector('#fd'); if (!d) return ''; const T = +d.querySelector('[name=T]').value || 0, Pp = +d.querySelector('[name=P]').value || 0; const kel = d.querySelector('[name=kel]').value; const m = { T, P: Pp, kel }; return `SKS ${T + Pp} · JP ${fmt(jpOf(m, P), 2)} jam/minggu · praktik ${durasi(m, P)} menit per SKS`; };
   if (ed) el.querySelector('#add').onclick = () => form();
   el.querySelector('#calc').onclick = () => kalkulator();
-  if (ed) el.querySelector('#kode').onclick = () => selaraskanKode();
+  if (ed) { el.querySelector('#kode').onclick = () => selaraskanKode(); el.querySelector('#pisah').onclick = () => pisahkanMk(); }
 }
 
 /** Kalkulator konversi kebutuhan belajar menjadi SKS (Panduan Teknis Bab III). */
@@ -196,5 +196,29 @@ function selaraskanKode() {
     if (!ubah.length) return;
     d.querySelector('#kd-csv').onclick = () => { const csv = '\ufeff' + [['Semester', 'Kode lama', 'Kode baru', 'Mata kuliah']].concat(ubah.map(m => [m.smt, m.kode, usul.get(m.id), m.nama])).map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(';')).join('\n'); unduh(new Blob([csv], { type: 'text/csv' }), `konversi-kode-mk-${ctx.prodi}.csv`); };
     d.querySelector('#kd-ok').onclick = async () => { await saveMany('mk', ubah.map(m => ({ ...m, kode: usul.get(m.id) })), `Selaraskan kode ${ubah.length} MK ${ctx.prodi} sesuai Pedoman Kode MK`); closeDrawer(); rerender(); };
+  }, true);
+}
+
+/** Memisahkan MK gabungan (teori + praktik dalam satu nama) menjadi dua MK: teori tetap, praktik menjadi "Praktik ...". MK bersama (kunci) tidak diubah. */
+function pisahkanMk() {
+  const all = byProdi(S.mk, ctx.prodi);
+  const gabung = all.filter(m => +m.T > 0 && +m.P > 0 && !/magang|tugas akhir/i.test(m.kel || '') && !m.kunci).sort((a, b) => a.smt - b.smt);
+  const terkunci = all.filter(m => +m.T > 0 && +m.P > 0 && !/magang|tugas akhir/i.test(m.kel || '') && m.kunci);
+  const rencana = gabung.map(m => ({ m, nama: awalPraktik(m.nama) ? m.nama + ' (praktik)' : 'Praktik ' + m.nama }));
+  const baris = rencana.map(({ m, nama }) => `<tr><td class="num">${m.smt}</td><td>${esc(m.nama)}</td><td class="num">${m.T} T + ${m.P} P</td><td>${m.T} T</td><td>${esc(nama)} <small class="muted">(${m.P} P)</small></td></tr>`).join('');
+  openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#8b5cf6">${icon('grid4')}</span><div><h3>Pisahkan MK teori dan praktik</h3><div class="sub">${prodiName()} · satu nama MK hanya berisi teori atau praktik</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
+  ${rencana.length ? `<p class="small">MK di bawah ini akan dipecah. MK teori mempertahankan kode, CPMK, dan RPS yang sudah ada. MK praktik baru mewarisi bahan kajian dan CPL, mendapat kode baru sesuai Pedoman, dan <b>CPMK serta RPS praktiknya perlu diisi prodi</b>.</p>
+  <div style="max-height:44vh;overflow:auto"><table class="tbl"><thead><tr><th>Smt</th><th>MK sekarang</th><th>Bobot</th><th>MK teori</th><th>MK praktik baru</th></tr></thead><tbody>${baris}</tbody></table></div>
+  <div class="row" style="margin-top:14px"><div class="sp"></div><button class="btn pri" id="ps-ok">Pisahkan ${rencana.length} MK</button></div>` : '<div class="ribbon ok">Tidak ada MK gabungan di prodi ini.</div>'}
+  ${terkunci.length ? `<p class="small muted" style="margin-top:10px">MK bersama berikut dikunci dan dipisah oleh Wadir I atau admin: ${terkunci.map(m => esc(m.nama)).join(', ')}.</p>` : ''}`, (d) => {
+    if (!rencana.length) return;
+    d.querySelector('#ps-ok').onclick = async () => {
+      const baru = [], ubah = [], pool = all.slice();
+      rencana.forEach(({ m, nama }) => {
+        const n = { ...m, id: uid(ctx.prodi + '-MK'), nama, T: 0, P: +m.P, kode: '', prasyarat: [], inti: false, lokasi: 'Laboratorium', usul: true };
+        n.kode = kodeBaruMk(pool, n); pool.push(n); baru.push(n); ubah.push({ ...m, P: 0, lokasi: m.lokasi === 'Laboratorium' ? 'Kampus' : m.lokasi });
+      });
+      await saveMany('mk', ubah.concat(baru), `Pisahkan ${rencana.length} MK teori dan praktik ${ctx.prodi}`); closeDrawer(); rerender();
+    };
   }, true);
 }

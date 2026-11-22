@@ -259,6 +259,8 @@ const hSel = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g,
 export function htmlBlok(blocks, logoSrc = '') {
   return blocks.map(b => {
     if (b.k === 'h') return `<h4 ${b.pb ? 'style="page-break-before:always"' : ''}>${esc(b.t)}</h4>`;
+    if (b.k === 'img') return `<p style="text-align:${b.al === 'l' ? 'left' : b.al === 'r' ? 'right' : 'center'};margin:6pt 0">${logoSrc ? `<img src="${logoSrc}" alt="" style="height:${Math.round((b.img.h || 200) / 100 * 37.8)}px">` : ''}</p>`;
+    if (b.k === 'br') return '<div style="page-break-after:always"></div>';
     if (b.k === 'p') return `<p style="${b.ind ? `margin-left:${Math.round(b.ind / 20)}pt;` : ''}${b.hang ? `text-indent:-${Math.round(b.hang / 20)}pt;padding-left:${Math.round(b.hang / 20)}pt;` : ''}${b.i ? 'font-style:italic;' : ''}${b.color ? `color:#${b.color};` : ''}margin:2pt 0">${hSel(b.t)}</p>`;
     const tot = b.w.reduce((a, c) => a + c, 0);
     const kolom = `<colgroup>${b.w.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join('')}</colgroup>`;

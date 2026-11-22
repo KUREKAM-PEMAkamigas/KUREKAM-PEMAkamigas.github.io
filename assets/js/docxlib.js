@@ -75,6 +75,7 @@ function badan(blocks, state) {
   return blocks.map(b => {
     if (b.k === 'tbl') return tabel(b, state);
     if (b.k === 'h') return para(b.t, { style: 'Judul' + (b.lvl || 1), b: true, sz: b.sz || (b.lvl === 2 ? 22 : 24), sb: b.sb == null ? 160 : b.sb, sa: 80, keep: true, pb: b.pb, al: b.al });
+    if (b.k === 'img') return para('', { img: b.img, imgId: ++state.img, al: b.al || 'c', sa: b.sa == null ? 120 : b.sa, sb: b.sb });
     if (b.k === 'br') return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
     return para(b.t, { sz: b.sz || 20, al: b.al || 'j', ind: b.ind, hang: b.hang, sa: b.sa == null ? 60 : b.sa, sb: b.sb, i: b.i, b: b.b, keep: b.keep, line: 250, color: b.color });
   }).join('');

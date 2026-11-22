@@ -4,6 +4,8 @@ import { labelKel, labelGrup } from '../kode.js';
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
 import { badanRps, berkasDocxRps, namaBerkasRps } from '../rpsdok.js';
+import { badanSap, berkasDocxSap, namaBerkasSap } from '../sapdok.js';
+import { badanAcp, berkasDocxAcp, namaBerkasAcp } from '../acpdok.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
 import { detect, badge } from '../bloom.js';
@@ -85,6 +87,9 @@ export function rpsView(el) {
         ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
         <button class="btn sm" id="print">${icon('download')} Cetak / Unduh RPS</button>
+        <button class="btn sm" id="print-sap">${icon('download')} SAP</button>
+        <button class="btn sm" id="print-acp">${icon('download')} ACP</button>
+        <button class="btn sm" id="unduh-paket">${icon('download')} Paket RPS + SAP + ACP</button>
         ${ed && r.status === 'draf' && can('rps', { prodi: m.prodi, mk: m.id }) ? `<button class="btn vio sm" id="aju">${icon('upload')} Ajukan ke kaprodi</button>` : ''}
         ${r.status === 'diajukan' && can('sahkanRps', m) ? `<button class="btn pri sm" id="sah">${icon('check')} Sahkan RPS</button><button class="btn sm danger" id="tolak">Kembalikan ke dosen</button>` : ''}
         ${r.status === 'disahkan' && can('sahkanRps', m) ? `<button class="btn sm danger" id="batal">Batalkan pengesahan</button>` : ''}
@@ -98,12 +103,12 @@ export function rpsView(el) {
       R.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => {
         const i = +tr.dataset.i, p = r.pertemuan[i]; const flat = { ...p, ...Object.fromEntries(Object.entries(p.sap || {}).map(([k, v]) => ['sap_' + k, v])) };
         formDrawer({ title: `Pertemuan ${p.m}${p.ujian ? ' · ' + p.ujian : ''}`, sub: `${m.nama} · durasi tatap muka ${m.T ? m.T * P.menitTeori + ' menit teori' : ''}${m.T && m.P ? ' + ' : ''}${m.P ? m.P * durasi(m, P) + ' menit praktik' : ''}`, obj: flat, wide: true,
-          fields: [{ k: 'sub', label: 'Sub-CPMK yang dicapai', type: 'multi', opts: subs.map(s => ({ v: s.id, t: s.kode.replace('Sub-CPMK', 'S'), title: s.teks })) }, { k: 'materi', label: 'Bahan kajian / materi', type: 'textarea', rows: 2 }, { k: 'metode', label: 'Metode dan bentuk pembelajaran', full: true }, { k: 'indikator', label: 'Indikator penilaian (satu per baris; tiga per Sub-CPMK, nomor otomatis)', type: 'textarea', rows: 4 }, { k: 'asesmen', label: 'Kriteria dan teknik asesmen', type: 'textarea', rows: 2 }, { k: 'tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'textarea', rows: 2 }, { k: 'daring', label: 'Daring (bila ada)', type: 'textarea', rows: 2 }, { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
+          fields: [{ k: 'sub', label: 'Sub-CPMK yang dicapai', type: 'multi', opts: subs.map(s => ({ v: s.id, t: s.kode.replace('Sub-CPMK', 'S'), title: s.teks })) }, { k: 'materi', label: 'Bahan kajian / materi', type: 'textarea', rows: 2 }, { k: 'metode', label: 'Metode dan bentuk pembelajaran', full: true }, { k: 'judul', label: 'Judul topik untuk SAP (boleh kosong, terisi dari poin pertama materi)', full: true }, { k: 'indikator', label: 'Indikator penilaian (satu per baris; tiga per Sub-CPMK, nomor otomatis)', type: 'textarea', rows: 4 }, { k: 'asesmen', label: 'Kriteria dan teknik asesmen', type: 'textarea', rows: 2 }, { k: 'tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'textarea', rows: 2 }, { k: 'daring', label: 'Daring (bila ada)', type: 'textarea', rows: 2 }, { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
             ...(p.ujian ? [] : [{ k: 'riset', label: 'Penelitian atau PKM yang diintegrasikan (pilih dari daftar pengampu)', type: 'multi', opts: opsiRiset(S, m).map(e => ({ v: e.id, t: `${e.jenis}: ${short(e.judul, 60)}${e.tahun ? ' (' + e.tahun + ')' : ''}`, title: labelRiset(S, e) })) },
               { k: 'bentuk', label: 'Dipakai sebagai', type: 'select', opts: [{ v: '', t: 'Pilih bentuk' }, ...BENTUK.map(v => ({ v, t: v })), { v: 'Lainnya', t: 'Lainnya (tulis sendiri)' }] }, { k: 'bentukLain', label: 'Bila memilih Lainnya, tulis bentuknya', ph: 'Contoh: Materi pengayaan, tugas proyek akhir' },
               ...(p.integ && !(p.riset || []).length ? [{ k: 'integ', label: 'Penandaan lama tanpa judul (ganti dengan pilihan dari daftar, atau kosongkan)', type: 'select', opts: INTEG.map(v => ({ v, t: v || 'Tidak ada' })) }] : []),
               { k: 'integUraian', label: 'Kaitan dengan materi (boleh kosong, terisi otomatis dari pilihan di atas)', type: 'textarea', rows: 2 }]),
-            ...(p.ujian ? [] : [{ k: 'sap_pendahuluan', label: 'SAP · Pendahuluan', type: 'textarea', rows: 2 }, { k: 'sap_inti', label: 'SAP · Kegiatan inti', type: 'textarea', rows: 3 }, { k: 'sap_penutup', label: 'SAP · Penutup', type: 'textarea', rows: 2 }, { k: 'sap_media', label: 'SAP · Media dan alat', full: true }])],
+            ...(p.ujian ? [{ k: 'sap_soal', label: 'SAP · Butir soal ujian atau ringkasan kisi-kisi (satu per baris)', type: 'textarea', rows: 4 }] : [{ k: 'sap_pendahuluan', label: 'SAP · Pendahuluan', type: 'textarea', rows: 2 }, { k: 'sap_inti', label: 'SAP · Kegiatan inti', type: 'textarea', rows: 3 }, { k: 'sap_penutup', label: 'SAP · Penutup', type: 'textarea', rows: 2 }, { k: 'sap_media', label: 'SAP · Media dan alat', full: true }, { k: 'sap_soal', label: 'SAP · Butir soal atau penugasan non tes (satu per baris)', type: 'textarea', rows: 3 }])],
           onDelete: nPert > 16 ? async () => { r.pertemuan.splice(i, 1); r.pertemuan.forEach((x, k) => { x.m = k + 1; }); if (r.status === 'disahkan') r.status = 'draf'; await save('rps', r, `Hapus pertemuan ${p.m} dari RPS ${m.nama}`); draw(); } : null,
           extra: p.ujian || opsiRiset(S, m).length ? '' : `<div class="ribbon info" style="margin-top:10px">${icon('info')} Daftar penelitian atau PKM pengampu masih kosong. Isi dulu di menu <a href="#riset"><b>Penelitian & PKM Dosen</b></a> (bisa unggah Excel), lalu kembali ke sini.</div>`,
           onSave: async (o) => { const sap = {}; Object.keys(o).filter(k => k.startsWith('sap_')).forEach(k => { sap[k.slice(4)] = o[k]; delete o[k]; }); if ((o.riset || []).length) { o.integ = jenisInteg(S, o.riset); if (!String(o.integUraian || '').trim()) { const e0 = riset(S, o.riset[0]); o.integUraian = `${(o.bentuk === 'Lainnya' ? (o.bentukLain || 'Lainnya') : o.bentuk) || 'Bahan ajar'}: ${e0 ? e0.judul : ''}${o.riset.length > 1 ? ` dan ${o.riset.length - 1} lainnya` : ''}.`; } } else if (p.riset && p.riset.length && !('integ' in o && o.integ)) o.integ = '';
@@ -130,10 +135,20 @@ export function rpsView(el) {
     const bt = q('#batal'); if (bt) bt.onclick = async () => { if (!(await tanya(`Pengesahan RPS ${m.nama} dibatalkan dan statusnya kembali menjadi draf, sehingga dosen dapat merevisi. Lanjutkan?`, 'Batalkan pengesahan'))) return; r.status = 'draf'; r.oleh = ''; r.tgl = ''; await save('rps', r, `Batalkan pengesahan RPS ${m.nama}`); draw(); };
     const tl = q('#tolak'); if (tl) tl.onclick = async () => { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); draw(); };
     q('#print').onclick = () => cetakRps(m, r);
+    q('#print-sap').onclick = () => cetakDok('Satuan Acara Pembelajaran (SAP)', badanSap(m, r, true), () => berkasDocxSap(m, r), namaBerkasSap(m));
+    q('#print-acp').onclick = () => cetakDok('Analisis Capaian Pembelajaran (ACP)', badanAcp(m, r, true), () => berkasDocxAcp(m, r), namaBerkasAcp(m));
+    q('#unduh-paket').onclick = async () => { try { unduh(await berkasDocxRps(m, r), namaBerkasRps(m)); await new Promise(z => setTimeout(z, 400)); unduh(await berkasDocxSap(m, r), namaBerkasSap(m)); await new Promise(z => setTimeout(z, 400)); unduh(await berkasDocxAcp(m, r), namaBerkasAcp(m)); toast('Tiga berkas Word diunduh: RPS, SAP, dan ACP.'); } catch (e) { console.error(e); toast('Berkas Word gagal dibuat. ' + e.message); } };
     q('#asis').onclick = () => bukaAsistenRps(m, draw, blankRps);
   };
   tombolUnggahRps(el, draw);
   draw();
+}
+
+function cetakDok(judul, badan, buatWord, nama) {
+  openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="rep-doc">${icon('download')} Unduh Word</button><button class="btn ghost" data-close>Tutup</button></div>
+  <div class="report rps-doc" id="rep" title="${esc(judul)}">${badan}</div>`, (dr) => {
+    dr.querySelector('#rep-doc').onclick = async () => { try { unduh(await buatWord(), nama); } catch (e) { console.error(e); toast('Berkas Word gagal dibuat. ' + e.message); } };
+  }, true);
 }
 
 function cetakRps(m, r) {

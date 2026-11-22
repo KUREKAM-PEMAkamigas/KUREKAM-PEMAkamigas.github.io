@@ -19,14 +19,33 @@ export const TAHAP_BAWAAN = [
 ];
 export const JADWAL_BAWAAN = { mulai: '', rpsMin: 2, rpsLengkap: 80 };
 
-/** Pengaturan jadwal yang berlaku: bawaan digabung dengan S.settings.jadwal. */
+/** Tahap yang progresnya dihitung otomatis dari isi aplikasi (menurut id). */
+export const TAHAP_AUTO = ['t1', 't2', 't3'];
+/** Target bawaan tahap otomatis: t1 = persen MK terpetakan ke CPL, t2 = maksimal butir belum sesuai. */
+export const TARGET_BAWAAN = { t1: 100, t2: 0 };
+
+/** Rapikan satu tahap dari data tersimpan. */
+function normTahap(t) {
+  const b = TAHAP_BAWAAN.find(x => x.id === t.id) || {};
+  const auto = TAHAP_AUTO.includes(t.id);
+  const mode = auto ? 'auto' : (t.mode === 'tonggak' ? 'tonggak' : 'tanda');
+  const peran = PELAKSANA[t.peran] ? t.peran : (b.peran || 'semua');
+  const out = {
+    id: t.id, nama: String(t.nama || b.nama || 'Tahap baru'), peran, mode,
+    offset: Math.max(0, Math.round(+t.offset || 0)), durasi: Math.max(1, Math.round(+t.durasi || 1)),
+    global: mode === 'tanda' && !!t.global, ket: String(t.ket != null ? t.ket : (b.ket || ''))
+  };
+  if (TARGET_BAWAAN[t.id] != null) out.target = t.target != null && t.target !== '' && !Number.isNaN(+t.target) ? +t.target : TARGET_BAWAAN[t.id];
+  return out;
+}
+
+/** Pengaturan jadwal yang berlaku. Sebelum daftar tahap diubah, bawaan digabung dengan S.settings.jadwal; sesudahnya daftar tersimpan dipakai apa adanya. */
 export function jadwalOf(S) {
   const j = (S.settings && S.settings.jadwal) || {};
+  const base = { mulai: j.mulai || '', rpsMin: +j.rpsMin || JADWAL_BAWAAN.rpsMin, rpsLengkap: +j.rpsLengkap || JADWAL_BAWAAN.rpsLengkap };
+  if (j.custom && Array.isArray(j.tahap)) return { ...base, custom: true, tahap: j.tahap.filter(t => t && t.id).map(normTahap) };
   const sim = new Map((j.tahap || []).map(t => [t.id, t]));
-  return {
-    mulai: j.mulai || '', rpsMin: +j.rpsMin || JADWAL_BAWAAN.rpsMin, rpsLengkap: +j.rpsLengkap || JADWAL_BAWAAN.rpsLengkap,
-    tahap: TAHAP_BAWAAN.map(t => { const x = sim.get(t.id) || {}; return { ...t, offset: x.offset != null ? +x.offset : t.offset, durasi: x.durasi != null ? +x.durasi : t.durasi }; })
-  };
+  return { ...base, custom: false, tahap: TAHAP_BAWAAN.map(t => { const x = sim.get(t.id) || {}; return normTahap({ ...t, offset: x.offset != null ? +x.offset : t.offset, durasi: x.durasi != null ? +x.durasi : t.durasi }); }) };
 }
 
 /* ---------- tanggal (ISO yyyy-mm-dd, waktu lokal) ---------- */
@@ -65,21 +84,24 @@ export function dosenRps(S, pid) {
 
 /** Progres satu tahap untuk satu prodi: { done, pct, teks, rinci }. */
 export function progresTahap(S, tahapId, pid) {
-  if (tahapId === 't1') {
+  const def = jadwalOf(S).tahap.find(x => x.id === tahapId) || {};
+  if (tahapId === 't1' && def.mode === 'auto') {
     const mk = byProdi(S.mk, pid).filter(m => !/magang|tugas akhir/i.test(m.kel));
     const ok = mk.filter(m => (m.cpl || []).length).length, n = S.cpl.filter(c => c.prodi === pid).length;
     const pct = mk.length ? ok / mk.length * 100 : 0;
-    return { done: !!mk.length && ok === mk.length && n > 0, pct, teks: n ? `${ok} dari ${mk.length} MK terpetakan ke CPL` : 'CPL prodi belum ada' };
+    const tg = def.target != null ? def.target : 100;
+    return { done: !!mk.length && pct >= tg && n > 0, pct, teks: n ? `${ok} dari ${mk.length} MK terpetakan ke CPL${tg < 100 ? ` (target ${tg}%)` : ''}` : 'CPL prodi belum ada' };
   }
-  if (tahapId === 't2') {
+  if (tahapId === 't2' && def.mode === 'auto') {
     const bad = cekStruktur(S, pid).filter(x => x.k === 'bad').length, near = cekStruktur(S, pid).filter(x => x.k === 'near').length;
-    return { done: bad === 0, pct: null, teks: bad ? `${bad} butir belum sesuai${near ? `, ${near} perlu perhatian` : ''}` : 'Semua butir pedoman sesuai', bad };
+    const tg = def.target != null ? def.target : 0;
+    return { done: bad <= tg, pct: null, teks: bad ? `${bad} butir belum sesuai${tg ? ` (batas ${tg})` : ''}${near ? `, ${near} perlu perhatian` : ''}` : 'Semua butir pedoman sesuai', bad };
   }
-  if (tahapId === 't3') {
+  if (tahapId === 't3' && def.mode === 'auto') {
     const dr = dosenRps(S, pid), ok = dr.filter(d => d.ok).length;
     return { done: !!dr.length && ok === dr.length, pct: dr.length ? ok / dr.length * 100 : 0, teks: dr.length ? `${ok} dari ${dr.length} dosen memenuhi target` : 'Belum ada penugasan dosen', rinci: dr };
   }
-  const td = tandaDi(S, tahapId, tahapId === 't6' ? '*' : pid);
+  const td = tandaDi(S, tahapId, def.global ? '*' : pid);
   return { done: !!td, pct: null, teks: td ? `Selesai ${fmtTgl(td.tgl)}${td.oleh ? ' · ' + td.oleh : ''}` : 'Belum ditandai', tanda: td };
 }
 
@@ -104,24 +126,24 @@ export function papan(S, hari = hariIni()) {
 /** Pengingat untuk peran yang sedang masuk. Mengembalikan daftar { k: 'info'|'near'|'bad', teks, rute }. */
 export function pengingat(S, ctx, hari = hariIni()) {
   const T = jadwalTanggal(S), out = [];
-  if (!T[0].awal) return out;
+  if (!T.length || !T[0].awal) return out;
   const aktif = (t) => hari >= t.awal && hari <= t.akhir, telat = (t) => hari > t.akhir;
   const sisa = (t) => selisihHari(hari, t.akhir);
-  const pakai = (t, pr, teks, rute) => { if (pr.done) return; if (hari < t.awal) return; out.push({ k: telat(t) ? 'bad' : (aktif(t) && sisa(t) <= 2 ? 'near' : 'info'), teks: `${teks} Tenggat ${fmtTgl(t.akhir)}${telat(t) ? ` (terlambat ${selisihHari(t.akhir, hari)} hari)` : ` (sisa ${sisa(t)} hari)`}.`, rute }); };
+  const pakai = (t, pr, teks, rute) => { if (!t || pr.done) return; if (hari < t.awal) return; out.push({ k: telat(t) ? 'bad' : (aktif(t) && sisa(t) <= 2 ? 'near' : 'info'), teks: `${teks} Tenggat ${fmtTgl(t.akhir)}${telat(t) ? ` (terlambat ${selisihHari(t.akhir, hari)} hari)` : ` (sisa ${sisa(t)} hari)`}.`, rute }); };
   const tt = (id) => T.find(x => x.id === id);
   const role = ctx.role;
   if (role === 'dosen' && ctx.dosen) {
-    const sa = dosenRps(S, '').find(d => d.id === ctx.dosen); if (sa) pakai(tt('t3'), { done: sa.ok }, `Anda baru mengisi ${sa.terisi} dari ${sa.target} RPS yang ditargetkan.`, 'rps');
+    const sa = dosenRps(S, '').find(d => d.id === ctx.dosen); if (sa && tt('t3')) pakai(tt('t3'), { done: sa.ok }, `Anda baru mengisi ${sa.terisi} dari ${sa.target} RPS yang ditargetkan.`, 'rps');
   }
   if (role === 'prodi' && ctx.prodi) {
-    ['t1', 't2', 't3'].forEach(id => { const pr = progresTahap(S, id, ctx.prodi), t = tt(id); const rute = id === 't3' ? 'jadwal' : id === 't1' ? 'matriks' : 'periksa'; pakai(t, pr, `${t.nama}: ${pr.teks}.`, rute); });
+    ['t1', 't2', 't3'].forEach(id => { const t = tt(id); if (!t) return; const pr = progresTahap(S, id, ctx.prodi); const rute = id === 't3' ? 'jadwal' : id === 't1' ? 'matriks' : 'periksa'; pakai(t, pr, `${t.nama}: ${pr.teks}.`, rute); });
   }
-  if (role === 'spm') { const belum = S.prodi.filter(p => !progresTahap(S, 't4', p.id).done); if (belum.length) pakai(tt('t4'), { done: false }, `${belum.length} prodi belum diverifikasi (${belum.map(p => p.id).join(', ')}).`, 'jadwal'); }
-  if (role === 'akademik') { const belum = S.prodi.filter(p => !progresTahap(S, 't5', p.id).done); if (belum.length) pakai(tt('t5'), { done: false }, `${belum.length} prodi belum dicek beban dan kelasnya (${belum.map(p => p.id).join(', ')}).`, 'jadwal'); }
+  if (role === 'spm') { const belum = S.prodi.filter(p => !progresTahap(S, 't4', p.id).done); if (belum.length && tt('t4')) pakai(tt('t4'), { done: false }, `${belum.length} prodi belum diverifikasi (${belum.map(p => p.id).join(', ')}).`, 'jadwal'); }
+  if (role === 'akademik') { const belum = S.prodi.filter(p => !progresTahap(S, 't5', p.id).done); if (belum.length && tt('t5')) pakai(tt('t5'), { done: false }, `${belum.length} prodi belum dicek beban dan kelasnya (${belum.map(p => p.id).join(', ')}).`, 'jadwal'); }
   if (role === 'wadir' || role === 'admin' || role === 'developer') {
     const merah = papan(S, hari).reduce((a, r) => a + r.sel.filter(x => x && x.st.s === 'terlambat').length, 0);
     if (merah) out.push({ k: 'bad', teks: `${merah} tahap prodi sudah melewati tenggat. Lihat papan pemantauan.`, rute: 'jadwal' });
-    else { const rapat = tt('t7'); if (hari < rapat.awal && selisihHari(hari, rapat.awal) <= 7) out.push({ k: 'info', teks: `Rapat evaluasi kurikulum ${fmtTgl(rapat.awal)} (${selisihHari(hari, rapat.awal)} hari lagi).`, rute: 'jadwal' }); }
+    else { const rapat = tt('t7') || T.find(x => x.mode === 'tonggak'); if (rapat && hari < rapat.awal && selisihHari(hari, rapat.awal) <= 7) out.push({ k: 'info', teks: `Rapat evaluasi kurikulum ${fmtTgl(rapat.awal)} (${selisihHari(hari, rapat.awal)} hari lagi).`, rute: 'jadwal' }); }
   }
   return out;
 }

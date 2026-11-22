@@ -77,7 +77,7 @@ export function tabelObe(S, pid) {
 
   /* 4 */ const snSet = Array.from(new Set(cpl.flatMap(snDari))).sort((a, b) => (RANAH_URUT[a.replace(/\d+$/, '')] || 9) - (RANAH_URUT[b.replace(/\d+$/, '')] || 9) || nu(a, b));
   tambah({ no: '4', sheet: '4. Pemetaan', judul: 'Pemetaan CPL SN Dikti terhadap CPL Prodi', kolom: ['CPL SN Dikti \\ CPL', ...cpl.map(c => c.kode)], baris: snSet.map(s => [s, ...cpl.map(c => V(snDari(c).includes(s)))]),
-    cek: [ck(snSet.length > 0, `${snSet.length} unsur SN Dikti terpetakan`, 'Belum ada kode unsur SN Dikti pada CPL', 'near'), ck(['S', 'P', 'KU', 'KK'].every(r => snSet.some(s => s.replace(/\d+$/, '') === r)), 'Empat unsur (S, P, KU, KK) tercakup', 'Ada unsur SN Dikti yang belum tercakup', 'near')] });
+    cek: [ck(snSet.length > 0, `${snSet.length} unsur SN Dikti terpetakan`, 'Belum ada kode unsur SN Dikti pada CPL', 'near'), ck(['S', 'P', 'KU', 'KK'].every(r => snSet.some(s => s.replace(/^CPL-/, '').replace(/\d+$/, '') === r)), 'Empat unsur (S, P, KU, KK) tercakup', 'Ada unsur SN Dikti yang belum tercakup', 'near')] });
 
   /* 5 */ tambah({ no: '5', sheet: '5. Pemetaan CPL & PL', judul: 'Pemetaan CPL dan PL', kolom: ['CPL \\ PL', ...pl.map(x => x.kode)], baris: cpl.map(c => [c.kode, ...pl.map(x => V((c.pl || []).includes(x.id)))]),
     cek: [ck(cpl.every(c => (c.pl || []).length), 'Setiap CPL mendukung sedikitnya satu PL', `${cpl.filter(c => !(c.pl || []).length).length} CPL belum terkait PL`), ck(pl.every(x => cpl.some(c => (c.pl || []).includes(x.id))), 'Setiap PL didukung sedikitnya satu CPL', `${pl.filter(x => !cpl.some(c => (c.pl || []).includes(x.id))).length} PL belum didukung CPL`)] });

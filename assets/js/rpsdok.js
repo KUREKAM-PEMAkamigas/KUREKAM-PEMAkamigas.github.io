@@ -192,7 +192,7 @@ export function modelRps(m, r) {
   pert.forEach(x => {
     const ss = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean);
     const g = new Map(); ss.forEach(s => { if (!g.has(s.cpmk)) g.set(s.cpmk, []); g.get(s.cpmk).push(s); });
-    if (!g.size) { ent.push({ x, ck: '', ss: [], b: +x.bobot || 0 }); return; }
+    if (!g.size) { if (+x.bobot) ent.push({ x, ck: '', ss: [], b: +x.bobot || 0 }); return; }
     g.forEach((arr, ck) => ent.push({ x, ck, ss: arr, b: (+x.bobot || 0) * arr.length / ss.length }));
   });
   ent.sort((a, b) => (cpmkOrder.has(a.ck) ? cpmkOrder.get(a.ck) : 99) - (cpmkOrder.has(b.ck) ? cpmkOrder.get(b.ck) : 99) || a.x.m - b.x.m);

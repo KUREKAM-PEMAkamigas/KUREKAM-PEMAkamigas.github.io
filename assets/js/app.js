@@ -125,24 +125,43 @@ export function can(action, obj = {}) {
 }
 
 /* ---------------- persistensi ---------------- */
+/* Umpan balik penyimpanan: penanda "Menyimpan..." selama ada penulisan, lalu satu notifikasi ringkas setelah semuanya selesai. */
+const kerja = { n: 0, jenis: 'simpan', gagal: false, timer: null, ada: false };
+function kerjaMulai(jenis) {
+  if (!kerja.ada) kerja.jenis = jenis; kerja.n++; kerja.ada = true;
+  clearTimeout(kerja.timer);
+  let el = document.getElementById('kerja'); if (!el) { el = document.createElement('div'); el.id = 'kerja'; el.className = 'kerja'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.innerHTML = '<span class="spin"></span> Menyimpan…';
+}
+function kerjaSelesai(gagal) {
+  if (gagal) kerja.gagal = true; kerja.n = Math.max(0, kerja.n - 1);
+  if (kerja.n > 0) return;
+  clearTimeout(kerja.timer);
+  kerja.timer = setTimeout(() => {
+    if (kerja.n > 0 || !kerja.ada) return;
+    const el = document.getElementById('kerja'); if (el) el.remove();
+    if (!kerja.gagal) toast(kerja.jenis === 'hapus' ? 'Berhasil dihapus.' : 'Berhasil disimpan.');
+    kerja.ada = false; kerja.gagal = false; kerja.jenis = 'simpan';
+  }, 450);
+}
 export async function save(col, doc, aksi) {
   const arr = S[col]; const i = arr.findIndex(x => x.id === doc.id);
   if (i >= 0) arr[i] = doc; else arr.push(doc);
-  try { await DB.put(col, doc, arr); } catch (e) { toast('Gagal menyimpan: ' + e.message); return; }
-  if (col !== 'log') jadwalkanUmpan();
-  if (aksi) await addLog(aksi);
+  kerjaMulai('simpan');
+  try { await DB.put(col, doc, arr); } catch (e) { toast('Gagal menyimpan: ' + e.message); kerjaSelesai(true); return; }
+  try { if (col !== 'log') jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(false); }
 }
 export async function saveMany(col, docs, aksi) {
   docs.forEach(doc => { const i = S[col].findIndex(x => x.id === doc.id); if (i >= 0) S[col][i] = doc; else S[col].push(doc); });
-  try { if (DB.mode === 'firebase') { for (const d of docs) await DB.put(col, d, S[col]); } else await DB.put(col, docs[0] || {}, S[col]); } catch (e) { toast('Gagal menyimpan: ' + e.message); }
-  jadwalkanUmpan();
-  if (aksi) await addLog(aksi);
+  kerjaMulai('simpan'); let gagal = false;
+  try { if (DB.mode === 'firebase') { for (let i = 0; i < docs.length; i += 20) await Promise.all(docs.slice(i, i + 20).map(d => DB.put(col, d, S[col]))); } else await DB.put(col, docs[0] || {}, S[col]); } catch (e) { gagal = true; toast('Gagal menyimpan: ' + e.message); }
+  try { jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(gagal); }
 }
 export async function remove(col, id, aksi) {
   S[col] = S[col].filter(x => x.id !== id);
-  try { await DB.del(col, id, S[col]); } catch (e) { toast('Gagal menghapus: ' + e.message); }
-  jadwalkanUmpan();
-  if (aksi) await addLog(aksi);
+  kerjaMulai('hapus'); let gagal = false;
+  try { await DB.del(col, id, S[col]); } catch (e) { gagal = true; toast('Gagal menghapus: ' + e.message); }
+  try { jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(gagal); }
 }
 export async function saveSettings() { setKodeBaku(param(S).kodeBaku); const doc = Object.assign({ id: 'app' }, S.settings); try { await DB.put('settings', doc, [doc]); } catch (e) { toast('Gagal menyimpan pengaturan'); } }
 export async function addLog(aksi) {

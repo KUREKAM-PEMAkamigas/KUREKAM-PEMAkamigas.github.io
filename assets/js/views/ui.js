@@ -1,5 +1,5 @@
 /* KUREKAM · Komponen tampilan bersama */
-import { esc, openDrawer, closeDrawer, icon, ctx, S, toast } from '../app.js';
+import { esc, openDrawer, closeDrawer, icon, ctx, S, toast, rerender } from '../app.js';
 import { fmt } from '../rules.js';
 
 export const kpi = (lbl, val, meta, c = '#10b981', ic = 'spark', dec = 0) =>
@@ -41,18 +41,26 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     <form class="form-grid" id="fd">${f}</form>${extra}
     <div class="drawer-act">${onDelete ? `<button class="btn danger" id="fd-del">${icon('trash')} Hapus</button>` : ''}<div class="sp"></div><button class="btn ghost" data-close>Batal</button><button class="btn pri" id="fd-save">${icon('check')} Simpan</button></div>`, (dr) => {
     dr.querySelectorAll('.cp input').forEach(i => i.onchange = () => i.parentElement.classList.toggle('on', i.checked));
+    const sibuk = (b, on, teks) => { dr.querySelectorAll('.drawer-act .btn').forEach(x => { x.disabled = on; }); if (b) { if (on) { b.dataset.t = b.innerHTML; b.innerHTML = '<span class="spin"></span> ' + teks; } else if (b.dataset.t) b.innerHTML = b.dataset.t; } };
+    const galat = (m) => { dr.querySelectorAll('.ribbon.bad').forEach(x => x.remove()); dr.querySelector('.drawer-act').insertAdjacentHTML('beforebegin', `<div class="ribbon bad">${esc(m)}</div>`); };
     dr.querySelector('#fd-save').onclick = async () => {
-      const out = { ...obj };
+      const btn = dr.querySelector('#fd-save'), out = { ...obj };
       fields.forEach(x => {
         if (x.type === 'kode') return;
         if (x.type === 'multi') out[x.k] = Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value);
         else { const el = dr.querySelector(`[name="${x.k}"]`); out[x.k] = x.type === 'number' ? (el.value === '' ? null : +el.value) : el.value.trim(); }
       });
-      const err = await onSave(out);
-      if (err) { const h = dr.querySelector('.drawer-act'); h.insertAdjacentHTML('beforebegin', `<div class="ribbon bad">${esc(err)}</div>`); return; }
-      closeDrawer();
+      sibuk(btn, true, 'Menyimpan…');
+      let err; try { err = await onSave(out); } catch (e) { console.error(e); err = 'Gagal menyimpan: ' + e.message; }
+      if (err) { sibuk(btn, false); galat(err); return; }
+      closeDrawer(); rerender();
     };
-    const del = dr.querySelector('#fd-del'); if (del) del.onclick = async () => { if (!(await tanya('Hapus data ini?', 'Hapus'))) return; await onDelete(obj); closeDrawer(); };
+    const del = dr.querySelector('#fd-del'); if (del) del.onclick = async () => {
+      if (!(await tanya('Hapus data ini?', 'Hapus'))) return;
+      sibuk(del, true, 'Menghapus…');
+      try { await onDelete(obj); } catch (e) { console.error(e); sibuk(del, false); galat('Gagal menghapus: ' + e.message); return; }
+      closeDrawer(); rerender();
+    };
     fields.filter(x => x.live && x.type !== 'kode').forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); up(); });
     if (onOpen) onOpen(dr);
   }, wide);

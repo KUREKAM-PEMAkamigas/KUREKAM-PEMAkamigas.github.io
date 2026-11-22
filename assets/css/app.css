@@ -712,3 +712,9 @@ details.dtl { border-top: 1px solid rgba(24,35,58,.08); padding: 8px 0; } detail
   .cpmk-h:has(.aksi) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
   .cpmk-h .aksi { grid-column: auto; }
 }
+
+/* umpan balik penyimpanan */
+.kerja { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 120; display: flex; gap: 8px; align-items: center; padding: 8px 16px; border-radius: 999px; background: var(--card-solid, #fff); color: var(--ink, #0f172a); box-shadow: 0 6px 24px rgba(15, 23, 42, .25); font-size: 13.5px; font-weight: 600; }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: putar .7s linear infinite; vertical-align: -2px; }
+@keyframes putar { to { transform: rotate(360deg); } }
+.btn:disabled { opacity: .6; cursor: progress; }

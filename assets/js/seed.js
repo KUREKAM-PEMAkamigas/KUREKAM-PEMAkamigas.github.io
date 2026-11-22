@@ -183,10 +183,11 @@ export function buildSeed() {
         const lvC = (id) => { const c = D.cpl.find(x => x.id === id); const b = c && detect(c.teks, c.ranah === 'S' ? 'A' : 'C'); return b && b.d === lvV.d ? b.n : (b ? 9 : 0); };
         const fit = m.cpl.filter(id => lvC(id) >= lvV.n);
         const cplLink = [(fit.length ? fit : m.cpl)[i % Math.max(1, (fit.length ? fit : m.cpl).length)]].filter(Boolean);
-        D.cpmk.push({ id, mk: m.id, prodi: pid, kode: `CPMK${i + 1}`, teks: `Mampu ${v} ${OBJ[v] || ''} ${m.nama.toLowerCase()}${prak ? ' sesuai prosedur dan kaidah K3' : ''}.`.replace(/\s+/g, ' '), cpl: cplLink });
+        const cplO = D.cpl.find(x => x.id === cplLink[0]), objek = cplO ? String(cplO.teks).trim().split(/\s+/).slice(1).join(' ').replace(/[.]+$/, '') : `${OBJ[v] || ''} ${m.nama.toLowerCase()}`;
+        D.cpmk.push({ id, mk: m.id, prodi: pid, kode: '', teks: `Mampu ${v} ${objek}.`.replace(/\s+/g, ' '), cpl: cplLink });
         if (m.smt <= subDepth || /capstone design i$/i.test(m.nama)) {
           const sv = SUBV[v] || [v, v];
-          sv.forEach((w, j) => D.sub.push({ id: `${id}-S${j + 1}`, cpmk: id, mk: m.id, prodi: pid, kode: `Sub-CPMK${i + 1}.${j + 1}`, teks: `Mampu ${w} ${OBJ[w] || 'aspek'} ${m.nama.toLowerCase()} pada topik ${j + 1}.`.replace(/\s+/g, ' '), bobot: 0 }));
+          sv.forEach((w, j) => D.sub.push({ id: `${id}-S${j + 1}`, cpmk: id, mk: m.id, prodi: pid, kode: '', teks: `Mampu ${w} ${OBJ[w] || 'aspek'} ${m.nama.toLowerCase()} pada topik ${j + 1}.`.replace(/\s+/g, ' '), bobot: 0 }));
         }
       }
       const ss = D.sub.filter(s => s.mk === m.id);
@@ -243,6 +244,17 @@ export function buildSeed() {
   );
   D.log.push({ id: 'LOG' + Date.now(), t: new Date().toISOString(), user: 'Sistem', aksi: 'Data contoh KUREKAM dimuat' });
   D.settings.push({ id: 'app', seedVersi: APP.seedVersi, paritas: 'ganjil', param: {} });
+  /* Kode baku (Excel OBE): CPL01 dst berurutan Sikap, Pengetahuan, KU, KK; CPMK01 dst menurut urutan CPL (satu CPMK dipakai banyak MK); SUB-CPMK0501 */
+  const URUT = ['S', 'P', 'KU', 'KK'], pad2 = (n) => String(n).padStart(2, '0');
+  PRODI_DEF.forEach(pd => {
+    const pid = pd.id, cpl = D.cpl.filter(c => c.prodi === pid).sort((a, b) => URUT.indexOf(a.ranah) - URUT.indexOf(b.ranah) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
+    cpl.forEach((c, i) => { c.sn = c.kode.replace(/^([A-Z]+)(\d+)$/, (_, a, b) => a + pad2(+b)); c.kode = `CPL${pad2(i + 1)}`; });
+    D.cpl = D.cpl.filter(c => c.prodi !== pid).concat(cpl);
+    const grup = new Map(); D.cpmk.filter(c => c.prodi === pid).forEach(c => { const k = c.teks + '|' + c.cpl[0]; if (!grup.has(k)) grup.set(k, []); grup.get(k).push(c); });
+    [...grup.values()].sort((a, b) => cpl.findIndex(c => c.id === a[0].cpl[0]) - cpl.findIndex(c => c.id === b[0].cpl[0])).forEach((g, i) => {
+      let n = 0; g.forEach(c => { c.kode = `CPMK${pad2(i + 1)}`; D.sub.filter(x => x.cpmk === c.id).forEach(x => { x.kode = `SUB-CPMK${pad2(i + 1)}${pad2(++n)}`; }); });
+    });
+  });
   return D;
 }
 

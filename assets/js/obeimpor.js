@@ -2,6 +2,8 @@
    Prodi cukup mengunggah berkas OBE yang sudah dimiliki; kode CPL, BK, MK, CPMK, dan Sub-CPMK dipakai apa adanya.
    Fungsi murni: tidak menyentuh S atau basis data. Hasilnya {data, rps, laporan} dipasang oleh pemanggil. */
 
+import { rencanaSelaras, byProdi } from './rules.js';
+
 const s = (v) => String(v == null ? '' : v).replace(/ /g, ' ').trim();
 const num = (v) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 const ya = (v) => /^v$|^x$|^✓$|^√$/i.test(s(v));
@@ -19,6 +21,15 @@ const BUCKET = [
 const NAMA_BUCKET = { mbkm: 'Penilaian MBKM', obs: 'Observasi (tugas dan keaktifan)', part: 'Partisipasi dan praktik', unjuk: 'Unjuk kerja', quiz: 'Kuis (tes tulis)', uts: 'Tes tulis UTS', uas: 'Tes tulis UAS', lisan: 'Tes lisan' };
 const KOL18 = ['obs', 'part', 'unjuk', 'quiz', 'uts', 'uas', 'lisan']; /* kolom MBKM (D) hanya menandai MK yang dapat dikonversi, bukan bobot */
 
+const NAMA_RANAH = { S: 'sikap', P: 'pengetahuan', KU: 'keterampilan umum', KK: 'keterampilan khusus' };
+/** Menebak ranah CPL dari rumusannya bila lembar 2 tidak memuatnya. */
+function tebakRanah(t) {
+  const x = s(t).toLowerCase();
+  if (/^(bertakwa|beriman|menunjukkan sikap|menginternalisasi|menghargai|berperan|berkontribusi|menjunjung|taat|bersikap|memiliki (sikap|etos|integritas))|sikap|etika|integritas|kejuangan|kewirausahaan/.test(x)) return 'S';
+  if (/^(menguasai|memahami|menjelaskan)\s+(konsep|teori|prinsip|dasar|pengetahuan)|konsep teoretis|pengetahuan/.test(x)) return 'P';
+  if (/bekerja sama|kerja sama|tim\b|berkomunikasi|pemikiran logis|berpikir kritis|mengambil keputusan|mendokumentasikan|mengelola informasi|belajar sepanjang hayat|inovatif/.test(x)) return 'KU';
+  return 'KK';
+}
 /** Baca satu lembar sebagai larik baris. Lembar dicari lewat nomor awal, mis. "13" atau "12a". */
 function lembar(X, wb, no) {
   const re = new RegExp('^\\s*' + no + '\\s*[.\\-]', 'i');
@@ -49,7 +60,7 @@ export function imporObe(X, wb, pid) {
     const k = a.toUpperCase();
     if (/^CPL\d+$/.test(k) && /^CPL-/i.test(b) && cplBy[k]) { const c = cplBy[k]; if (!c.ranah) c.ranah = ranah; const sn = b.toUpperCase(); c.sn = c.sn ? `${c.sn}, ${sn}` : sn; }
   });
-  cpl.forEach(c => { if (!c.ranah) { c.ranah = 'KK'; lap.push(`${c.kode}: ranah tidak terbaca dari lembar 2, dianggap keterampilan khusus.`); } });
+  cpl.forEach(c => { if (!c.ranah) { c.ranah = tebakRanah(c.teks); lap.push(`${c.kode}: ranah tidak terbaca dari lembar 2, ditebak dari rumusan sebagai ${NAMA_RANAH[c.ranah]}. Periksa di menu CPL.`); } });
   if (!cpl.some(c => c.sn)) lap.push('Kode unsur SN Dikti (lembar 2) belum terbaca.');
 
   /* 5. CPL terhadap PL */
@@ -109,6 +120,26 @@ export function imporObe(X, wb, pid) {
   });
   cpmk.forEach(c => { if (!c.cpl.length && cpmkCpl[c.kode]) c.cpl.push(...cpmkCpl[c.kode]); });
   cpmk.forEach(c => { if (!c.teks) lap.push(`${c.kode} pada ${c.mk.replace(pid + '-', '')}: uraian CPMK tidak ada di lembar 13.`); if (!c.cpl.length) lap.push(`${c.kode} pada ${c.mk.replace(pid + '-', '')}: tidak terkait CPL pada lembar 14.`); });
+
+  /* Konversi cerdas: (a) satu CPMK mendukung CPL yang sama di semua MK pemuatnya, (b) CPL diurutkan menurut ranah SN Dikti dan dinomori CPL01 dst,
+     (c) CPMK dinomori mengikuti urutan CPL dan Sub-CPMK mengikuti nomor CPMK. Hanya kode yang berganti; id dan keterkaitan tetap. */
+  const konversi = [];
+  { const urutCpl = byProdi(cpl, pid).map(c => c.id), cpmkKode = {};
+    cpmk.forEach(c => { (cpmkKode[c.kode] = cpmkKode[c.kode] || []).push(c); });
+    Object.values(cpmkKode).forEach(g => { const u = Array.from(new Set(g.flatMap(c => c.cpl))).sort((a, b) => urutCpl.indexOf(a) - urutCpl.indexOf(b)); g.forEach(c => { c.cpl = u.slice(); }); const teks = (g.find(c => c.teks) || {}).teks; if (teks) g.forEach(c => { c.teks = teks; }); });
+    const banyak = Object.values(cpmkKode).filter(g => g.length > 1).length; if (banyak) lap.push(`${banyak} CPMK dipakai oleh lebih dari satu mata kuliah (sesuai pola Excel).`);
+    /* urutan CPL: ranah SN Dikti, lalu nomor unsur SN Dikti terkecil (S01, P03, KK02...), lalu nomor lama. Nomor sementara dipakai agar rencanaSelaras mengikuti urutan ini. */
+    const ORD = { S: 0, P: 1, KU: 2, KK: 3 }, noSn = (c) => { const m = (String(c.sn).toUpperCase().match(/(?:^|[^A-Z])(KU|KK|S|P)(\d+)/g) || []).map(x => x.replace(/^[^A-Z]/, '')).filter(x => x.replace(/\d+/, '') === c.ranah).map(x => +x.replace(/\D/g, '')); return m.length ? Math.min(...m) : 999; };
+    const lamaKode = {}; cpl.slice().sort((a, b) => (ORD[a.ranah] - ORD[b.ranah]) || (noSn(a) - noSn(b)) || (parseInt(a.kode.replace(/\D/g, ''), 10) - parseInt(b.kode.replace(/\D/g, ''), 10))).forEach((c, i) => { lamaKode[c.id] = c.kode; c.kode = 'CPL' + String(i + 1).padStart(3, '0'); });
+    const S2 = { settings: {}, cpl, mk, cpmk, sub, pi: [], pl, bk };
+    const r = rencanaSelaras(S2, pid);
+    cpl.forEach(c => { c.kode = lamaKode[c.id]; });
+    r.cpl.forEach(n => { const c = cpl.find(x => x.id === n.id); if (c.kode !== n.kode) konversi.push({ jenis: 'CPL', lama: c.kode, baru: n.kode }); c.kode = n.kode; });
+    const lamaK = {}; r.cpmk.forEach(n => { const c = cpmk.find(x => x.id === n.id); lamaK[c.kode] = n.kode; c.kode = n.kode; }); Object.entries(lamaK).forEach(([a, b]) => konversi.push({ jenis: 'CPMK', lama: a, baru: b }));
+    r.sub.forEach(n => { const c = sub.find(x => x.id === n.id); c.kode = n.kode; });
+    if (r.sub.length) konversi.push({ jenis: 'Sub-CPMK', lama: `${r.sub.length} kode`, baru: 'SUB-CPMK + nomor CPMK + urutan' });
+    { const kc = konversi.filter(k => k.jenis === 'CPL'); if (kc.length) lap.push(`CPL diurutkan menurut ranah (Sikap, Pengetahuan, Keterampilan Umum, Keterampilan Khusus) lalu nomor unsur SN Dikti, dan dinomori ulang: ${kc.slice(0, 12).map(k => `${k.lama} menjadi ${k.baru}`).join(', ')}${kc.length > 12 ? ', dan lainnya' : ''}.`); }
+  }
 
   /* 17, 18. Teknik, minggu, dan bobot penilaian -> kerangka RPS */
   const teknik = {};
@@ -171,6 +202,6 @@ export function imporObe(X, wb, pid) {
     rps.push({ id: m.id, mk: m.id, prodi: pid, deskripsi: '', pustaka: '', pertemuan: pert, status: 'draf', oleh: '', tgl: '', kerangka: true });
   });
 
-  return { data: { pl, cpl, bk, mk, cpmk, sub }, rps, laporan: lap,
+  return { data: { pl, cpl, bk, mk, cpmk, sub }, rps, laporan: lap, konversi,
     ringkas: { pl: pl.length, cpl: cpl.length, bk: bk.length, mk: mk.length, sks: mk.reduce((a, m) => a + m.T + m.P, 0), cpmk: cpmk.length, sub: sub.length, rps: rps.length } };
 }

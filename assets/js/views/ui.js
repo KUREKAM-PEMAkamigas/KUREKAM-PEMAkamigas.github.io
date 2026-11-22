@@ -81,6 +81,17 @@ export function tanya(pesan, ya = 'Ya, lanjutkan') {
     document.body.appendChild(bg); bg.querySelector('[data-y]').focus();
   });
 }
+/** Dialog pratinjau berisi HTML (sudah di-escape oleh pemanggil), dengan isi yang dapat digulir. */
+export function pratinjau(judul, isiHtml, ya = 'Ya, lanjutkan') {
+  return new Promise(res => {
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal card wide" role="dialog" aria-modal="true"><h3 style="margin:0 0 8px">${esc(judul)}</h3><div class="modal-isi">${isiHtml}</div><div class="drawer-act"><div class="sp"></div><button class="btn ghost" data-n>Batal</button><button class="btn pri" data-y>${esc(ya)}</button></div></div>`;
+    const done = (v) => { bg.remove(); res(v); };
+    bg.querySelector('[data-y]').onclick = () => done(true); bg.querySelector('[data-n]').onclick = () => done(false);
+    bg.addEventListener('click', e => { if (e.target === bg) done(false); });
+    document.body.appendChild(bg); bg.querySelector('[data-y]').focus();
+  });
+}
 export const DALAM_BINGKAI = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 /** Unduh berkas dari Blob. */
 export function unduh(blob, nama) {

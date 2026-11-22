@@ -7,6 +7,7 @@ import { param, fmt, KMAP, kelasOf, RANAH_CPL, HURUF_IABEE } from '../rules.js';
 import { head, formDrawer, prodiTag, ro, tanya, unduh, loadXLSX } from './ui.js';
 import { DATA_HEAD, JP_DEFAULT } from './bebanprodi.js';
 import { imporObe } from '../obeimpor.js';
+import { bokStandarProdi } from '../rules.js';
 
 let tab = 'prodi', fH = '', hasil = '';
 const TABS = [['prodi', 'Prodi & kelas'], ['dosen', 'Dosen'], ['param', 'Parameter'], ['impor', 'Impor & ekspor'], ['db', 'Basis data'], ['akun', 'Pengguna & peran'], ['log', 'Log aktivitas']];
@@ -291,6 +292,7 @@ async function imporObeUI(X, wb) {
   const d = {}; Object.keys(S).forEach(k => { d[k] = k === 'settings' ? [{ ...S.settings, demo: S.settings.demo }] : S[k]; });
   ['pl', 'cpl', 'bk', 'mk', 'cpmk', 'sub', 'rps'].forEach(k => { d[k] = keep(S[k]).concat(k === 'rps' ? h.rps : h.data[k]); });
   d.tugas = keep(S.tugas); d.pi = keep(S.pi);
+  if (!(S.bok || []).some(b => b.prodi === pid)) d.bok = (S.bok || []).concat(bokStandarProdi(pid));
   await replaceData(d);
   await addLog(`Impor Tabel OBE prodi ${pid}: ${r.cpl} CPL, ${r.mk} MK, ${r.cpmk} CPMK`);
   return `<b>Impor Tabel OBE ${esc(pid)} selesai.</b> ${r.cpl} CPL, ${r.bk} BK, ${r.mk} MK (${r.sks} SKS), ${r.cpmk} CPMK, ${r.sub} Sub-CPMK, ${r.rps} kerangka RPS.<br>${h.laporan.length ? `<b>${h.laporan.length} catatan pada berkas:</b><br>` + h.laporan.slice(0, 15).map(esc).join('<br>') + (h.laporan.length > 15 ? `<br>… dan ${h.laporan.length - 15} lainnya` : '') + '<br>' : ''}Lanjutkan di menu <b>Tabel OBE</b> dan <b>Pemeriksa Kurikulum</b> untuk melihat bagian yang masih perlu dilengkapi.`;

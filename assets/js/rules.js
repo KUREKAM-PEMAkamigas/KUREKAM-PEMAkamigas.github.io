@@ -598,3 +598,17 @@ export function rencanaCpmk(S, pid) {
   });
   return out;
 }
+
+/** Body of Knowledge standar (urutan sama dengan data contoh) dan penebakan BoK dari nama bahan kajian. */
+export const BOK_STANDAR = [['Matematika dan Sains Dasar', 'IABEE 2.1.1, LAM Teknik butir 19'], ['Dasar Keteknikan', 'IABEE disiplin ET, SKKNI terkait'], ['Keilmuan Inti Prodi', 'SKKNI dan standar kompetensi migas'], ['K3LL dan Lingkungan', 'Regulasi K3 migas, ISO 45001'], ['Manajemen dan Profesionalisme', 'IABEE student outcomes'], ['Karakter dan Kebangsaan', 'Kepdirjen 209/B/KPT/2025']];
+export function tebakBok(nama) {
+  const x = String(nama || '').toLowerCase();
+  if (/national|compulsory|pancasila|kewarganegaraan|agama|bahasa|karakter|kebangsaan|wajib/.test(x)) return 6;
+  if (/science|sains|mathemat|matematika|fisika|kimia|physics|chemistry/.test(x)) return 1;
+  if (/hse|k3|safety|keselamatan|lingkungan|environment|green|renewable|hijau|energi terbarukan/.test(x)) return 4;
+  if (/manage|manajemen|industr|project|proyek|entrepreneur|kewirausahaan|etika|ethic|profesional|5\.0|capstone|magang/.test(x)) return 5;
+  if (/drawing|gambar|standard|standar|code|tools|device|alat|computer|komputer|programming|pemrograman|dasar|basic/.test(x)) return 2;
+  return 3;
+}
+/** BoK standar satu prodi untuk ditambahkan bila belum ada. */
+export const bokStandarProdi = (pid) => BOK_STANDAR.map(([nama, sumber], i) => ({ id: `${pid}-BOK${i + 1}`, prodi: pid, kode: `BOK${i + 1}`, nama, sumber }));

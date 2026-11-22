@@ -2,7 +2,7 @@
    Prodi cukup mengunggah berkas OBE yang sudah dimiliki; kode CPL, BK, MK, CPMK, dan Sub-CPMK dipakai apa adanya.
    Fungsi murni: tidak menyentuh S atau basis data. Hasilnya {data, rps, laporan} dipasang oleh pemanggil. */
 
-import { rencanaSelaras, byProdi } from './rules.js';
+import { rencanaSelaras, byProdi, tebakBok } from './rules.js';
 
 const s = (v) => String(v == null ? '' : v).replace(/ /g, ' ').trim();
 const num = (v) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
@@ -68,7 +68,7 @@ export function imporObe(X, wb, pid) {
 
   /* 6 dan 7. Bahan kajian dan pemetaannya ke CPL */
   const bk = [], bkBy = {};
-  (l6 || []).forEach(r => { const k = s(r[0]).toUpperCase(); if (/^BK\d+$/.test(k) && s(r[1])) { const b = { id: P(k), prodi: pid, kode: k, nama: s(r[1]), bok: '', kedalaman: '', cpl: [] }; bk.push(b); bkBy[k] = b; } });
+  (l6 || []).forEach(r => { const k = s(r[0]).toUpperCase(); if (/^BK\d+$/.test(k) && s(r[1])) { const b = { id: P(k), prodi: pid, kode: k, nama: s(r[1]), bok: `${pid}-BOK${tebakBok(s(r[1]))}`, kedalaman: '', cpl: [] }; bk.push(b); bkBy[k] = b; } });
   if (l7) { const hi = cariBaris(l7, /^bk/i); if (hi >= 0) { const h = l7[hi].map(x => s(x).toUpperCase()); l7.slice(hi + 1).forEach(r => { const b = bkBy[s(r[0]).toUpperCase()]; if (!b) return; h.forEach((x, i) => { if (/^CPL\d+$/.test(x) && ya(r[i]) && cplBy[x]) b.cpl.push(cplBy[x].id); }); }); } }
 
   /* 11, 12. Mata kuliah: kode asli, semester, SKS teori dan praktik, dan kelompok */
@@ -94,6 +94,7 @@ export function imporObe(X, wb, pid) {
   } else lap.push('Lembar 12 belum ada: kelompok MK dianggap kompetensi.');
   mk.forEach(m => { m.kat = KAT[m.kel.slice(0, 3)] || 'Muatan spesifik'; });
 
+  if (bk.length) lap.push('Bahan kajian dikaitkan ke BoK menurut kata kunci pada namanya (lembar 6 tidak memuat BoK). Periksa di menu BoK dan Bahan Kajian.');
   /* 8. BK terhadap MK, 9. CPL terhadap MK */
   if (l8) { const hi = cariBaris(l8, /^kode mk/i); if (hi >= 0) { const h = l8[hi].map(x => s(x).toUpperCase()); l8.slice(hi + 1).forEach(r => { const m = mkBy[s(r[0]).toUpperCase()]; if (!m) return; h.forEach((x, i) => { if (/^BK\d+$/.test(x) && ya(r[i]) && bkBy[x]) m.bk.push(bkBy[x].id); }); }); } }
   if (l9) { const hi = cariBaris(l9, /^mk\s*\/\s*cpl/i, 1) >= 0 ? cariBaris(l9, /^mk\s*\/\s*cpl/i, 1) : cariBaris(l9, /^mk/i, 0); if (hi >= 0) { const h = l9[hi].map(x => s(x).toUpperCase()); l9.slice(hi + 1).forEach(r => { const m = mkBy[s(r[0]).toUpperCase()]; if (!m) return; h.forEach((x, i) => { if (/^CPL\d+$/.test(x) && ya(r[i]) && cplBy[x]) m.cpl.push(cplBy[x].id); }); }); } }

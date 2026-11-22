@@ -3,7 +3,7 @@
    Satu CPMK boleh dipakai banyak MK, dan satu MK boleh memuat banyak CPMK. */
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, toast, replaceData, addLog } from '../app.js';
 import { imporObe } from '../obeimpor.js';
-import { RANAH_CPL, byProdi, cpmkProdi, rencanaCpmk, param } from '../rules.js';
+import { RANAH_CPL, byProdi, cpmkProdi, rencanaCpmk, param, bokStandarProdi } from '../rules.js';
 import { detect, badge } from '../bloom.js';
 import { head, formDrawer, ro, tanya, short, pratinjau, loadXLSX } from './ui.js';
 
@@ -62,6 +62,7 @@ async function imporExcelProdi(f) {
   Object.keys(S).forEach(k => { d[k] = k === 'settings' ? [{ ...S.settings, demo: S.settings.demo }] : S[k]; });
   ['pl', 'cpl', 'bk', 'mk', 'cpmk', 'sub', 'rps'].forEach(k => { d[k] = keep(S[k]).concat(k === 'rps' ? h.rps : h.data[k]); });
   d.tugas = keep(S.tugas).concat(tugasTetap); d.pi = keep(S.pi);
+  if (!(S.bok || []).some(b => b.prodi === pid)) d.bok = (S.bok || []).concat(bokStandarProdi(pid));
   await replaceData(d); await addLog(`Impor Excel OBE prodi ${pid} oleh pengguna prodi: ${r.cpl} CPL, ${r.mk} MK, ${r.cpmk} CPMK`);
   toast(`Terpetakan: ${r.cpl} CPL, ${r.mk} MK, ${cpmkProdi(S, pid).length} CPMK prodi.`);
 }

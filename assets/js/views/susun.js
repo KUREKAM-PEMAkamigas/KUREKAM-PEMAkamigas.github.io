@@ -3,11 +3,12 @@ import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDraw
 import { labelKel, labelGrup, kodeBaruMk, usulKodeProdi, KODE_USULAN, awalPraktik } from '../kode.js';
 import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
-import { detect } from '../bloom.js';
+import { detect, smtMinCpl, alasanOk } from '../bloom.js';
 import { badge } from '../bloom.js';
-import { iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
+import { cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
 import { head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
 
+const akadMkF = (m) => !/magang|tugas akhir/i.test(m.kel || '');
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
 const RANAH_HINT = { S: 'A', P: 'C', KU: 'C', KK: 'C' };
 const liveBloom = (hintKey) => (v) => { const b = detect(v, hintKey()); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"${b.kabur ? ' <span class="st near">kurang terukur</span>' : ''}` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional, misalnya "menerapkan", "menganalisis", "merancang".'); };
@@ -150,13 +151,25 @@ export function mkView(el) {
       { k: 'inti', label: 'Mata kuliah inti (asesmen CPL)', type: 'select', opts: [{ v: '', t: 'Bukan MK inti' }, { v: '1', t: 'Ya, MK inti' }], help: 'MK inti menjadi tempat utama pengukuran CPL melalui PI. Biasanya MK kompetensi penciri dan capstone.' },
       { k: 'kompetensi', label: 'Kompetensi dosen untuk MK inti (kata kunci)', type: 'textarea', rows: 2, ph: 'Misalnya: reservoir, well control, petrofisika', help: 'Pisahkan dengan koma. Dicocokkan dengan bidang S1, S2, S3, dan sertifikasi dosen pengampu (indikator 10 IABEE). Bila kosong, aplikasi memakai kata pada nama MK.' },
       { k: 'T', label: 'SKS teori', type: 'number', live: () => jpHelp() }, { k: 'P', label: `SKS praktik (1–${P.praktikMaxSks})`, type: 'number', live: () => jpHelp() },
-      { k: 'bk', label: 'Bahan kajian', type: 'multi', opts: opts(byProdi(S.bk, ctx.prodi)) }, { k: 'cpl', label: 'CPL yang didukung', type: 'multi', opts: opts(byProdi(S.cpl, ctx.prodi), c => c.teks) },
+      { k: 'bk', label: 'Bahan kajian', type: 'multi', opts: opts(byProdi(S.bk, ctx.prodi)) }, { k: 'cpl', label: 'CPL yang didukung', type: 'multi', opts: byProdi(S.cpl, ctx.prodi).map(c => { const b = c.ranah === 'S' ? null : detect(c.teks, RANAH_HINT[c.ranah] || 'C'), ms = b ? smtMinCpl(b) : 1; return { v: c.id, t: c.kode + (ms > 1 ? ` (${b.code}, mulai smt ${ms})` : ''), title: c.teks, ms }; }), help: 'CPL tingkat tinggi (misalnya C5 atau C6) tidak dapat dibebankan pada mata kuliah semester awal; pilihannya otomatis tidak aktif menurut semester yang dipilih.' },
+      { k: 'alasanCpl', label: 'Alasan pengecualian rambu semester (hanya bila perlu)', type: 'textarea', rows: 2, ph: 'Kosongkan bila tidak ada pengecualian', help: 'Isi bila prodi sengaja membebankan CPL tingkat tinggi pada semester awal. Tanpa alasan, penyimpanan ditolak.' },
       { k: 'prasyarat', label: 'Prasyarat', type: 'multi', opts: all.filter(m => m.id !== x.id && m.smt < +x.smt + 1).map(m => ({ v: m.id, t: short(m.nama, 30) })) }],
     onSave: async (o) => {
       o.smt = +o.smt; o.T = +o.T || 0; o.P = +o.P || 0; o.inti = o.inti === true || o.inti === '1';
-      if (!o.nama) return 'Nama MK wajib diisi.'; if (o.P > P.praktikMaxSks && !/magang|tugas akhir/i.test(o.kel)) return `MK praktik dibatasi 1–${P.praktikMaxSks} SKS (Pedoman).`; if (o.T === 0 && o.P > 0 && !/magang|tugas akhir/i.test(o.kel) && !awalPraktik(o.nama)) return 'Nama MK praktik harus diawali "Praktik" atau "Praktikum" (keputusan 21 Nov 2026).';
+      if (!o.nama) return 'Nama MK wajib diisi.';
+      { const tinggi = (o.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(c => c && cplTerlaluTinggi(c, o.smt)); if (tinggi.length && !alasanOk(o.alasanCpl) && akadMkF(o)) return `CPL ${tinggi.map(c => c.kode).join(', ')} terlalu tinggi untuk semester ${o.smt}. Pilih CPL yang sesuai, atau isi alasan pengecualian.`; } if (o.P > P.praktikMaxSks && !/magang|tugas akhir/i.test(o.kel)) return `MK praktik dibatasi 1–${P.praktikMaxSks} SKS (Pedoman).`; if (o.T === 0 && o.P > 0 && !/magang|tugas akhir/i.test(o.kel) && !awalPraktik(o.nama)) return 'Nama MK praktik harus diawali "Praktik" atau "Praktikum" (keputusan 21 Nov 2026).';
       o.id = o.id || uid(ctx.prodi + '-MK'); o.prodi = ctx.prodi; o.kode = o.kode || kodeBaruMk(byProdi(S.mk, ctx.prodi).filter(m => m.id !== o.id), o);
       await save('mk', o, `Simpan MK ${o.nama} (${ctx.prodi})`); rerender();
+    },
+    onOpen: (dr) => {
+      const smtEl = dr.querySelector('[name=smt]'), al = dr.querySelector('[name=alasanCpl]'), box = dr.querySelector('[data-multi=cpl]'), hint = dr.querySelector('[data-help=cpl]');
+      const base = hint ? hint.innerHTML : '';
+      const filt = () => {
+        const smt = +smtEl.value, ada = alasanOk(al.value); let n = 0;
+        box.querySelectorAll('.cp').forEach(l => { const i = l.querySelector('input'); const c = S.cpl.find(z => z.id === i.value); const tg = !ada && !!cplTerlaluTinggi(c, smt), blk = tg && !i.checked; l.classList.toggle('blk', blk); i.disabled = blk; if (tg) n++; });
+        if (hint) hint.innerHTML = base + (n ? `<br><b>${n} CPL terlalu tinggi untuk semester ${smt}</b> (yang belum dipilih tidak aktif; yang sudah terpilih harus dilepas). Isi alasan pengecualian di bawah (sedikitnya 10 huruf) bila memang perlu.` : '');
+      };
+      smtEl.addEventListener('change', filt); al.addEventListener('input', filt); box.addEventListener('change', filt); filt();
     },
     onDelete: x.id ? async () => { await remove('mk', x.id, `Hapus MK ${x.nama}`); rerender(); } : null });
   const jpHelp = () => { const d = document.querySelector('#fd'); if (!d) return ''; const T = +d.querySelector('[name=T]').value || 0, Pp = +d.querySelector('[name=P]').value || 0; const kel = d.querySelector('[name=kel]').value; const m = { T, P: Pp, kel }; return `SKS ${T + Pp} · JP ${fmt(jpOf(m, P), 2)} jam/minggu · praktik ${durasi(m, P)} menit per SKS`; };

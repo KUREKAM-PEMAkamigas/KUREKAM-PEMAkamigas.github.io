@@ -22,7 +22,7 @@ export const prodiName = () => { const p = S.prodi.find(x => x.id === ctx.prodi)
 
 /** Drawer formulir generik.
  *  fields: [{k, label, type: text|textarea|number|select|multi, opts:[{v,t}], help, full, step}] */
-export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete, wide, extra = '' }) {
+export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete, wide, extra = '', onOpen }) {
   const f = fields.map(x => {
     const v = obj[x.k];
     /* isian satu baris yang ternyata berisi baris baru dibuka sebagai kotak teks agar baris tidak menyatu */
@@ -52,6 +52,7 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     };
     const del = dr.querySelector('#fd-del'); if (del) del.onclick = async () => { if (!(await tanya('Hapus data ini?', 'Hapus'))) return; await onDelete(obj); closeDrawer(); };
     fields.filter(x => x.live).forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); up(); });
+    if (onOpen) onOpen(dr);
   }, wide);
 }
 

@@ -80,3 +80,25 @@ export function saran(code) {
   const next = Object.keys(KKO).filter(k => k[0] === L.d && LEVELS[k].n === L.n);
   return next.length ? `Contoh KKO setara: ${KKO[next[0]].slice(0, 5).join(', ')}` : '';
 }
+
+/* Rambu penempatan semester.
+   Level CPL tertinggi yang boleh dibebankan pada mata kuliah menurut semesternya (ranah kognitif dan psikomotor).
+   Ranah afektif (sikap) tidak dibatasi. Prodi dapat mengecualikan dengan alasan tertulis pada mata kuliah. */
+export const BATAS_CPL_SMT = { C: { 1: 4, 2: 4, 3: 5, 4: 5 }, P: { 1: 3, 2: 3, 3: 4, 4: 4 } };
+export const batasCpl = (domain, smt) => (BATAS_CPL_SMT[domain] || {})[+smt] || 9;
+/** Semester paling awal yang boleh memuat CPL dengan level b. */
+export function smtMinCpl(b) { if (!b) return 1; for (let s = 1; s <= 8; s++) if (b.n <= batasCpl(b.d, s)) return s; return 8; }
+/** Selisih level CPMK terhadap rentang anjuran semester (kognitif). Positif: terlalu tinggi; negatif: terlalu rendah; 0: dalam rentang. */
+export function selisihRentang(b, smt) {
+  const r = ANJURAN_SMT[+smt]; if (!b || b.d !== 'C' || !r) return 0;
+  return b.n > r[1] ? b.n - r[1] : b.n < r[0] ? b.n - r[0] : 0;
+}
+/** Contoh kata kerja operasional untuk rentang level yang dianjurkan pada semester. */
+export function kkoSemester(smt) {
+  const r = ANJURAN_SMT[+smt]; if (!r) return '';
+  const out = [];
+  for (let n = r[0]; n <= r[1]; n++) { const v = (KKO['C' + n] || []).filter(x => !KABUR.includes(x)).slice(0, 3); if (v.length) out.push(`C${n}: ${v.join(', ')}`); }
+  return out.join(' · ');
+}
+/** Alasan pengecualian dianggap sah bila berisi sedikitnya 10 huruf. */
+export const alasanOk = (t) => String(t || '').trim().length >= 10;

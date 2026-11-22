@@ -3,6 +3,8 @@ import { S, ctx, icon, esc, bolehMenu } from '../app.js';
 import { RUMAH_PERAN, PERAN } from '../config.js';
 import { rpsOf } from '../rules.js';
 import { periksaRps } from './asisten.js';
+import { perluTindakan } from './verifrps.js';
+import { pilihMk } from './ajar.js';
 import { statusTag, bar } from './ui.js';
 import { APP } from '../config.js';
 import { chart, AX, grad } from '../charts.js';
@@ -59,6 +61,7 @@ export default function beranda(el) {
     </div>
     <div class="h3d-space"></div>
   </section>
+  ${perluTindakan()}
   ${panelPeran()}
   <div class="card" style="margin-top:18px">${head('Rantai keterlacakan OBE', 'Dari visi sampai SAP. Klik tahap untuk membuka modulnya.', 'link', '#6366f1')}
     <div class="chain">${chain.map(([t, n, c, r], i) => `<a class="cstep" href="#${bolehMenu(r) ? r : 'beranda'}" style="--c:${c}"><span class="orb">${i + 1}</span><b>${t}</b><span class="n">${fmt(n)}</span></a>`).join('<span class="carr"></span>')}</div>
@@ -120,5 +123,6 @@ export default function beranda(el) {
     xAxis: { type: 'category', data: prodiIds, ...AX }, yAxis: { type: 'value', ...AX },
     series: ['MKU', 'MBS', 'MBE', 'MKK'].map(g => ({ name: g, type: 'bar', stack: 'a', barWidth: 34, data: S.prodi.map(p => struktur(S, p.id).g[g]), itemStyle: { color: grad(warnaGrup(g), warnaGrup(g) + 'aa'), borderRadius: g === 'MKK' ? [8, 8, 0, 0] : 0 } }))
   });
+  el.querySelectorAll('[data-pilih]').forEach(a => a.addEventListener('click', () => pilihMk(a.dataset.pilih)));
   el.querySelectorAll('.prow').forEach(a => a.addEventListener('click', () => { ctx.prodi = a.dataset.p; try { localStorage.setItem('kurekam_ctx', JSON.stringify(ctx)); } catch (e) { /* abaikan */ } }));
 }

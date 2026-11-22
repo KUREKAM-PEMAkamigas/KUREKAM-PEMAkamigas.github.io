@@ -688,3 +688,7 @@ body.side-open #sideBg { opacity: 1; pointer-events: auto; }
 .g-now { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #f0616d; text-decoration: none; z-index: 2; }
 details.dtl { border-top: 1px solid rgba(24,35,58,.08); padding: 8px 0; } details.dtl summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 700px) { .g-row, .g-axis { grid-template-columns: 1fr; gap: 3px; } .g-axis .g-lbl { display: none; } }
+
+/* rambu penempatan semester: pilihan CPL yang tidak aktif */
+.cp.blk { opacity: .45; text-decoration: line-through; cursor: not-allowed; }
+.cp.blk input { pointer-events: none; }

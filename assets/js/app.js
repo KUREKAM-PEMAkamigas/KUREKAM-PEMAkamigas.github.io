@@ -32,6 +32,7 @@ import skpiView from './views/skpi.js';
 import bahanLedView from './views/bahanled.js';
 import obeView from './views/obe.js';
 import panduanView from './views/panduan.js';
+import rambuView from './views/rambu.js';
 
 /* ---------------- state ---------------- */
 export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], jadwal: [], riset: [], pengguna: [], log: [], settings: {} };
@@ -195,6 +196,7 @@ export const ROUTES = [
   { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
   { id: 'bahanled', t: 'Bahan LED IABEE', sub: 'Tabel suplemen A1–C2', ic: 'book', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bahanLedView },
   { id: 'generator', t: 'Generator Usulan', sub: 'MK inti, PI, tindak lanjut', ic: 'spark', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: generatorView },
+  { id: 'rambu', t: 'Rambu Pengisian', sub: 'Semester, level Bloom, RPS', ic: 'audit', c: '#f5a524', sec: 'Ringkasan', prodi: true, v: rambuView },
   { id: 'panduan', t: 'Panduan 10 Indikator', sub: 'Cara mengisi dan contoh', ic: 'audit', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: panduanView },
   { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'lulusan', t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi', ic: 'medal', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: lulusanView },

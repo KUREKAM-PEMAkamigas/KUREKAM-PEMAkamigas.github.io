@@ -1,7 +1,7 @@
 /* KUREKAM · Aturan Buku Pedoman, keterlacakan OBE, progres, dan beban dosen riil. */
 import { formatKode, awalanKode, kodeBaku, awalPraktik } from './kode.js';
 import { PARAM_DEFAULT, KELOMPOK, GRUP, BUTIR_IABEE, INDIKATOR_IABEE } from './config.js';
-import { detect, lvNum, MIN_CPL, ANJURAN_SMT } from './bloom.js';
+import { detect, lvNum, MIN_CPL, ANJURAN_SMT, batasCpl, selisihRentang, alasanOk } from './bloom.js';
 import { turunanReal } from './realisasilogic.js';
 
 export const KMAP = Object.fromEntries(KELOMPOK.map(k => [k.id, k]));
@@ -151,6 +151,7 @@ export function cekTrace(S, pid) {
     row('MK tanpa CPL', t.mkNoCpl, 'IABEE 2.1'),
     row('MK tanpa bahan kajian', t.mkNoBk, 'KPT OBE'),
     row('CPMK di luar CPL yang dibebankan', t.cpmkLuar, 'IABEE 2.2'),
+    ...cekRambu(S, pid),
     ...cekIntegrasi(S, pid),
     { grp: 'Keterlacakan', label: 'Bobot Sub-CPMK tidak 100%', val: t.bobotSalah.length ? `${t.bobotSalah.length}: ${L(t.bobotSalah)}` : 'Tidak ada', target: '0', k: t.bobotSalah.length ? 'near' : 'ok', acuan: 'Pedoman RPS' }
   ];
@@ -199,6 +200,45 @@ export function bloomAudit(S, pid) {
   let naik = true; let prev = 0;
   for (let s = 1; s <= 6; s++) { if (avg[s] != null) { if (avg[s] + 0.3 < prev) naik = false; prev = Math.max(prev, avg[s]); } }
   return { issues, dist, avg, naik, cplLv, cpmkLv, nStmt: cpl.length + cpmk.length + sub.length, P };
+}
+
+
+/* ---------- Rambu penempatan semester ---------- */
+/** CPL terlalu tinggi untuk semester mata kuliah? Mengembalikan {b, mx} atau null. Sikap (ranah S) tidak dibatasi. */
+export function cplTerlaluTinggi(c, smt) {
+  if (!c || c.ranah === 'S') return null;
+  const b = detect(c.teks, hintRanah[c.ranah] || 'C'); if (!b) return null;
+  const mx = batasCpl(b.d, smt);
+  return b.n > mx ? { b, mx } : null;
+}
+const akadMk = (m) => !/magang|tugas akhir/i.test(m.kel || '');
+/** Temuan rambu untuk satu prodi: CPL terlalu tinggi pada MK dan CPMK di luar rentang level semester. */
+export function pelanggaranRambu(S, pid) {
+  const cpl = byProdi(S.cpl, pid), mk = byProdi(S.mk, pid).filter(akadMk), cpmk = byProdi(S.cpmk, pid);
+  const cplMk = [], cpmkSmt = [];
+  mk.filter(m => !m.kunci).forEach(m => (m.cpl || []).forEach(id => { const c = cpl.find(x => x.id === id), t = cplTerlaluTinggi(c, m.smt); if (t) cplMk.push({ m, c, ...t, alasan: alasanOk(m.alasanCpl) }); }));
+  cpmk.forEach(c => { const m = mk.find(x => x.id === c.mk); if (!m) return; const b = detect(c.teks, +m.P > +m.T ? 'P' : 'C'), g = selisihRentang(b, m.smt); if (g) cpmkSmt.push({ m, c, b, gap: g, alasan: alasanOk(c.alasanLevel) }); });
+  return { cplMk, cpmkSmt };
+}
+/** Baris Pemeriksa Kurikulum untuk rambu penempatan semester. */
+export function cekRambu(S, pid) {
+  const R = pelanggaranRambu(S, pid), L = (a, f) => a.slice(0, 5).map(f).join(', ') + (a.length > 5 ? ', …' : '');
+  const cplBad = R.cplMk.filter(x => !x.alasan), cmBad = R.cpmkSmt.filter(x => Math.abs(x.gap) >= 2 && !x.alasan), cmNear = R.cpmkSmt.filter(x => Math.abs(x.gap) === 1 || (Math.abs(x.gap) >= 2 && x.alasan));
+  const row = (label, arr, f, k, acuan) => ({ grp: 'Rambu penempatan semester', label, val: arr.length ? `${arr.length}: ${L(arr, f)}` : 'Tidak ada', target: '0', k: arr.length ? k : 'ok', acuan });
+  return [
+    row('CPL terlalu tinggi untuk semester mata kuliah, tanpa alasan', cplBad, x => `${x.m.kode} (S${x.m.smt}) ${x.c.kode}`, 'bad', 'Pedoman 4.4, Bloom, KKNI 6'),
+    row('CPMK selisih 2 level atau lebih dari rentang semester, tanpa alasan', cmBad, x => `${x.c.kode} ${x.m.kode} (${x.b.code})`, 'bad', 'Pedoman 4.4, Bloom'),
+    row('CPMK sedikit di luar rentang level semester, atau dikecualikan dengan alasan', cmNear, x => `${x.c.kode} ${x.m.kode} (${x.b.code})`, 'near', 'Pedoman 4.4, Bloom')
+  ];
+}
+/** Alasan RPS mata kuliah ini belum boleh diajukan karena rambu level (kosong bila bersih). */
+export function alasanRambuRps(S, m) {
+  const cpmk = S.cpmk.filter(c => c.mk === m.id), a = [];
+  const bad = cpmk.filter(c => { const g = selisihRentang(detect(c.teks, +m.P > +m.T ? 'P' : 'C'), m.smt); return Math.abs(g) >= 2 && !alasanOk(c.alasanLevel); });
+  if (bad.length) a.push(`${bad.length} CPMK (${bad.slice(0, 3).map(c => c.kode).join(', ')}) berselisih 2 level atau lebih dari rentang semester ${m.smt} dan belum diberi alasan`);
+  const cp = m.kunci ? [] : (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(c => cplTerlaluTinggi(c, m.smt));
+  if (cp.length && !alasanOk(m.alasanCpl)) a.push(`CPL ${cp.slice(0, 3).map(c => c.kode).join(', ')} terlalu tinggi untuk semester ${m.smt} dan belum diberi alasan pengecualian`);
+  return a.length ? a.join('; ') + '. Alasan diisi prodi pada menu CPMK dan Sub-CPMK atau Mata Kuliah dan SKS' : '';
 }
 
 /* ---------- RPS ---------- */

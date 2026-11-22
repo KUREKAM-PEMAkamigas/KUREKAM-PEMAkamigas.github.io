@@ -8,8 +8,9 @@ import { badanSap, berkasDocxSap, namaBerkasSap } from '../sapdok.js';
 import { badanAcp, berkasDocxAcp, namaBerkasAcp } from '../acpdok.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
+import { kartuVerif, ikatVerif, formVerif, verifOf } from './verifrps.js';
 import { bukaGeneratorDok, turunkanDok } from './dokgen.js';
-import { detect, badge } from '../bloom.js';
+import { detect, badge, ANJURAN_SMT, selisihRentang, kkoSemester } from '../bloom.js';
 import { INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
 import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, stTag, bar, pctColor, opts } from './ui.js';
 import { rapikanEntri, normRiset, opsiRiset, riset, ringkasIntegrasi, teksRiset, jenisInteg, kecocokan, labelRiset, BENTUK } from '../riset.js';
@@ -18,7 +19,18 @@ const akad = (m) => !/magang|tugas akhir/i.test(m.kel);
 const hintOf = (m) => (+m.P > +m.T ? 'P' : 'C');
 const mine = (m) => ctx.role !== 'dosen' || S.tugas.some(t => t.mk === m.id && t.dosen === ctx.dosen);
 const live = (m) => (v) => { const b = detect(v, hintOf(m)); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"${b.kabur ? ' <span class="st near">tidak terukur, ganti KKO</span>' : ''}` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional.'); };
+const liveCpmk = (m) => (v) => {
+  const b = detect(v, hintOf(m)), dasar = live(m)(v), r = ANJURAN_SMT[m.smt];
+  if (!b || b.d !== 'C' || !r) return dasar;
+  const g = selisihRentang(b, m.smt);
+  if (!g) return `${dasar} <span class="st ok">sesuai rentang semester ${m.smt} (C${r[0]}–C${r[1]})</span>`;
+  const berat = Math.abs(g) >= 2;
+  return `${dasar} <span class="st ${berat ? 'bad' : 'near'}">${g > 0 ? 'terlalu tinggi' : 'terlalu rendah'} untuk semester ${m.smt} (anjuran C${r[0]}–C${r[1]})${berat ? ': isi alasan di bawah' : ''}</span><div class="small" style="margin-top:4px">Contoh kata kerja yang sesuai: ${esc(kkoSemester(m.smt))}</div>`;
+};
+const tagRentang = (m, b) => { const g = selisihRentang(b, m.smt); return g ? `<span class="st ${Math.abs(g) >= 2 ? 'bad' : 'near'}" title="Anjuran semester ${m.smt}: C${(ANJURAN_SMT[m.smt] || [])[0]}–C${(ANJURAN_SMT[m.smt] || [])[1]}">${g > 0 ? 'terlalu tinggi' : 'terlalu rendah'} untuk smt ${m.smt}</span>` : ''; };
 let sel = null, fSmt = '';
+/** Memilih mata kuliah yang dibuka pada menu CPMK dan RPS (dipakai tautan di Beranda). */
+export function pilihMk(id) { sel = id; fSmt = ''; }
 
 function mkList(el, onPick, extra) {
   const list = (ctx.role === 'dosen' ? S.mk.filter(m => mine(m)) : byProdi(S.mk, ctx.prodi)).filter(akad).filter(m => !fSmt || m.smt === +fSmt).sort((a, b) => a.smt - b.smt || a.nama.localeCompare(b.nama));
@@ -41,12 +53,12 @@ export function cpmkView(el) {
     const tot = S.sub.filter(s => s.mk === m.id).reduce((a, s) => a + (+s.bobot || 0), 0);
     R.innerHTML = `<div class="card">${head(esc(m.nama), `${m.inti ? 'Mata kuliah inti · ' : ''}Semester ${m.smt} · ${m.T}T + ${m.P}P · CPL dibebankan: ${cplMk.map(c => c.kode).join(', ') || 'belum ada'}`, 'spark', '#0ea5e9', edC ? `<button class="btn pri sm" id="add-c">${icon('plus')} CPMK</button>` : (edS ? '' : ro()))}
       <div class="cplbox">${cplMk.map(c => `<div><span class="tag" style="--c:#0ea5e9">${c.kode}</span> ${esc(c.teks)} ${badge((detect(c.teks, c.ranah === 'S' ? 'A' : 'C') || {}).code)}</div>`).join('')}</div>
-      ${cp.map(c => { const b = detect(c.teks, hintOf(m)); const ss = S.sub.filter(s => s.cpmk === c.id); return `<div class="cpmk"><div class="cpmk-h ${edC ? 'click' : ''}" data-c="${c.id}"><span class="orbsm">${c.kode.replace('CPMK', 'C')}</span><div><b>${esc(c.teks)}</b><div class="small muted">Mendukung ${(c.cpl || []).map(id => (S.cpl.find(x => x.id === id) || {}).kode).join(', ') || '–'} · PI: ${(S.pi || []).filter(p => (p.cpmk || []).includes(c.id)).map(p => p.kode).join(', ') || (m.inti ? '<span class="st bad">belum ada</span>' : '–')}</div></div>${b ? badge(b.code) : badge(null)}</div>
+      ${cp.map(c => { const b = detect(c.teks, hintOf(m)); const ss = S.sub.filter(s => s.cpmk === c.id); return `<div class="cpmk"><div class="cpmk-h ${edC ? 'click' : ''}" data-c="${c.id}"><span class="orbsm">${c.kode.replace('CPMK', 'C')}</span><div><b>${esc(c.teks)}</b><div class="small muted">Mendukung ${(c.cpl || []).map(id => (S.cpl.find(x => x.id === id) || {}).kode).join(', ') || '–'} · PI: ${(S.pi || []).filter(p => (p.cpmk || []).includes(c.id)).map(p => p.kode).join(', ') || (m.inti ? '<span class="st bad">belum ada</span>' : '–')}</div></div>${b ? badge(b.code) : badge(null)} ${b ? tagRentang(m, b) : ''}</div>
         <div class="subs">${ss.map(s => { const sb = detect(s.teks, 'C'); return `<div class="sub ${edS ? 'click' : ''}" data-s="${s.id}"><span class="small muted">${s.kode}</span><span>${esc(s.teks)}</span>${sb ? badge(sb.code) : badge(null)}<b>${fmt(s.bobot)}%</b></div>`; }).join('')}
         ${edS ? `<button class="btn ghost sm" data-adds="${c.id}">${icon('plus')} Sub-CPMK</button>` : ''}</div></div>`; }).join('') || '<div class="empty">Belum ada CPMK.</div>'}
       <div class="filters" style="margin-top:12px"><span class="st ${Math.abs(tot - 100) < 0.5 ? 'ok' : tot ? 'near' : 'na'}">Total bobot Sub-CPMK: ${fmt(tot)}%</span><span class="note">Level Sub-CPMK tidak boleh melampaui CPMK induknya, dan CPMK tidak melampaui CPL.</span></div></div>`;
     const cForm = (x = { cpl: [] }) => formDrawer({ title: x.id ? 'Ubah ' + x.kode : 'CPMK baru', sub: m.nama, obj: x,
-      fields: [{ k: 'kode', label: 'Kode', ph: 'CPMK' + (cp.length + 1) }, { k: 'teks', label: 'Rumusan CPMK', type: 'textarea', live: live(m) }, { k: 'cpl', label: 'CPL yang didukung (dari CPL yang dibebankan pada MK)', type: 'multi', opts: opts(cplMk, c => c.teks) }],
+      fields: [{ k: 'kode', label: 'Kode', ph: 'CPMK' + (cp.length + 1) }, { k: 'teks', label: 'Rumusan CPMK', type: 'textarea', live: liveCpmk(m) }, { k: 'alasanLevel', label: 'Alasan bila level di luar rentang semester (hanya bila perlu)', type: 'textarea', rows: 2, ph: 'Kosongkan bila level sudah sesuai', help: `Rentang anjuran semester ${m.smt}: ${ANJURAN_SMT[m.smt] ? 'C' + ANJURAN_SMT[m.smt][0] + '–C' + ANJURAN_SMT[m.smt][1] : '–'}. Selisih 2 level atau lebih dari rentang wajib diberi alasan agar RPS dapat diajukan.` }, { k: 'cpl', label: 'CPL yang didukung (dari CPL yang dibebankan pada MK)', type: 'multi', opts: opts(cplMk, c => c.teks) }],
       onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; o.kode = o.kode || 'CPMK' + (cp.length + 1); o.id = o.id || uid(m.id + '-CPMK'); o.mk = m.id; o.prodi = m.prodi; await save('cpmk', o, `Simpan ${o.kode} ${m.nama}`); draw(); },
       onDelete: x.id ? async () => { for (const s of S.sub.filter(s => s.cpmk === x.id)) await remove('sub', s.id); await remove('cpmk', x.id, `Hapus ${x.kode} ${m.nama}`); draw(); } : null });
     const sForm = (x) => formDrawer({ title: x.id ? 'Ubah ' + x.kode : 'Sub-CPMK baru', sub: m.nama, obj: x,
@@ -84,6 +96,7 @@ export function rpsView(el) {
       <div class="grid g3 mini" style="margin-top:10px"><div><small>Integrasi penelitian atau PKM (opsional)</small><b style="color:#475569">${integrasiOf(r) ? integrasiOf(r) + ' pertemuan' : 'Tidak ada integrasi'}</b></div><div style="grid-column:span 2"><small>Penelitian dan PKM yang diintegrasikan (otomatis dari pilihan di pertemuan)</small><div class="small">${kotakRiset}</div></div></div>
       ${salahJml ? `<div class="ribbon bad" style="margin-top:12px">${icon('alert')} <b>RPS belum sesuai: jumlah pertemuan ${nPert}, seharusnya 16.</b> RPS ini belum dapat diajukan atau disahkan. ${nPert > 16 ? `Hapus ${nPert - 16} pertemuan yang berlebih: klik pertemuannya, lalu tombol <b>Hapus</b> di bagian bawah. Nomor pertemuan menyesuaikan otomatis.` : 'Lengkapi sampai 16 pertemuan.'}</div>` : ''}
       ${alasanRps(m, r) ? `<div style="margin-top:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px"><b>Validasi usulan.</b> RPS belum dapat diajukan atau disahkan: ${esc(alasanRps(m, r))}.${r && r.usulTinjau && ed ? ` Baca seluruh pertemuan, sunting bila perlu, lalu <button class="btn sm pri" id="tinjau">Saya sudah membaca dan menyetujui isi RPS</button>` : ''}${usulanMk(m.id).length ? ' Usulan CPMK dan Sub-CPMK disetujui Prodi di Asisten Kurikulum.' : ''}</div>` : ''}
+      ${kartuVerif(m)}
       <div class="filters" style="margin-top:12px">
         ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
@@ -131,11 +144,12 @@ export function rpsView(el) {
       await save('rps', r, `Hubungkan integrasi RPS ${m.nama} ke daftar`); toast(r2n ? 'Judul lama dipindahkan ke daftar dan dihubungkan ke pertemuan yang sudah ditandai.' : 'Judul lama dipindahkan ke daftar. Klik pertemuan, lalu pilih dari daftar.'); draw();
     };
     const tj = q('#tinjau'); if (tj) tj.onclick = async () => { if (!(await tanya('Saya sudah membaca seluruh isi RPS ini, memahaminya, dan menyetujuinya sebagai isian resmi.', 'Setujui'))) return; r.usulTinjau = false; await save('rps', r, `Setujui isi usulan RPS ${m.nama}`); draw(); };
-    const aju = q('#aju'); if (aju) aju.onclick = async () => { const al = alasanRps(m, r); if (al) { toast('Belum bisa diajukan: ' + al + '.'); return; } if (salahJml) { toast(`Jumlah pertemuan ${nPert}, seharusnya 16. Perbaiki dulu.`); return; } if (lk < 99) { toast('Lengkapi 16 pertemuan sebelum mengajukan.'); return; }
+    const aju = q('#aju'); if (aju) aju.onclick = async () => { const al = alasanRps(m, r); if (al) { toast('Belum bisa diajukan: ' + al + '.'); return; } if (salahJml) { toast(`Jumlah pertemuan ${nPert}, seharusnya 16. Perbaiki dulu.`); return; } if (lk < 99) { toast('Lengkapi 16 pertemuan sebelum mengajukan.'); return; } for (const v of verifOf(m.id).filter(x => x.status === 'perbaiki')) await save('jadwal', { ...v, status: 'diperbaiki', tglPerbaikan: new Date().toISOString().slice(0, 10) });
       r.status = 'diajukan'; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Ajukan RPS ${m.nama}`); draw(); };
     const sah = q('#sah'); if (sah) sah.onclick = async () => { const al = alasanRps(m, r); if (al) { toast('Belum bisa disahkan: ' + al + '.'); return; } if (salahJml) { toast(`Jumlah pertemuan ${nPert}, seharusnya 16. Kembalikan ke dosen untuk diperbaiki.`); return; } r.status = 'disahkan'; r.oleh = 'Kaprodi ' + m.prodi; r.tgl = new Date().toISOString().slice(0, 10); await save('rps', r, `Sahkan RPS ${m.nama}`); draw(); };
     const bt = q('#batal'); if (bt) bt.onclick = async () => { if (!(await tanya(`Pengesahan RPS ${m.nama} dibatalkan dan statusnya kembali menjadi draf, sehingga dosen dapat merevisi. Lanjutkan?`, 'Batalkan pengesahan'))) return; r.status = 'draf'; r.oleh = ''; r.tgl = ''; await save('rps', r, `Batalkan pengesahan RPS ${m.nama}`); draw(); };
-    const tl = q('#tolak'); if (tl) tl.onclick = async () => { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); draw(); };
+    const tl = q('#tolak'); if (tl) tl.onclick = () => formVerif(m, { statusAwal: 'perbaiki', wajib: true, judul: 'Kembalikan RPS ke dosen: tulis alasannya', onDone: async (o) => { if (o.status === 'perbaiki') { r.status = 'draf'; await save('rps', r, `Kembalikan RPS ${m.nama} ke dosen`); } draw(); } });
+    ikatVerif(R, m, draw);
     q('#print').onclick = () => cetakRps(m, r);
     q('#print-sap').onclick = () => cetakDok('Satuan Acara Pembelajaran (SAP)', badanSap(m, r, true), () => berkasDocxSap(m, r), namaBerkasSap(m));
     q('#print-acp').onclick = () => cetakDok('Analisis Capaian Pembelajaran (ACP)', badanAcp(m, r, true), () => berkasDocxAcp(m, r), namaBerkasAcp(m));

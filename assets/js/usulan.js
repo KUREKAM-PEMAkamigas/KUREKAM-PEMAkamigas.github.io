@@ -2,6 +2,7 @@
    Isian buatan Asisten berstatus usulan (usul: true). Selama masih ada usulan yang belum dibaca dan disetujui,
    RPS tidak dapat diajukan atau disahkan dan kurikulum prodi tidak dapat diajukan. */
 import { S, save, saveMany, remove, addLog } from './app.js';
+import { alasanRambuRps } from './rules.js';
 
 export const JENIS = [['pl', 'Profil lulusan'], ['cpl', 'CPL'], ['bok', 'BoK'], ['bk', 'Bahan kajian'], ['mk', 'Mata kuliah'], ['cpmk', 'CPMK'], ['sub', 'Sub-CPMK']];
 const uraian = (k, o) => ['pl', 'bok', 'bk', 'mk'].includes(k) ? (o.nama || '') : String(o.teks || '').slice(0, 110);
@@ -23,6 +24,7 @@ export function alasanRps(m, r) {
   const u = usulanMk(m.id), a = [];
   if (r && r.usulTinjau) a.push('isi RPS dari Asisten belum disetujui dosen');
   if (u.length) a.push(`${u.length} usulan CPMK, Sub-CPMK, atau MK belum disetujui prodi`);
+  const rb = alasanRambuRps(S, m); if (rb) a.push(rb);
   return a.join('; ');
 }
 export const bolehSetuju = (it) => !(it.k === 'mk' && /\[[^\]]{3,}\]/.test(it.o.nama || ''));

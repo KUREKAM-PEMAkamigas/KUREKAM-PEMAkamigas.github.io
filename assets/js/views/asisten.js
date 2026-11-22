@@ -325,9 +325,10 @@ export default function asistenView(el) {
     cplKabur.length ? `${cplKabur.length} CPL belum diawali kata kerja operasional terukur: ${cplKabur.map(c => c.kode).join(', ')}.` : (t.cpl.length ? 'Semua CPL memakai kata kerja operasional (Taksonomi Bloom).' : ''),
     t.cplNoPl.length ? `${t.cplNoPl.length} CPL belum terhubung ke profil lulusan.` : '',
     'Tiap CPL dipetakan ke capaian IABEE supaya asesmen CPL bisa dilaporkan saat akreditasi.']), tombol('cpl', t.cpl.length ? 'Tambah usulan CPL untuk ranah yang kosong' : 'Buat usulan CPL', !!bidang.trim() && (!t.cpl.length || ranah.length > 0)) + `<a class="btn sm ghost" href="#cpl">Buka menu CPL</a>`, '#0ea5e9')}
-  ${langkah(3, 'Body of knowledge dan bahan kajian', st(t.bk.length >= 6 && !t.cplNoBk.length, t.bk.length > 0), li([
+  ${langkah(3, 'Body of knowledge dan bahan kajian', st(t.bk.length >= 6 && !t.cplNoBk.length && !t.bk.some(b => !b.kedalaman), t.bk.length > 0), li([
     `${byProdi(S.bok, pid).length} BoK dan ${t.bk.length} bahan kajian, ${intiBk.length} di antaranya keilmuan inti prodi.`,
     t.cplNoBk.length ? `${t.cplNoBk.length} CPL belum punya bahan kajian: ${t.cplNoBk.map(c => c.kode).join(', ')}.` : (t.bk.length ? 'Semua CPL sudah punya bahan kajian.' : ''),
+    t.bk.some(b => !b.kedalaman) ? `${t.bk.filter(b => !b.kedalaman).length} bahan kajian belum diberi kedalaman (level Bloom). Tombol Isi kedalaman otomatis ada di menu BoK dan Bahan Kajian.` : '',
     'Bahan kajian inti diturunkan dari SKKNI, standar industri migas, dan masukan pengguna lulusan.']), tombol('bk', 'Buat usulan BoK dan bahan kajian', !byProdi(S.bok, pid).length || !t.bk.length) + `<a class="btn sm ghost" href="#bk">Buka menu BoK dan Bahan Kajian</a>`, '#8b5cf6')}
   ${langkah(4, 'Mata kuliah dan struktur semester', st(!kunciKurang.length && sisaTot === 0 && !usulMk.length && R.total >= P.totalSksMin, t.mk.length > 0), li([
     `${t.mk.length} mata kuliah, total ${R.total} SKS dari minimal ${P.totalSksMin} SKS (Permendiktisaintek 39/2025). Jumlah MK dianjurkan ${P.mkProdiMin} sampai ${P.mkProdiMax}.`,

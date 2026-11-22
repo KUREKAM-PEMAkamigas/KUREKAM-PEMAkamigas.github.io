@@ -151,6 +151,7 @@ export function cekTrace(S, pid) {
     row('CPL tanpa bahan kajian', t.cplNoBk, 'SN Dikti, KPT OBE'),
     row('CPL tanpa mata kuliah pendukung', t.cplNoMk, 'IABEE 1.2, LAM butir 14'),
     row('Bahan kajian tidak dipakai MK', t.bkNoMk, 'KPT OBE'),
+    row('Bahan kajian belum diberi kedalaman (level Bloom)', t.bk.filter(b => !b.kedalaman), 'SN Dikti: kedalaman dan keluasan BK'),
     row('MK tanpa CPL', t.mkNoCpl, 'IABEE 2.1'),
     row('MK tanpa bahan kajian', t.mkNoBk, 'KPT OBE'),
     row('CPMK di luar CPL yang dibebankan', t.cpmkLuar, 'IABEE 2.2'),
@@ -612,3 +613,16 @@ export function tebakBok(nama) {
 }
 /** BoK standar satu prodi untuk ditambahkan bila belum ada. */
 export const bokStandarProdi = (pid) => BOK_STANDAR.map(([nama, sumber], i) => ({ id: `${pid}-BOK${i + 1}`, prodi: pid, kode: `BOK${i + 1}`, nama, sumber }));
+
+/** Kedalaman bahan kajian (level Bloom kognitif): nilai tengah (median atas) level CPL yang dibentuk BK itu, dibatasi level yang wajar pada semester tertinggi tempat BK diajarkan. Bila BK belum dipetakan ke CPL, dipakai CPL dari MK yang memuatnya. */
+export function kedalamanBk(S, b) {
+  const mkBk = (S.mk || []).filter(m => (m.bk || []).includes(b.id));
+  let ids = (b.cpl || []).slice();
+  if (!ids.length) mkBk.forEach(m => (m.cpl || []).forEach(c => { if (!ids.includes(c)) ids.push(c); }));
+  const cp = ids.map(id => (S.cpl || []).find(c => c.id === id)).filter(Boolean);
+  const nilai = cp.filter(c => c.ranah !== 'S').map(c => detect(c.teks, 'C')).filter(h => h && h.d === 'C').map(h => h.n).sort((a, b2) => a - b2);
+  if (!nilai.length) return cp.length ? 'C3' : '';
+  let n = nilai[Math.floor(nilai.length / 2)];
+  const smt = Math.max(0, ...mkBk.map(m => +m.smt || 0)); if (smt && ANJURAN_SMT[smt]) n = Math.min(n, ANJURAN_SMT[smt][1]);
+  return 'C' + Math.max(1, Math.min(6, n));
+}

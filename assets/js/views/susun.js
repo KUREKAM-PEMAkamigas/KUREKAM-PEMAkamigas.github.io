@@ -1,11 +1,11 @@
 /* KUREKAM · Penyusunan: Visi & PL, CPL, BoK & BK, Mata Kuliah */
-import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, addLog } from '../app.js';
+import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, addLog, toast } from '../app.js';
 import { labelKel, labelGrup, kodeBaruMk, usulKodeProdi, KODE_USULAN, awalPraktik } from '../kode.js';
 import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { detect, smtMinCpl, alasanOk } from '../bloom.js';
 import { badge } from '../bloom.js';
-import { kodeBerikut, tebakBok, bokStandarProdi, rencanaSelaras, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
+import { kodeBerikut, tebakBok, kedalamanBk, bokStandarProdi, rencanaSelaras, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
 import { tanya, head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
 
 const akadMkF = (m) => !/magang|tugas akhir/i.test(m.kel || '');
@@ -113,8 +113,10 @@ export function bkView(el) {
   const ed = can('susun');
   const bok = byProdi(S.bok, ctx.prodi), bk = byProdi(S.bk, ctx.prodi), mk = byProdi(S.mk, ctx.prodi), cpl = byProdi(S.cpl, ctx.prodi);
   const bkTanpa = bk.filter(b => !bok.some(x => x.id === b.bok));
+  const bkTanpaKed = bk.filter(b => !b.kedalaman);
   const sksBk = (b) => mk.filter(m => (m.bk || []).includes(b.id)).reduce((a, m) => a + sksOf(m) / Math.max(1, (m.bk || []).length), 0);
   el.innerHTML = `
+  ${ed && bkTanpaKed.length ? `<div class="ribbon info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>${bkTanpaKed.length} bahan kajian belum diberi kedalaman (level Bloom). Kedalaman = level tertinggi yang harus dicapai pada bahan kajian itu, diturunkan dari CPL yang dibentuknya.</span><button class="btn pri sm" id="ked-fix">${icon('spark')} Isi kedalaman otomatis</button></div>` : ''}
   ${ed && (bkTanpa.length || !bok.length) ? `<div class="ribbon bad" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>${!bok.length ? 'Prodi ini belum memiliki BoK.' : `${bkTanpa.length} bahan kajian belum dikaitkan ke BoK.`}</span><button class="btn pri sm" id="bok-fix">${icon('spark')} Kaitkan otomatis</button></div>` : ''}
   <div class="grid g-12">
     <div class="card">${head('Body of Knowledge', 'Peta keilmuan bidang (asosiasi, SKKNI, IABEE)', 'globe', '#6366f1', ed ? `<button class="btn sm" id="add-bok">${icon('plus')} BoK</button>` : '')}
@@ -138,6 +140,11 @@ export function bkView(el) {
     onSave: async (o) => { if (!o.nama) return 'Nama wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'bok', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('bok', o, `Simpan BoK ${o.kode}`); rerender(); },
     onDelete: x.id ? async () => { await remove('bok', x.id, `Hapus BoK ${x.kode}`); rerender(); } : null });
   if (ed) {
+    const kf = el.querySelector('#ked-fix'); if (kf) kf.onclick = async () => {
+      const ub = bkTanpaKed.map(b => ({ ...b, kedalaman: kedalamanBk(S, b) })).filter(b => b.kedalaman);
+      if (!ub.length) { toast('Belum ada CPL yang terkait bahan kajian. Pilih CPL pada bahan kajian dulu.'); return; }
+      await saveMany('bk', ub, `Isi kedalaman ${ub.length} bahan kajian otomatis`); rerender();
+    };
     const fx = el.querySelector('#bok-fix'); if (fx) fx.onclick = async () => {
       if (!bok.length) await saveMany('bok', bokStandarProdi(ctx.prodi));
       const ids = new Set(byProdi(S.bok, ctx.prodi).map(x => x.id)), ub = bkTanpa.map(b => { const id = `${ctx.prodi}-BOK${tebakBok(b.nama)}`; return { ...b, bok: ids.has(id) ? id : Array.from(ids)[0] }; });

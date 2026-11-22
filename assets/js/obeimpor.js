@@ -2,7 +2,7 @@
    Prodi cukup mengunggah berkas OBE yang sudah dimiliki; kode CPL, BK, MK, CPMK, dan Sub-CPMK dipakai apa adanya.
    Fungsi murni: tidak menyentuh S atau basis data. Hasilnya {data, rps, laporan} dipasang oleh pemanggil. */
 
-import { rencanaSelaras, byProdi, tebakBok } from './rules.js';
+import { rencanaSelaras, byProdi, tebakBok, kedalamanBk } from './rules.js';
 
 const s = (v) => String(v == null ? '' : v).replace(/ /g, ' ').trim();
 const num = (v) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
@@ -141,6 +141,9 @@ export function imporObe(X, wb, pid) {
     if (r.sub.length) konversi.push({ jenis: 'Sub-CPMK', lama: `${r.sub.length} kode`, baru: 'SUB-CPMK + nomor CPMK + urutan' });
     { const kc = konversi.filter(k => k.jenis === 'CPL'); if (kc.length) lap.push(`CPL diurutkan menurut ranah (Sikap, Pengetahuan, Keterampilan Umum, Keterampilan Khusus) lalu nomor unsur SN Dikti, dan dinomori ulang: ${kc.slice(0, 12).map(k => `${k.lama} menjadi ${k.baru}`).join(', ')}${kc.length > 12 ? ', dan lainnya' : ''}.`); }
   }
+
+  /* Kedalaman BK: level Bloom tertinggi dari CPL yang dibentuk BK (lembar 6 tidak memuatnya) */
+  { const S3 = { cpl, mk }; bk.forEach(b => { b.kedalaman = kedalamanBk(S3, b); }); if (bk.length) lap.push('Kedalaman bahan kajian diisi otomatis dari level Bloom tertinggi CPL yang dibentuknya. Periksa di menu BoK dan Bahan Kajian.'); }
 
   /* 17, 18. Teknik, minggu, dan bobot penilaian -> kerangka RPS */
   const teknik = {};

@@ -41,7 +41,7 @@ export default function bahanLedView(el) {
   const b = el.querySelector('#bl-b');
 
   if (tab === 'ringkas') {
-    const hint = O.angkatan ? `Wisuda PEM Akamigas umumnya bulan Juli. Angkatan ${esc(O.angkatan)} lulus Juli ${+O.angkatan + 4} bila masa studi empat tahun.` : 'Pilih angkatan pertama yang memakai kurikulum OBE (mis. 2023).';
+    const hint = O.angkatan ? `Wisuda PEM Akamigas umumnya bulan Juli. Angkatan ${esc(O.angkatan)} lulus Juli ${+O.angkatan + 4} bila masa studi empat tahun.` : 'Pilih angkatan pertama yang memakai kurikulum OBE (misalnya 2023).';
     b.innerHTML = `
     <div class="grid g4">${kpi('Tabel siap (A1–C2)', siap, 'dari 6 tabel utama', '#10b981', 'check')}${kpi('Rata-rata kesiapan', rata, 'persen, enam tabel utama', '#0ea5e9', 'pulse')}${kpi('OBE pertama', O.angkatan ? 'Angkatan ' + O.angkatan : '–', O.wisuda ? 'wisuda ' + O.wisuda : 'tanggal wisuda belum diisi', '#8b5cf6', 'flag')}${kpi('Lulusan OBE tercatat', O.lulusan, 'dari menu Lulusan dan tracer', '#f5a524', 'flag')}</div>
     <div class="card" style="margin-top:16px">${head('Kesiapan tabel suplemen', `Prodi ${esc(pid)}`, 'medal', '#8b5cf6', `<button class="btn sm pri" id="bl-x">${icon('download')} Unduh Excel semua tabel</button>`)}
@@ -70,7 +70,7 @@ export default function bahanLedView(el) {
     b.innerHTML = `<div class="card">${head('Status LED di SIMANTAP', 'Ringkasan dibaca dari SIMANTAP (hanya angka)', 'layers', '#0ea5e9')}<div id="bl-s" class="muted">Memuat…</div></div>`;
     (simLed ? Promise.resolve(simLed) : ledSimantap().then(r => (simLed = r))).then(rows => {
       const d = rows.find(x => x.id === pid), box = b.querySelector('#bl-s'); if (!box) return;
-      box.innerHTML = d ? `<div class="grid g4">${kpi('Aitem siap diaudit atau lebih', d.siap, 'dari ' + d.n + ' aitem', '#0ea5e9', 'check')}${kpi('Kelengkapan rata-rata', d.pctLengkap, 'persen', '#10b981', 'pulse')}${kpi('Temuan W atau D', (d.nilai.W || 0) + (d.nilai.D || 0), `A ${d.nilai.A || 0} · C ${d.nilai.C || 0}`, '#f0616d', 'alert')}${kpi('Final', d.per.final || 0, 'disahkan', '#8b5cf6', 'flag')}</div><div class="small muted" style="margin-top:8px">Diperbarui ${new Date(d.waktu).toLocaleString('id-ID')}. Rincian narasi dan bukti ada di <a href="${esc(APP_LAIN.simantap.url)}#/led" target="_blank" rel="noopener">SIMANTAP › LED IABEE</a>.</div>` : '<div class="empty">Belum ada ringkasan dari SIMANTAP untuk prodi ini. Muncul setelah prodi mengisi aitem LED di SIMANTAP.</div>';
+      box.innerHTML = d ? `<div class="grid g4">${kpi('Butir siap diaudit atau lebih', d.siap, 'dari ' + d.n + ' butir', '#0ea5e9', 'check')}${kpi('Kelengkapan rata-rata', d.pctLengkap, 'persen', '#10b981', 'pulse')}${kpi('Temuan W atau D', (d.nilai.W || 0) + (d.nilai.D || 0), `A ${d.nilai.A || 0} · C ${d.nilai.C || 0}`, '#f0616d', 'alert')}${kpi('Final', d.per.final || 0, 'disahkan', '#8b5cf6', 'flag')}</div><div class="small muted" style="margin-top:8px">Diperbarui ${new Date(d.waktu).toLocaleString('id-ID')}. Rincian narasi dan bukti ada di <a href="${esc(APP_LAIN.simantap.url)}#/led" target="_blank" rel="noopener">SIMANTAP › LED IABEE</a>.</div>` : '<div class="empty">Belum ada ringkasan dari SIMANTAP untuk prodi ini. Muncul setelah prodi mengisi butir LED di SIMANTAP.</div>';
       animateCounts(box);
     });
   } else {

@@ -20,7 +20,7 @@ export default function realisasiView(el) {
   if (!lihatRekap) tab = 'isi';
   const ilus = (S.real || []).some(r => r.prodi === pid && r.ilustratif);
   el.innerHTML = `
-  <div class="ribbon info">${icon('info')} <span>Menu ini merekam <b>hasil pembelajaran tiap mata kuliah sesuai RPS</b>: realisasi pertemuan dan metode, hasil per CPMK, hasil akhir, tautan bukti (soal, kisi-kisi, rubrik), serta evaluasi dan tindak lanjut. Itulah yang diminta auditor LAM Teknik (butir 15 dan 16) dan IABEE (aitem 2.1.3 dan 3.1.3). Isi <b>angka agregat dan tautan Drive saja</b>; nilai dan nama mahasiswa tidak disimpan di sini. Seluruh mata kuliah semua prodi diisi.</span></div>
+  <div class="ribbon info">${icon('info')} <span>Menu ini merekam <b>hasil pembelajaran tiap mata kuliah sesuai RPS</b>: realisasi pertemuan dan metode, hasil per CPMK, hasil akhir, tautan bukti (soal, kisi-kisi, rubrik), serta evaluasi dan tindak lanjut. Itulah yang diminta auditor LAM Teknik (butir 15 dan 16) dan IABEE (butir 2.1.3 dan 3.1.3). Isi <b>angka agregat dan tautan Drive saja</b>; nilai dan nama mahasiswa tidak disimpan di sini. Seluruh mata kuliah semua prodi diisi.</span></div>
   ${ilus ? `<div class="ribbon warn">${icon('info')} <span>Ada data <b>contoh ilustratif</b> untuk peragaan. Hapus dengan mengisi ulang atau menimpa isiannya sebelum dipakai sebagai bukti.</span></div>` : ''}
   ${lihatRekap ? `<div class="seg scroll" style="margin-bottom:14px">${[['isi', 'Isi per mata kuliah'], ['rekap', 'Rekap prodi']].map(([k, t]) => `<button class="${k === tab ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</div>` : ''}
   <div id="rl-b"></div>`;

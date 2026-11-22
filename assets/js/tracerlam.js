@@ -1,7 +1,7 @@
 /* KUREKAM · Tracer study dan survei pengguna dalam format LAM Teknik 2025 (butir 53 sampai 56).
    Hanya jumlah per kategori; tidak ada data individu. Rumus mengikuti lembar hitung instrumen LAM Teknik 2025 (STr). */
 
-export const ASPEK = [['etika', 'Etika'], ['keahlian', 'Keahlian'], ['bahasa', 'Bahasa'], ['ti', 'Teknologi Informasi'], ['komunikasi', 'Komunikasi'], ['kerjasama', 'Kerjasama'], ['diri', 'Pengembangan Diri']];
+export const ASPEK = [['etika', 'Etika'], ['keahlian', 'Keahlian'], ['bahasa', 'Bahasa'], ['ti', 'Teknologi Informasi'], ['komunikasi', 'Komunikasi'], ['kerjasama', 'Kerja sama'], ['diri', 'Pengembangan Diri']];
 export const NILAI = [['sb', 'Sangat baik'], ['b', 'Baik'], ['c', 'Cukup'], ['k', 'Kurang']];
 export const KAT = {
   wt: [['a', 'Kurang dari 3 bulan'], ['b', '3 sampai 6 bulan'], ['c', 'Lebih dari 6 bulan']],

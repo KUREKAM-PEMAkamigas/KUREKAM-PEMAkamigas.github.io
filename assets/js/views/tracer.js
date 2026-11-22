@@ -151,7 +151,7 @@ async function imporTracer(file, pid) {
 async function imporPengguna(file, pid) {
   const { rows, h } = await bacaTabel(file, /^tahun(lulus|kelulusan)/);
   const th0 = kolom(h, /^tahun(lulus|kelulusan)/);
-  const pat = { etika: /etika/, keahlian: /keahlian|bidangilmu/, bahasa: /bahasa/, ti: /teknologi|informasi/, komunikasi: /komunikasi/, kerjasama: /kerjasama|kerjatim|teamwork/, diri: /pengembangan/ };
+  const pat = { etika: /etika/, keahlian: /keahlian|bidangilmu/, bahasa: /bahasa/, ti: /teknologi|informasi/, komunikasi: /komunikasi/, kerjasama: /kerja ?sama|kerjatim|teamwork/, diri: /pengembangan/ };
   const col = Object.fromEntries(ASPEK.map(([id]) => [id, kolom(h, pat[id])]));
   if (Object.values(col).every(v => v < 0)) throw new Error('Kolom aspek (Etika, Keahlian, Bahasa, dst.) tidak ditemukan.');
   const per = {}; let tanpaTahun = 0;
@@ -193,7 +193,7 @@ async function instrumen(pid) {
     [9, 'Saran bagi prodi (isian bebas)', 'Teks']], [5, 70, 45]);
   add('Templat impor tracer', [['Tahun lulus', 'Waktu tunggu (bulan)', 'Kesesuaian bidang kerja', 'Tingkat tempat kerja'], [2025, 2, 'Tinggi', 'Nasional'], [2025, 5, 'Sedang', 'Wilayah', 'Contoh, hapus baris ini']], [12, 22, 24, 24]);
   add('Templat impor pengguna', [['Tahun lulus', ...ASPEK.map(a => a[1])], [2025, ...ASPEK.map(() => 'Baik'), 'Contoh, hapus baris ini']], [12, ...ASPEK.map(() => 16)]);
-  add('Petunjuk', [['Petunjuk'], ['1. Sebarkan pertanyaan lewat Google Form. Unduh tanggapan sebagai Excel atau CSV.'], ['2. Judul kolom boleh berbeda; yang dikenali: Tahun lulus, Waktu tunggu, Kesesuaian, Tingkat tempat kerja (tracer) dan Etika, Keahlian, Bahasa, Teknologi Informasi, Komunikasi, Kerjasama, Pengembangan Diri (pengguna).'], ['3. Impor lewat tombol Impor tanggapan tracer atau Impor survei pengguna. Berkas dihitung di peramban; yang disimpan hanya jumlah per kategori.'], ['4. Hapus kolom nama, NIM, dan kontak dari berkas sebelum diimpor. Aplikasi tidak menyimpannya.'], ['5. Tahun lulus harus sudah punya jumlah lulusan di tab Lulusan dan tracer; kalau belum, barisnya dilewati.'], ['6. LAM menghitung waktu tunggu dengan titik tengah 1,5; 4,5; dan 9 bulan untuk kelompok kurang dari 3, 3 sampai 6, dan lebih dari 6 bulan.']], [110]);
+  add('Petunjuk', [['Petunjuk'], ['1. Sebarkan pertanyaan lewat Google Form. Unduh tanggapan sebagai Excel atau CSV.'], ['2. Judul kolom boleh berbeda; yang dikenali: Tahun lulus, Waktu tunggu, Kesesuaian, Tingkat tempat kerja (tracer) dan Etika, Keahlian, Bahasa, Teknologi Informasi, Komunikasi, Kerja sama, Pengembangan Diri (pengguna).'], ['3. Impor lewat tombol Impor tanggapan tracer atau Impor survei pengguna. Berkas dihitung di peramban; yang disimpan hanya jumlah per kategori.'], ['4. Hapus kolom nama, NIM, dan kontak dari berkas sebelum diimpor. Aplikasi tidak menyimpannya.'], ['5. Tahun lulus harus sudah punya jumlah lulusan di tab Lulusan dan tracer; kalau belum, barisnya dilewati.'], ['6. LAM menghitung waktu tunggu dengan titik tengah 1,5; 4,5; dan 9 bulan untuk kelompok kurang dari 3, 3 sampai 6, dan lebih dari 6 bulan.']], [110]);
   unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `Instrumen_Tracer_${pid}.xlsx`);
 }
 

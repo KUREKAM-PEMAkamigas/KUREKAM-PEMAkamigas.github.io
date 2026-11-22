@@ -3,7 +3,7 @@
 
 export const UNSUR = ['Industri', 'Praktisi profesi', 'Asosiasi profesi', 'Pengguna lulusan', 'Alumni', 'Pemerintah', 'Akademisi atau peneliti'];
 export const LUAR = new Set(['Industri', 'Praktisi profesi', 'Asosiasi profesi', 'Pengguna lulusan', 'Pemerintah']);
-export const BENTUK = ['Rapat advisory board', 'FGD kurikulum', 'Lokakarya kurikulum', 'Kunjungan atau kuliah industri', 'Survei pemangku kepentingan'];
+export const BENTUK = ['Rapat dewan penasihat industri', 'FGD kurikulum', 'Lokakarya kurikulum', 'Kunjungan atau kuliah industri', 'Survei pemangku kepentingan'];
 export const OBJEK = ['Profil lulusan', 'CPL', 'Bahan kajian', 'Mata kuliah', 'CPMK dan RPS', 'Capstone', 'Praktik industri', 'Lainnya'];
 export const STATUS = { menunggu: 'Menunggu tanggapan', diterima: 'Diterima', sebagian: 'Diterima sebagian', ditolak: 'Tidak diterapkan' };
 
@@ -27,7 +27,7 @@ export function abRekap(S, pid) {
   const keProfil = d.masukan.filter(x => ['Profil lulusan', 'CPL'].includes(x.objek));
   const syarat = [
     { t: 'Ada anggota dari luar kampus (industri, praktisi, asosiasi profesi, pengguna lulusan, pemerintah)', ok: luar.length >= 3, ket: `${luar.length} anggota dari luar kampus, ${unsurLuar.size} unsur berbeda. Disarankan minimal 3 anggota.` },
-    { t: 'Penetapan advisory board terdokumentasi (SK atau surat tugas)', ok: d.anggota.some(x => x.tautan), ket: d.anggota.some(x => x.tautan) ? 'Ada tautan SK atau penetapan.' : 'Tempel tautan SK pada salah satu anggota.' },
+    { t: 'Penetapan dewan penasihat industri terdokumentasi (SK atau surat tugas)', ok: d.anggota.some(x => x.tautan), ket: d.anggota.some(x => x.tautan) ? 'Ada tautan SK atau penetapan.' : 'Tempel tautan SK pada salah satu anggota.' },
     { t: 'Pertemuan atau kegiatan dalam 12 bulan terakhir', ok: dalam12.length >= 1, ket: `${dalam12.length} kegiatan dalam 12 bulan terakhir${terakhir ? `, terakhir ${terakhir}` : ''}.` },
     { t: 'Setiap kegiatan punya bukti (notulen, daftar hadir, foto)', ok: d.pertemuan.length > 0 && !tanpaBukti.length, ket: d.pertemuan.length ? (tanpaBukti.length ? `${tanpaBukti.length} kegiatan belum ada tautan bukti.` : 'Semua kegiatan ada tautan bukti.') : 'Belum ada kegiatan tercatat.' },
     { t: 'Masukan industri tercatat dan semuanya sudah ditanggapi', ok: d.masukan.length > 0 && !belum.length, ket: d.masukan.length ? (belum.length ? `${belum.length} masukan masih menunggu tanggapan.` : `${d.masukan.length} masukan, semuanya sudah ditanggapi.`) : 'Belum ada masukan tercatat.' },

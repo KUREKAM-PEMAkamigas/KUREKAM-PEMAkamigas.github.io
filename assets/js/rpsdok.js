@@ -142,7 +142,7 @@ export function modelRps(m, r) {
     ['Bahan Kajian: Materi pembelajaran', r.bahan || (bk.length ? bk.map((b, i) => `${i + 1}. ${b}`).join('; ') : dots)],
     ...(r.pustakaPendukung ? [['Pustaka Utama', r.pustaka || dots], ['Pustaka Pendukung', r.pustakaPendukung]] : [['Pustaka', String(r.pustaka || '').trim() || dots]]),
     ['Dosen Pengampu', peng.join('; ') || dots],
-    ['Matakuliah syarat', r.syarat || syarat || '-'],
+    ['Mata kuliah syarat', r.syarat || syarat || '-'],
     ['Integrasi penelitian dan PKM', integ.join('\n') || dots],
   ];
   B.push({ k: 'tbl', w: [2600, 13200], sz: 20, rows: baris2.map(x => [{ t: `**${x[0]}**`, shade: 'F2F2F2' }, { t: x[1], al: /^(Deskripsi|Bahan)/.test(x[0]) ? 'j' : '' }]) });

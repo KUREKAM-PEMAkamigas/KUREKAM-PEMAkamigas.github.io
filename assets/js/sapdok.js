@@ -67,7 +67,7 @@ export function modelSap(m, r) {
     B.push({ k: 'br' });
     B.push(kepalaFormulir(k.p.nama, 'SATUAN ACARA PEMBELAJARAN (SAP)', 'sap', W, `Pertemuan ke-${x.m}: ${jd}`));
     B.push({ k: 'tbl', w: [LW, W - LW], sz: 18, rows: [
-      [lbl('Matakuliah'), m.nama], [lbl('Kode Matakuliah'), m.kode], [lbl('Pertemuan'), `Ke-${x.m} (SAP ${i + 1} dari ${k.pert.length})`], [lbl('Waktu'), waktuTeks()], [lbl('Dosen Pengampu'), peng],
+      [lbl('Mata Kuliah'), m.nama], [lbl('Kode Mata Kuliah'), m.kode], [lbl('Pertemuan'), `Ke-${x.m} (SAP ${i + 1} dari ${k.pert.length})`], [lbl('Waktu'), waktuTeks()], [lbl('Dosen Pengampu'), peng],
     ] });
 
     /* I. Sub-CPMK dan capaian */

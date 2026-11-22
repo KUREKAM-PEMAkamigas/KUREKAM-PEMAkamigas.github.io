@@ -199,7 +199,7 @@ export const ROUTES = [
   { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'lulusan', t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi', ic: 'medal', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: lulusanView },
   { id: 'skpi', t: 'SKPI Lulusan', sub: 'Surat pendamping ijazah dwibahasa', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: skpiView },
-  { id: 'advisory', t: 'Advisory Board Industri', sub: 'Bukti pelibatan praktisi', ic: 'link', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: advisoryView },
+  { id: 'advisory', t: 'Dewan Penasihat Industri', sub: 'Bukti pelibatan praktisi', ic: 'link', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: advisoryView },
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },

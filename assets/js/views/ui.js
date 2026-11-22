@@ -25,6 +25,8 @@ export const prodiName = () => { const p = S.prodi.find(x => x.id === ctx.prodi)
 export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete, wide, extra = '' }) {
   const f = fields.map(x => {
     const v = obj[x.k];
+    /* isian satu baris yang ternyata berisi baris baru dibuka sebagai kotak teks agar baris tidak menyatu */
+    if (!x.type && typeof v === 'string' && v.includes('\n')) x = { ...x, type: 'textarea', rows: Math.min(6, v.split('\n').length + 1) };
     let inp;
     if (x.type === 'textarea') inp = `<textarea class="inp" name="${x.k}" rows="${x.rows || 3}" placeholder="${esc(x.ph || '')}">${esc(v || '')}</textarea>`;
     else if (x.type === 'select') inp = `<select class="inp" name="${x.k}">${x.opts.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;

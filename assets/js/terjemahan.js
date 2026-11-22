@@ -13,13 +13,13 @@ const D_EN = {
   LG: 'oil and gas supply chain, storage, and distribution'
 };
 const CPL_EN = {
-  S1: 'Demonstrates a responsible attitude toward work in their field of expertise, independently, upholding safety and professional ethics.',
+  S1: 'Demonstrates a responsible attitude toward work in their field of expertise and independently upholds safety and professional ethics.',
   S2: 'Internalizes the spirit of independence, perseverance, entrepreneurship, and care for the environment in professional life.',
   P1: 'Explains the theoretical concepts of mathematics, science, and engineering that underlie {d}.',
   P2: 'Analyzes the working principles of equipment and processes in {d} based on industry standards.',
   KU1: 'Applies logical, critical, systematic, and innovative thinking in implementing technology in their field of expertise.',
   KU2: 'Makes appropriate decisions based on data analysis and works collaboratively in multidisciplinary teams.',
-  KK1: 'Operates the main equipment of {d} in accordance with standard procedures and occupational health and safety principles.',
+  KK1: 'Operates the main equipment used in {d} in accordance with standard procedures and occupational health and safety principles.',
   KK2: 'Analyzes technical problems in {d} using field data and engineering software.',
   KK3: 'Designs improvements or simple systems in the field of {d} considering realistic constraints, safety, and the environment.',
   KK4: 'Manages operation and maintenance work in the field of {d} in accordance with quality standards, occupational health, safety and environment (HSE) requirements, and oil and gas regulations.'
@@ -37,16 +37,16 @@ const MK_TEKS = `
 Pengantar Industri Migas dan Energi Terbarukan = Introduction to the Oil and Gas and Renewable Energy Industry
 Keselamatan dan Kesehatan Kerja (K3) = Occupational Health and Safety
 Praktik K3 = Occupational Health and Safety Practicum
-Kewarganegaraan = Civics
+Kewarganegaraan = Civic Education
 Pancasila = Pancasila
-Pancasila dan Kewarganegaraan = Pancasila and Civics
+Pancasila dan Kewarganegaraan = Pancasila and Civic Education
 Bahasa Indonesia = Indonesian Language
 Agama = Religion
 Agama dan Etika = Religion and Ethics
 Capstone Design I = Capstone Design I
 Capstone Design II = Capstone Design II
 Capstone Design III = Capstone Design III
-Magang Berdampak (inti) = Impactful Internship (core)
+Magang Berdampak (inti) = Impactful Internship (Core)
 Mata Kuliah Konversi Magang = Internship Conversion Course
 Tugas Akhir = Final Project
 Matematika Dasar = Basic Mathematics
@@ -129,6 +129,7 @@ Manajemen Operasi Kilang = Refinery Operations Management
 Energi Terbarukan dan Biorefinery = Renewable Energy and Biorefinery
 Pengendalian Mutu Produk = Product Quality Control
 Blending Produk BBM = Fuel Product Blending
+Pencampuran Produk BBM = Fuel Product Blending
 Praktik Pengolahan Gas = Gas Processing Practicum
 Praktik Utilitas = Utilities Practicum
 Praktik Terpadu TO 1 = Integrated Practicum TO 1
@@ -160,10 +161,12 @@ Sistem Kontrol Proses = Process Control Systems
 Jaringan Komunikasi Industri = Industrial Communication Networks
 Elemen Kontrol Akhir = Final Control Elements
 Distributed Control System = Distributed Control System
-Analisa Instrumen (Analyzer) = Instrument Analysis (Analyzer)
+Analisa Instrumen (Analyzer) = Analytical Instrumentation (Analyzers)
+Analisis Instrumen (Analyzer) = Analytical Instrumentation (Analyzers)
 Sistem Instrumentasi Keselamatan = Safety Instrumented Systems
 Praktik Instrumentasi Proses = Process Instrumentation Practicum
 Tuning Pengendali = Controller Tuning
+Penalaan Pengendali = Controller Tuning
 Keamanan Siber Industri = Industrial Cybersecurity
 Manajemen Pemeliharaan Instrumen = Instrument Maintenance Management
 SCADA dan HMI = SCADA and HMI
@@ -239,7 +242,8 @@ Perencanaan Distribusi BBM = Fuel Distribution Planning
 Kepabeanan dan Perdagangan = Customs and Trade
 Logistik Hijau = Green Logistics
 Analitik Data Logistik = Logistics Data Analytics
-Losses Control Migas = Oil and Gas Losses Control
+Losses Control Migas = Oil and Gas Loss Control
+Pengendalian Susut Migas = Oil and Gas Loss Control
 Simulasi Sistem Logistik = Logistics System Simulation
 Manajemen Armada = Fleet Management
 Praktik Pergudangan = Warehousing Practicum
@@ -278,7 +282,7 @@ const CPL_INDEX = (() => {
       if (pd.id === 'LG' && k === 'KK3') id = 'Mampu membuat rancangan sistem logistik migas yang efisien dengan mempertimbangkan biaya, keselamatan, dan lingkungan.';
       const en = CPL_EN[k].replace('{d}', D_EN[pd.id] || '');
       if (pd.id === 'TM' && k === 'P1') m.set(kunci(id), { en: 'Understands the theoretical concepts of mathematics, science, and engineering that underlie ' + D_EN.TM + '.', s: SING[k][0], se: SING[k][1] });
-      else if (pd.id === 'LG' && k === 'KK3') m.set(kunci(id), { en: 'Is able to produce efficient oil and gas logistics system designs considering cost, safety, and the environment.', s: SING[k][0], se: SING[k][1] });
+      else if (pd.id === 'LG' && k === 'KK3') m.set(kunci(id), { en: 'Is able to design efficient oil and gas logistics systems, taking into account cost, safety, and the environment.', s: SING[k][0], se: SING[k][1] });
       else m.set(kunci(id), { en, s: SING[k][0], se: SING[k][1] });
     });
   });

@@ -91,7 +91,7 @@ export function periksaRps(m, r) {
   const ni = integrasiOf(r);
   const ri = ringkasIntegrasi(S, m, r);
   add('ok', 'Integrasi penelitian dan PKM', ni ? `${ni} pertemuan terintegrasi` : 'Tidak ada integrasi (opsional)', 'Tidak semua mata kuliah perlu terintegrasi. Bila ada, pilih penelitian atau PKM dari daftar di pertemuan terkait.', AC.integ);
-  if (ri.bad.length || ri.near.length) add('near', 'Kecocokan integrasi dengan materi', ri.bad.length ? `Belum nyambung di pertemuan ${ri.bad.map(x => x.m).join(', ')}` : `Perlu dicek di pertemuan ${ri.near.map(x => x.m).join(', ')}`, 'Pilih penelitian atau PKM yang topiknya sesuai materi pertemuan, atau tulis kaitannya di kolom Kaitan dengan materi.', AC.integ);
+  if (ri.bad.length || ri.near.length) add('near', 'Kecocokan integrasi dengan materi', ri.bad.length ? `Belum sesuai di pertemuan ${ri.bad.map(x => x.m).join(', ')}` : `Perlu dicek di pertemuan ${ri.near.map(x => x.m).join(', ')}`, 'Pilih penelitian atau PKM yang topiknya sesuai materi pertemuan, atau tulis kaitannya di kolom Kaitan dengan materi.', AC.integ);
   const aktif = non.some(p => /kasus|case|proyek|project|problem|pbl|praktik|praktikum|simulasi/i.test(`${p.metode} ${p.tatap || ''}`));
   add(aktif ? 'ok' : 'near', 'Pembelajaran aktif', aktif ? 'Ada metode kasus, proyek, atau praktik' : 'Belum ada metode kasus, proyek, atau praktik', aktif ? '' : 'Masukkan case method, team-based project, atau praktik terbimbing pada beberapa pertemuan.', AC.vokasi);
   const sap = non.filter(p => !(p.sap && String(p.sap.inti || '').trim())).length;

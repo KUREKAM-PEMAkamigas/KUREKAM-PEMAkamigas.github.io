@@ -37,26 +37,26 @@ function tRingkas(el, pid, p, ed, R) {
   <div class="card" style="margin-top:18px">${head(`Syarat bukti · ${pid}`, `${R.ok} dari ${R.syarat.length} syarat terpenuhi`, 'check', '#10b981', ed && demo && kosong ? `<button class="btn sm" id="ab-ct">${icon('spark')} Muat contoh ilustratif</button>` : '')}
     <div class="ind-list">${R.syarat.map(x => `<div class="ind ${x.ok ? 'ok' : 'bad'}"><span class="ind-no">${x.ok ? '✓' : '–'}</span><div><b>${esc(x.t)}</b><div class="small muted">${esc(x.ket)}</div></div>${stTag(x.ok ? 'ok' : 'bad', x.ok ? 'Terpenuhi' : 'Belum')}</div>`).join('')}</div></div>
   <div class="card" style="margin-top:18px">${head('Alur yang dibuktikan', 'Dari industri sampai perubahan kurikulum', 'loop', '#6366f1')}
-    <div class="small" style="line-height:1.6">① Advisory board ditetapkan (tab Anggota) → ② bertemu atau diundang dalam FGD dan lokakarya (tab Kegiatan) → ③ masukan dicatat per objek: profil lulusan, CPL, bahan kajian, mata kuliah, capstone (tab Masukan) → ④ prodi menanggapi: diterima, sebagian, atau tidak diterapkan dengan alasan → ⑤ yang diterima dihubungkan ke <b>Revisi dan Pengesahan</b> sampai disahkan Wadir 1. Ringkasannya dikirim ke SIMANTAP sebagai bukti.</div></div>`;
+    <div class="small" style="line-height:1.6">① Dewan penasihat industri ditetapkan (tab Anggota) → ② bertemu atau diundang dalam FGD dan lokakarya (tab Kegiatan) → ③ masukan dicatat per objek: profil lulusan, CPL, bahan kajian, mata kuliah, capstone (tab Masukan) → ④ prodi menanggapi: diterima, sebagian, atau tidak diterapkan dengan alasan → ⑤ yang diterima dihubungkan ke <b>Revisi dan Pengesahan</b> sampai disahkan Wadir 1. Ringkasannya dikirim ke SIMANTAP sebagai bukti.</div></div>`;
   animateCounts(el);
-  const c = el.querySelector('#ab-ct'); if (c) c.onclick = async () => { await saveMany('ab', contoh(pid), `Muat contoh advisory board ilustratif ${pid}`); toast('Contoh ilustratif dimuat'); rerender(); };
+  const c = el.querySelector('#ab-ct'); if (c) c.onclick = async () => { await saveMany('ab', contoh(pid), `Muat contoh dewan penasihat industri ilustratif ${pid}`); toast('Contoh ilustratif dimuat'); rerender(); };
 }
 
 function tAnggota(el, pid, p, ed, R) {
-  el.innerHTML = `<div class="card">${head('Anggota advisory board · ' + pid, 'Industri, praktisi profesi, asosiasi, pengguna lulusan. Klik baris untuk mengubah.', 'user', '#0ea5e9', ed ? `<button class="btn pri sm" id="ab-add">${icon('plus')} Tambah anggota</button>` : ro())}
+  el.innerHTML = `<div class="card">${head('Anggota dewan penasihat industri · ' + pid, 'Industri, praktisi profesi, asosiasi, pengguna lulusan. Klik baris untuk mengubah.', 'user', '#0ea5e9', ed ? `<button class="btn pri sm" id="ab-add">${icon('plus')} Tambah anggota</button>` : ro())}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Unsur</th><th>Nama atau inisial</th><th>Bidang keahlian</th><th>Instansi</th><th>Sejak</th><th>SK</th></tr></thead><tbody>
     ${R.anggota.map(x => `<tr class="${ed ? 'click' : ''}" data-id="${esc(x.id)}"><td>${esc(x.unsur)}</td><td><b>${esc(x.nama || '–')}</b>${x.ilustratif ? ' <span class="small muted">(contoh)</span>' : ''}</td><td>${esc(x.bidang || '')}</td><td>${esc(x.instansi || '')}</td><td>${esc(x.sejak || '')}</td><td>${tautan(x.tautan)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Belum ada anggota.</td></tr>'}
     </tbody></table></div></div>`;
   if (!ed) return;
-  const form = (x) => formDrawer({ title: x.id ? 'Ubah anggota' : 'Anggota advisory board', sub: pid, obj: x,
+  const form = (x) => formDrawer({ title: x.id ? 'Ubah anggota' : 'Anggota dewan penasihat industri', sub: pid, obj: x,
     fields: [{ k: 'unsur', label: 'Unsur', type: 'select', opts: opt(UNSUR) }, { k: 'nama', label: 'Nama atau inisial dan jabatan', ph: 'Mis. Bapak A.S., GM Operasi' }, { k: 'bidang', label: 'Bidang keahlian' }, { k: 'instansi', label: 'Instansi atau perusahaan' }, { k: 'sejak', label: 'Sejak (tahun)', ph: '2026' },
       { k: 'tautan', label: 'Tautan SK atau surat penetapan di Google Drive (opsional)', full: true, ph: 'https://drive.google.com/…' }],
     onSave: async (o) => {
       if (!String(o.nama || '').trim()) return 'Nama atau inisial wajib diisi.'; if (!httpsOk(o.tautan)) return 'Tautan harus diawali https://';
       const d = { ...o, id: x.id || baru(pid, 'anggota'), jenis: 'anggota', prodi: pid, unsur: o.unsur || UNSUR[0], tgl: today() }; delete d.ilustratif;
-      await save('ab', d, `Simpan anggota advisory board ${pid}`); rerender();
+      await save('ab', d, `Simpan anggota dewan penasihat industri ${pid}`); rerender();
     },
-    onDelete: x.id ? async () => { await remove('ab', x.id, `Hapus anggota advisory board ${pid}`); rerender(); } : null });
+    onDelete: x.id ? async () => { await remove('ab', x.id, `Hapus anggota dewan penasihat industri ${pid}`); rerender(); } : null });
   el.querySelector('#ab-add').onclick = () => form({ unsur: UNSUR[0] });
   el.querySelectorAll('[data-id]').forEach(r => r.onclick = (e) => { if (e.target.closest('a')) return; form({ ...S.ab.find(x => x.id === r.dataset.id) }); });
 }
@@ -74,9 +74,9 @@ function tPertemuan(el, pid, p, ed, R) {
     onSave: async (o) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(o.tgl || ''))) return 'Tanggal wajib diisi.'; if (o.hadir != null && (o.hadir < 0 || !Number.isInteger(o.hadir))) return 'Jumlah peserta harus bilangan bulat tidak negatif.'; if (!httpsOk(o.tautan)) return 'Tautan harus diawali https://';
       const d = { ...o, id: x.id || baru(pid, 'pertemuan'), jenis: 'pertemuan', prodi: pid, bentuk: o.bentuk || BENTUK[0] }; delete d.ilustratif;
-      await save('ab', d, `Simpan kegiatan advisory board ${pid}`); rerender();
+      await save('ab', d, `Simpan kegiatan dewan penasihat industri ${pid}`); rerender();
     },
-    onDelete: x.id ? async () => { await remove('ab', x.id, `Hapus kegiatan advisory board ${pid}`); rerender(); } : null });
+    onDelete: x.id ? async () => { await remove('ab', x.id, `Hapus kegiatan dewan penasihat industri ${pid}`); rerender(); } : null });
   el.querySelector('#ab-add').onclick = () => form({ tgl: today(), bentuk: BENTUK[0] });
   el.querySelectorAll('[data-id]').forEach(r => r.onclick = (e) => { if (e.target.closest('a')) return; form({ ...S.ab.find(x => x.id === r.dataset.id) }); });
 }
@@ -106,12 +106,12 @@ function tMasukan(el, pid, p, ed, R) {
       if (rid === '__baru') {
         if (!['diterima', 'sebagian'].includes(st)) return 'Usulan revisi baru hanya untuk masukan yang diterima atau diterima sebagian.';
         const n = Math.max(0, ...S.revisi.map(r => +(String(r.id).match(/^REV-(\d+)$/) || [0, 0])[1])) + 1; rid = `REV-${String(n).padStart(3, '0')}`;
-        await save('revisi', { id: rid, prodi: pid, objek: o.objek === 'CPL' ? 'CPL' : /Mata kuliah|CPMK|Capstone|Praktik/.test(o.objek) ? 'Mata kuliah' : o.objek, uraian: String(o.uraian).trim().slice(0, 240), alasan: 'Masukan advisory board industri' + (o.tanggapan ? '. ' + o.tanggapan : ''), oleh: `Tim Kurikulum ${pid}`, tgl: today(), status: 'menunggu', putusan: '' }, `Usulan revisi ${rid} dari masukan advisory board ${pid}`);
+        await save('revisi', { id: rid, prodi: pid, objek: o.objek === 'CPL' ? 'CPL' : /Mata kuliah|CPMK|Capstone|Praktik/.test(o.objek) ? 'Mata kuliah' : o.objek, uraian: String(o.uraian).trim().slice(0, 240), alasan: 'Masukan dewan penasihat industri industri' + (o.tanggapan ? '. ' + o.tanggapan : ''), oleh: `Tim Kurikulum ${pid}`, tgl: today(), status: 'menunggu', putusan: '' }, `Usulan revisi ${rid} dari masukan dewan penasihat industri ${pid}`);
       }
       const d = { ...o, id: x.id || baru(pid, 'masukan'), jenis: 'masukan', prodi: pid, status: st, revisiId: rid, objek: o.objek || OBJEK[0] }; delete d.ilustratif;
-      await save('ab', d, `Simpan masukan advisory board ${pid}`); rerender();
+      await save('ab', d, `Simpan masukan dewan penasihat industri ${pid}`); rerender();
     },
-    onDelete: x.id ? async () => { await remove('ab', x.id, `Hapus masukan advisory board ${pid}`); rerender(); } : null });
+    onDelete: x.id ? async () => { await remove('ab', x.id, `Hapus masukan dewan penasihat industri ${pid}`); rerender(); } : null });
   el.querySelector('#ab-add').onclick = () => form({ tgl: today(), status: 'menunggu', objek: OBJEK[0] });
   el.querySelectorAll('[data-id]').forEach(r => r.onclick = () => form({ ...S.ab.find(x => x.id === r.dataset.id) }));
 }

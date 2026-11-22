@@ -7,12 +7,14 @@ import { htmlBlok, CATATAN_JUDUL } from './rpsdok.js';
 import { kriteriaPi, iabeeOf } from './rules.js';
 import { teknikDari } from './rubrik.js';
 import { APP } from './config.js';
-import { konteksMk, bloomDari, bobotRingkas, bobotSubPenuh, bobotCpmk, rentang, daftarPustaka, tahunDari, pc, namaBerkas, KOTA, RANAH_NAMA, cplSingkat, pendek } from './dokbantu.js';
+import { konteksMk, bloomDari, bobotRingkas, bobotSubPenuh, bobotCpmk, rentang, daftarPustaka, tahunDari, pc, namaBerkas, RANAH_NAMA, cplSingkat, BIRU, ABU, BELUM, isiAtau, kepalaFormulir, statusDok } from './dokbantu.js';
+import { acpEfektif } from './dokgen.js';
+import { tglPanjang } from './sapdok.js';
 
 export const namaBerkasAcp = (m) => namaBerkas('ACP', m);
-const GEL = '1F3864', PUTIH = 'FFFFFF', ABU = 'F2F2F2', W = 9638;
+const W = 9638;
 const WARNA = { 1: 'DCE6F1', 2: 'E2EFDA', 3: 'FFF2CC', 4: 'FCE4D6', 5: 'F8CBAD', 6: 'F4B6B6' };
-const kepala = (arr) => arr.map(t => ({ t: `**${t}**`, shade: GEL, color: PUTIH, al: 'c' }));
+const kepala = (arr) => arr.map(t => ({ t: `**${t}**`, shade: BIRU, al: 'c' }));
 const sebagaiMampu = (t) => String(t || '').replace(/\.$/, '').replace(/^Mampu\s+/i, '').replace(/^./, c => c.toUpperCase());
 
 export function modelAcp(m, r) {
@@ -28,28 +30,27 @@ export function modelAcp(m, r) {
   const lvl = (b) => (b ? `${b.code} — ${b.nama}` : '-');
   const bk = (m.bk || []).map(id => (S.bk.find(b => b.id === id) || {}).nama).filter(Boolean);
   const sks = `${k.T ? k.T + ' SKS Teori' : ''}${k.T && k.Pr ? ' + ' : ''}${k.Pr ? k.Pr + ' SKS Praktik' : ''}`;
-  const peng = k.pengampu.join('; ') || '..............................';
+  const peng = k.pengampu.join('; ') || '(dosen pengampu belum ditetapkan)';
+  const ef = acpEfektif(m, r), status = statusDok(r && r.acpStatus, tglPanjang(r && r.acpTgl), r && r.acpOleh);
+  const nm = (v) => ({ t: `\n\n\n${v}`, al: 'c', va: 'bottom' });
 
-  /* Sampul */
-  B.push({ k: 'img', img: { w: 300, h: 363 }, sb: 200 });
-  B.push({ k: 'p', t: '**POLITEKNIK ENERGI DAN MINERAL AKAMIGAS**', al: 'c', sz: 28, sa: 20 });
-  B.push({ k: 'p', t: `**PROGRAM STUDI ${String(k.p.nama).toUpperCase()}**`, al: 'c', sz: 24, sa: 20 });
-  B.push({ k: 'p', t: 'Jenjang Sarjana Terapan (D-IV) | KKNI Level 6', al: 'c', sz: 20, sa: 360 });
-  B.push({ k: 'p', t: '**ANALISIS CAPAIAN PEMBELAJARAN (ACP)**', al: 'c', sz: 36, sa: 200 });
-  B.push({ k: 'p', t: 'Mata Kuliah', al: 'c', sz: 24, sa: 40 });
-  B.push({ k: 'p', t: `**${String(m.nama).toUpperCase()}**`, al: 'c', sz: 34, sa: 40 });
-  B.push({ k: 'p', t: `Kode: ${m.kode} | Semester ${m.smt} | ${sks}`, al: 'c', sz: 22, sa: 360 });
-  B.push({ k: 'tbl', w: [2600, W - 2600], sz: 20, rows: [
-    [{ t: '**Dosen Pengembang**', shade: ABU }, peng], [{ t: '**Kurikulum**', shade: ABU }, `Kurikulum ${APP.tahunKurikulum}`],
-    [{ t: '**Dasar Hukum**', shade: ABU }, 'SN Dikti (lihat Bagian 9)'], [{ t: '**Tahun Penyusunan**', shade: ABU }, tahun],
+  /* Kepala formulir dan otorisasi (bentuk mengikuti RPS FM-BPPAK) */
+  B.push(kepalaFormulir(k.p.nama, 'ANALISIS CAPAIAN PEMBELAJARAN (ACP)', 'acp'));
+  B.push({ k: 'tbl', w: [3000, W - 3000], sz: 20, rows: [
+    [{ t: '**Mata Kuliah**', shade: ABU }, `**${m.nama}**  (${m.kode})`], [{ t: '**Kurikulum**', shade: ABU }, `Kurikulum ${APP.tahunKurikulum}`], [{ t: '**Tahun Penyusunan**', shade: ABU }, tahun], [{ t: '**Status Dokumen**', shade: ABU }, status],
   ] });
-  B.push({ k: 'p', t: `${KOTA}, ${tahun}`, al: 'c', sz: 20, sb: 240 });
+  B.push({ k: 'p', t: '', sz: 8, sa: 60 });
+  B.push({ k: 'tbl', w: [3212, 3213, 3213], sz: 20, rows: [
+    [{ t: '**OTORISASI / PENGESAHAN**', span: 3, al: 'c', shade: BIRU }],
+    [{ t: '**Dosen Pengembang ACP**', al: 'c' }, { t: '**Koordinator RMK**', al: 'c' }, { t: '**Ka Prodi**', al: 'c' }],
+    [nm(k.pengampu.join('\n') || '(dosen pengampu belum ditetapkan)'), nm(k.koor || '(belum ditetapkan)'), nm(k.kaprodi || '(nama Ketua Program Studi belum diisi)')],
+  ] });
 
   /* 1. Identitas */
-  B.push({ k: 'h', lvl: 1, t: '1. Identitas Mata Kuliah dan Konteks Kurikulum', pb: true });
-  B.push({ k: 'p', t: `Mata kuliah ${m.nama} merupakan bagian dari struktur kurikulum Program Studi ${k.p.nama} Politeknik Energi dan Mineral Akamigas (PEM Akamigas), dibebankan ${sks} pada semester ${m.smt}. ACP ini memetakan secara utuh hubungan capaian pembelajaran lulusan (CPL), capaian pembelajaran mata kuliah (CPMK), Sub-CPMK, penilaian, dan indikator kinerja pada mata kuliah ini, sehingga kesesuaiannya dapat diperiksa untuk keperluan penjaminan mutu dan akreditasi.` });
+  B.push({ k: 'h', lvl: 1, t: '1. Identitas Mata Kuliah dan Konteks Kurikulum' });
+  B.push({ k: 'p', t: ef.pengantar });
   B.push({ k: 'tbl', w: [3000, W - 3000], sz: 20, rows: [
-    [{ t: '**IDENTITAS MATA KULIAH**', span: 2, shade: GEL, color: PUTIH, al: 'c' }],
+    [{ t: '**IDENTITAS MATA KULIAH**', span: 2, shade: BIRU, al: 'c' }],
     ['Nama Mata Kuliah', m.nama], ['Kode Mata Kuliah', m.kode], ['Program Studi', k.p.nama], ['Jenjang / Level KKNI', 'Sarjana Terapan (D-IV) / Level 6'],
     ['Institusi', 'Politeknik Energi dan Mineral Akamigas (PEM Akamigas)'], ['Semester', String(m.smt)], ['Bobot SKS', sks],
     ['CPL yang Dibebankan', k.cpl.map(c => `${cplSingkat(c)} (${RANAH_NAMA[c.ranah] || c.ranah})`).join('\n') || '-'],
@@ -87,11 +88,11 @@ export function modelAcp(m, r) {
   B.push({ k: 'p', t: 'Diagram dibaca dari atas ke bawah: CPL sebagai puncak, CPMK sebagai turunannya, dan Sub-CPMK sebagai kemampuan tahapan yang bermuara pada CPMK. Pada setiap Sub-CPMK tercantum level Bloom, pertemuan, dan bobot penilaian.' });
   const maks = Math.max(1, ...cpmkUrut.map(c => subUrut.filter(s => s.cpmk === c.id).length));
   const wKol = Math.floor((W - 1900) / maks), wd = [1900, ...Array(maks).fill(wKol)]; wd[wd.length - 1] += W - wd.reduce((a, b) => a + b, 0);
-  const rowsD = [[{ t: `**${k.cpl.map(c => `${cplSingkat(c)} (${RANAH_NAMA[c.ranah] || c.ranah})`).join('   |   ') || 'CPL'}**\n${k.cpl.map(c => pendek(c.teks, 110)).join('\n')}`, span: maks + 1, shade: GEL, color: PUTIH, al: 'c' }]];
+  const rowsD = [[{ t: `**${k.cpl.map(c => `${cplSingkat(c)} (${RANAH_NAMA[c.ranah] || c.ranah})`).join('   |   ') || 'CPL'}**\n${k.cpl.map(c => c.teks).join('\n')}`, span: maks + 1, shade: BIRU, al: 'c' }]];
   cpmkUrut.forEach(c => {
     const ss = subUrut.filter(s => s.cpmk === c.id);
-    rowsD.push([{ t: `**${c.kode}**\n${pendek(c.teks, 90)}\nBobot ${pc(bCpmk.get(c.id) || 0)}`, shade: '2F5597', color: PUTIH, al: 'c', va: 'center', sz: 17 },
-      ...Array.from({ length: maks }, (_, i) => { const s = ss[i]; if (!s) return ''; const b = levelSub(s); return { t: `**${s.kode}**\n${lvl(b)}\n${pendek(s.teks.replace(/^Mampu\s+/i, ''), 60)}\n${rentang(mgSub(s.id))} | ${pc(bPenuh.get(s.id) || 0)}`, shade: WARNA[(b && b.n) || 1] || 'FFFFFF', al: 'c', sz: 16 }; })]);
+    rowsD.push([{ t: `**${c.kode}**\n${c.teks}\n**Bobot ${pc(bCpmk.get(c.id) || 0)}**`, shade: ABU, al: 'c', va: 'center', sz: 17 },
+      ...Array.from({ length: maks }, (_, i) => { const s = ss[i]; if (!s) return ''; const b = levelSub(s); return { t: `**${s.kode}**\n${lvl(b)}\n${s.teks.replace(/^Mampu\s+/i, '')}\n**${rentang(mgSub(s.id))} | ${pc(bPenuh.get(s.id) || 0)}**`, shade: WARNA[(b && b.n) || 1] || 'FFFFFF', al: 'c', sz: 16 }; })]);
   });
   B.push({ k: 'tbl', w: wd, sz: 18, rows: rowsD });
   B.push({ k: 'p', t: 'Warna sel Sub-CPMK menunjukkan level Bloom: biru muda (C1), hijau (C2), kuning (C3), jingga muda (C4), jingga (C5), merah muda (C6).', sz: 17, i: true, al: 'l' });
@@ -103,7 +104,7 @@ export function modelAcp(m, r) {
   const rowsM = subUrut.map(s => {
     const c = S.cpmk.find(x => x.id === s.cpmk) || {}, wk = k.pert.filter(x => !x.ujian && (x.sub || []).includes(s.id));
     const instr = Array.from(new Set(wk.filter(x => +x.bobot > 0).map(x => String(x.asesmen || '').replace(/^Kriteria:.*?Teknik:\s*/is, '').trim()).filter(Boolean)));
-    return [{ t: cplDariCpmk(c).map(cplSingkat).join('\n') || '-', al: 'c' }, { t: c.kode || '-', al: 'c' }, { t: `**${s.kode}**`, al: 'c' }, pendek(sebagaiMampu(s.teks), 110), instr.join('; ') || 'Formatif (tanpa bobot)', { t: rubrikId(instr.join(' ')), al: 'c' }, { t: rentang(wk.map(x => x.m)), al: 'c' }, { t: pc(bSub.get(s.id) || 0), al: 'c' }, { t: (levelSub(s) || {}).code || '-', al: 'c' }];
+    return [{ t: cplDariCpmk(c).map(cplSingkat).join('\n') || '-', al: 'c' }, { t: c.kode || '-', al: 'c' }, { t: `**${s.kode}**`, al: 'c' }, sebagaiMampu(s.teks), instr.join('; ') || 'Formatif (tanpa bobot)', { t: rubrikId(instr.join(' ')), al: 'c' }, { t: rentang(wk.map(x => x.m)), al: 'c' }, { t: pc(bSub.get(s.id) || 0), al: 'c' }, { t: (levelSub(s) || {}).code || '-', al: 'c' }];
   });
   ujian.forEach(x => { const ss = (x.sub || []).map(id => (S.sub.find(q => q.id === id) || {}).kode).filter(Boolean); rowsM.push([{ t: '', al: 'c' }, '', { t: ss.length ? `${ss[0]} s.d. ${ss[ss.length - 1]}` : '-', al: 'c' }, `${x.ujian === 'UTS' ? 'Evaluasi Tengah Semester (UTS)' : 'Evaluasi Akhir Semester (UAS)'}, mencakup ${ss.length} Sub-CPMK`, String(x.asesmen || ''), { t: rubrikId(`${x.asesmen || ''} tes tulis`), al: 'c' }, { t: `Mg ${x.m}`, al: 'c' }, { t: pc(x.bobot), al: 'c' }, { t: '—', al: 'c' }]); });
   const totM = k.pert.reduce((a, x) => a + (+x.bobot || 0), 0);
@@ -117,7 +118,7 @@ export function modelAcp(m, r) {
   /* 7. Distribusi bobot */
   B.push({ k: 'h', lvl: 1, t: '7. Distribusi Bobot Penilaian' });
   B.push({ k: 'p', t: `Distribusi bobot selaras dengan RPS. Total bobot ${pc(totM)}${Math.abs(totM - 100) < 0.05 ? ' (memenuhi 100%)' : ', seharusnya 100%'}.` });
-  const rowsB = k.pert.filter(x => +x.bobot > 0).map(x => [x.ujian ? (x.ujian === 'UTS' ? 'Ujian Tengah Semester (UTS)' : 'Ujian Akhir Semester (UAS)') : `${pendek(String(x.asesmen || '').replace(/^Kriteria:.*?Teknik:\s*/is, ''), 70)} (Pertemuan ${x.m})`, { t: pc(x.bobot), al: 'c' }, (x.sub || []).map(id => (S.sub.find(q => q.id === id) || {}).kode).filter(Boolean).join(', ') || '-']);
+  const rowsB = k.pert.filter(x => +x.bobot > 0).map(x => [x.ujian ? (x.ujian === 'UTS' ? 'Ujian Tengah Semester (UTS)' : 'Ujian Akhir Semester (UAS)') : `${String(x.asesmen || '').replace(/^Kriteria:.*?Teknik:\s*/is, '').trim() || BELUM} (Pertemuan ${x.m})`, { t: pc(x.bobot), al: 'c' }, (x.sub || []).map(id => (S.sub.find(q => q.id === id) || {}).kode).filter(Boolean).join(', ') || '-']);
   B.push({ k: 'tbl', w: [4400, 1200, W - 5600], sz: 19, rows: [kepala(['Komponen Penilaian', 'Bobot (%)', 'Cakupan Sub-CPMK']), ...rowsB, [{ t: '**TOTAL BOBOT PENILAIAN**' }, { t: `**${pc(totM)}**`, al: 'c' }, '']] });
 
   /* 8. Target ketercapaian CPL dan PI */
@@ -136,14 +137,20 @@ export function modelAcp(m, r) {
     ] });
   } else B.push({ k: 'p', t: 'Belum ada indikator kinerja (PI) yang dihubungkan ke CPMK mata kuliah ini. Hubungkan pada menu Indikator Kinerja.', i: true, al: 'l', sz: 19 });
 
-  /* 9. Landasan dan referensi */
-  B.push({ k: 'h', lvl: 1, t: '9. Landasan dan Referensi' });
-  B.push({ k: 'p', t: '**9.1 Landasan hukum**', al: 'l', sa: 40 });
+  /* 9. Analisis kesesuaian dan tindak lanjut (dihitung dari RPS dan kurikulum; dapat disunting dosen sebelum disahkan) */
+  B.push({ k: 'h', lvl: 1, t: '9. Analisis Kesesuaian dan Tindak Lanjut' });
+  B.push({ k: 'p', t: '**9.1 Temuan analisis**', al: 'l', sa: 40 });
+  ef.analisis.split(/\n+/).filter(Boolean).forEach(t => B.push({ k: 'p', t, ind: 360, hang: 360, al: 'l', sa: 30 }));
+  B.push({ k: 'p', t: '**9.2 Rekomendasi tindak lanjut**', al: 'l', sb: 100, sa: 40 });
+  ef.rekomendasi.split(/\n+/).filter(Boolean).forEach(t => B.push({ k: 'p', t, ind: 360, hang: 360, al: 'l', sa: 30 }));
+
+  /* 10. Landasan dan referensi */
+  B.push({ k: 'h', lvl: 1, t: '10. Landasan dan Referensi' });
+  B.push({ k: 'p', t: '**10.1 Landasan hukum**', al: 'l', sa: 40 });
   [CATATAN_JUDUL.replace(/^Catatan sesuai dengan /, '').replace(/:$/, ''), 'Kerangka Kualifikasi Nasional Indonesia (KKNI) Level 6, Peraturan Presiden Nomor 8 Tahun 2012', `Dokumen Kurikulum Program Studi ${k.p.nama} PEM Akamigas ${APP.tahunKurikulum}`].forEach(x => B.push({ k: 'p', t: `–  ${x}`, ind: 360, hang: 300, al: 'l', sa: 20 }));
   const pus = daftarPustaka(r), nomor = Object.keys(pus).map(Number).sort((a, b) => a - b);
-  B.push({ k: 'p', t: '**9.2 Referensi keilmuan**', al: 'l', sb: 100, sa: 40 });
-  if (nomor.length) nomor.forEach(n => B.push({ k: 'p', t: `${n}.  ${pus[n]}`, ind: 0, hang: 360, al: 'l', sa: 20 })); else B.push({ k: 'p', t: String((r && r.pustaka) || '..........'), al: 'l' });
-  B.push({ k: 'tbl', w: [W / 2, W / 2], sz: 20, rows: [[{ t: `Mengetahui,\nKetua Program Studi\n\n\n\n**${k.kaprodi || '..............................'}**`, al: 'c' }, { t: `${KOTA}, ${tahun}\nDosen Pengembang\n\n\n\n**${k.pengampu.join('\n') || '..............................'}**`, al: 'c' }]] });
+  B.push({ k: 'p', t: '**10.2 Referensi keilmuan**', al: 'l', sb: 100, sa: 40 });
+  if (nomor.length) nomor.forEach(n => B.push({ k: 'p', t: `${n}.  ${pus[n]}`, ind: 0, hang: 360, al: 'l', sa: 20 })); else B.push({ k: 'p', t: isiAtau((r && r.pustaka) || '', 'Daftar pustaka belum diisi pada RPS.'), al: 'l' });
   return B;
 }
 

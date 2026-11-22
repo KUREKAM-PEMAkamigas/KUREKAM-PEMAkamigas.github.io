@@ -11,6 +11,7 @@ import { ringkasIntegrasi } from '../riset.js';
 import { param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
 import { usulanProdi, bolehSetuju, setujui, hapusSlotKosong } from '../usulan.js';
 import { head, bar, pctColor, kTag, tanya, prodiName, ro } from './ui.js';
+import { turunkanDok } from './dokgen.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -169,7 +170,7 @@ export function bukaAsistenRps(m, draw, blankRps) {
       if (sebelum && h.n) h.r.cadangan = JSON.stringify(sebelum);
       if (h.cpmk.length) await saveMany('cpmk', h.cpmk);
       if (h.sub.length) await saveMany('sub', h.semuaSub);
-      if (h.r.status === 'disahkan') h.r.status = 'draf';
+      if (h.r.status === 'disahkan') h.r.status = 'draf'; turunkanDok(h.r);
       await save('rps', h.r, `Asisten RPS ${timpa ? 'menyusun ulang' : 'melengkapi'} ${m.nama}`);
       toast(h.n ? `${h.n} isian ditambahkan sebagai usulan. Baca, sunting, lalu setujui sebelum RPS diajukan.` : 'Tidak ada bagian kosong yang bisa diisi otomatis.');
       draw(); bukaAsistenRps(m, draw, blankRps);

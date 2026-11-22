@@ -115,6 +115,8 @@ export const PARAM_DEFAULT = {
     { p: '^praktik(um)?\\s+fisika dasar', k: 'AK2004', n: 'Praktikum Fisika Dasar' }, { p: '^praktik(um)?\\s+kimia dasar', k: 'AK2005', n: 'Praktikum Kimia Dasar' },
     { p: '^matematika dasar', k: 'AK2001', n: 'Matematika Dasar' }, { p: '^fisika dasar', k: 'AK2002', n: 'Fisika Dasar' }, { p: '^kimia dasar', k: 'AK2003', n: 'Kimia Dasar' }
   ],
+  /* Kepala formulir SAP dan ACP (mengikuti kepala formulir RPS FM-BPPAK). Nomor dan tanggal terbit adalah usulan awal dan perlu disamakan dengan penomoran dokumen mutu BPPAK. */
+  dok: { sap: { no: 'FM-BPPAK.01-07', terbit: '22 November 2026', rev: '00' }, acp: { no: 'FM-BPPAK.01-08', terbit: '22 November 2026', rev: '00' } },
   /* Beban dosen: JP total = SKS teori + SKS praktik x (durasi / 60), dikali kelas dan porsi. */
   bebanRiilMin: 9, bebanRiilMax: 16, jpMingguMax: 24
 };

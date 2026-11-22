@@ -46,8 +46,26 @@ export function butirMateri(p) {
   return out;
 }
 
-/** Judul SAP: isian judul, atau poin pertama materi. */
-export const judulPertemuan = (p) => String(p.judul || '').trim() || pendek(butirMateri(p)[0] || p.materi || '', 90) || `Pertemuan ${p.m}`;
+/** Judul SAP: isian judul, atau poin pertama materi (selalu utuh, tanpa pemotongan). */
+export const judulPertemuan = (p) => String(p.judul || '').trim() || String(butirMateri(p).find(b => !/^konteks\s*:/i.test(b)) || '').replace(/\s+/g, ' ').trim() || `Pertemuan ${p.m}`;
+
+/* ---------- Kepala formulir (mengikuti kepala RPS FM-BPPAK, warna biru RPS) ---------- */
+export const BIRU = 'D9E2F3', ABU = 'E7E6E6';
+export const BELUM = '(belum diisi)';
+export const isiAtau = (v, ket = BELUM) => { const t = String(v == null ? '' : v).trim(); return t || ket; };
+export const namaAtau = (arr, ket) => (arr && arr.length ? arr.join('\n') : ket);
+/** Kepala formulir: logo, identitas lembaga, nomor dokumen, tanggal terbit, revisi, jumlah halaman, lalu judul dokumen. jenis = 'sap' atau 'acp'. lebar = lebar tabel (dxa). */
+export function kepalaFormulir(prodiNama, judul, jenis, lebar = 9638, subjudul = '') {
+  const d = param(S).dok[jenis], w = [1400, lebar - 1400 - 1500 - 2300, 1500, 2300];
+  const rows = [[{ img: { w: 128, h: 155 }, shade: BIRU, va: 'center' },
+    { t: `**KEMENTERIAN ENERGI DAN SUMBER DAYA MINERAL**\n**BADAN PENGEMBANGAN SUMBER DAYA MANUSIA ENERGI DAN SUMBER DAYA MINERAL**\n**POLITEKNIK ENERGI DAN MINERAL AKAMIGAS**\n**PROGRAM STUDI ${String(prodiNama).toUpperCase()}**`, al: 'c', va: 'center', shade: BIRU, sz: 17 },
+    { t: 'No Dokumen\nTanggal Terbit\nRevisi\nJumlah Halaman', shade: BIRU, va: 'center', sz: 16 },
+    { t: `: ${d.no}\n: ${d.terbit}\n: ${d.rev}\n: {{HAL}}`, shade: BIRU, va: 'center', sz: 16 }],
+  [{ t: `**${judul}**${subjudul ? '\n' + subjudul : ''}`, span: 4, al: 'c', sz: 22, shade: BIRU }]];
+  return { k: 'tbl', w, sz: 18, rows };
+}
+/** Teks status dokumen untuk baris identitas. */
+export const statusDok = (st, tgl, oleh) => (st === 'disahkan' ? `Disahkan${tgl ? ' pada ' + tgl : ''}${oleh ? ' oleh ' + oleh : ''}` : st === 'diajukan' ? 'Diajukan ke Ketua Program Studi, menunggu pengesahan' : 'Draf, belum disahkan');
 
 /** Daftar pustaka bernomor dari RPS: { 1: 'teks', ... }. */
 export function daftarPustaka(r) {
@@ -55,14 +73,14 @@ export function daftarPustaka(r) {
   `${(r && r.pustaka) || ''}\n${(r && r.pustakaPendukung) || ''}`.split(/\n+/).forEach(b => { const x = b.trim().match(/^(\d+)[.)]\s*(.+)$/); if (x) peta[+x[1]] = x[2]; });
   return peta;
 }
-const kutipanSingkat = (t) => { const x = String(t).match(/^(.*?\((?:19|20)\d{2}\))/); return x ? x[1] : pendek(t, 90); };
+const kutipanSingkat = (t) => { const x = String(t).match(/^(.*?\((?:19|20)\d{2}\))/); return x ? x[1] : String(t).replace(/\s+/g, ' ').trim(); };
 /** Sumber belajar satu pertemuan, dari baris Pustaka pada materi, dalam bentuk kutipan singkat. */
 export function sumberBelajar(p, r) {
   const m = String(p.materi || '').replace(/\*\*/g, '').match(/pustaka\s*:\s*([^\n]+)/i);
   if (!m) return '';
   const peta = daftarPustaka(r), nomor = Array.from(m[1].matchAll(/\((\d+)\)|\b(\d+)\b/g)).map(x => +(x[1] || x[2]));
   const isi = nomor.filter(n => peta[n]).map(n => kutipanSingkat(peta[n]));
-  return isi.length ? isi.join('; ') : m[1].trim();
+  return isi.length ? isi.map(x => x.replace(/[.\s]+$/, '')).join('; ') : m[1].trim();
 }
 
 /** Capaian pembelajaran pertemuan: indikator diubah menjadi kalimat kemampuan mahasiswa. */

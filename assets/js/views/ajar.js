@@ -8,6 +8,7 @@ import { badanSap, berkasDocxSap, namaBerkasSap } from '../sapdok.js';
 import { badanAcp, berkasDocxAcp, namaBerkasAcp } from '../acpdok.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
+import { bukaGeneratorDok, turunkanDok } from './dokgen.js';
 import { detect, badge } from '../bloom.js';
 import { INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
 import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, stTag, bar, pctColor, opts } from './ui.js';
@@ -87,6 +88,7 @@ export function rpsView(el) {
         ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
         <button class="btn sm" id="print">${icon('download')} Cetak / Unduh RPS</button>
+        <button class="btn sm vio" id="gen-dok">${icon('spark')} Generator SAP & ACP${(r.sapStatus === 'disahkan' ? '' : ' · SAP ' + (r.sapStatus || 'draf')) + (r.acpStatus === 'disahkan' ? '' : ' · ACP ' + (r.acpStatus || 'draf'))}</button>
         <button class="btn sm" id="print-sap">${icon('download')} SAP</button>
         <button class="btn sm" id="print-acp">${icon('download')} ACP</button>
         <button class="btn sm" id="unduh-paket">${icon('download')} Paket RPS + SAP + ACP</button>
@@ -99,7 +101,7 @@ export function rpsView(el) {
       </tbody></table></div></div></div>`;
     const q = (s) => R.querySelector(s);
     if (ed) {
-      q('#ed-info').onclick = () => formDrawer({ title: 'Deskripsi dan pustaka', sub: m.nama, obj: r, fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 4 }, { k: 'bahan', label: 'Bahan kajian', type: 'textarea', rows: 3 }, { k: 'syarat', label: 'Mata kuliah syarat', type: 'textarea', rows: 1 }, { k: 'pustaka', label: 'Pustaka utama (bila tidak dipisah, tulis utama dan pendukung di sini)', type: 'textarea', rows: 5 }, { k: 'pustakaPendukung', label: 'Pustaka pendukung (boleh kosong)', type: 'textarea', rows: 3 }, { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester)', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester)', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' }], onSave: async (o) => { await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw(); } });
+      q('#ed-info').onclick = () => formDrawer({ title: 'Deskripsi dan pustaka', sub: m.nama, obj: r, fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 4 }, { k: 'bahan', label: 'Bahan kajian', type: 'textarea', rows: 3 }, { k: 'syarat', label: 'Mata kuliah syarat', type: 'textarea', rows: 1 }, { k: 'pustaka', label: 'Pustaka utama (bila tidak dipisah, tulis utama dan pendukung di sini)', type: 'textarea', rows: 5 }, { k: 'pustakaPendukung', label: 'Pustaka pendukung (boleh kosong)', type: 'textarea', rows: 3 }, { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester)', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester)', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' }], onSave: async (o) => { turunkanDok(o); await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw(); } });
       R.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => {
         const i = +tr.dataset.i, p = r.pertemuan[i]; const flat = { ...p, ...Object.fromEntries(Object.entries(p.sap || {}).map(([k, v]) => ['sap_' + k, v])) };
         formDrawer({ title: `Pertemuan ${p.m}${p.ujian ? ' · ' + p.ujian : ''}`, sub: `${m.nama} · durasi tatap muka ${m.T ? m.T * P.menitTeori + ' menit teori' : ''}${m.T && m.P ? ' + ' : ''}${m.P ? m.P * durasi(m, P) + ' menit praktik' : ''}`, obj: flat, wide: true,
@@ -109,10 +111,10 @@ export function rpsView(el) {
               ...(p.integ && !(p.riset || []).length ? [{ k: 'integ', label: 'Penandaan lama tanpa judul (ganti dengan pilihan dari daftar, atau kosongkan)', type: 'select', opts: INTEG.map(v => ({ v, t: v || 'Tidak ada' })) }] : []),
               { k: 'integUraian', label: 'Kaitan dengan materi (boleh kosong, terisi otomatis dari pilihan di atas)', type: 'textarea', rows: 2 }]),
             ...(p.ujian ? [{ k: 'sap_soal', label: 'SAP · Butir soal ujian atau ringkasan kisi-kisi (satu per baris)', type: 'textarea', rows: 4 }] : [{ k: 'sap_pendahuluan', label: 'SAP · Pendahuluan', type: 'textarea', rows: 2 }, { k: 'sap_inti', label: 'SAP · Kegiatan inti', type: 'textarea', rows: 3 }, { k: 'sap_penutup', label: 'SAP · Penutup', type: 'textarea', rows: 2 }, { k: 'sap_media', label: 'SAP · Media dan alat', full: true }, { k: 'sap_soal', label: 'SAP · Butir soal atau penugasan non tes (satu per baris)', type: 'textarea', rows: 3 }])],
-          onDelete: nPert > 16 ? async () => { r.pertemuan.splice(i, 1); r.pertemuan.forEach((x, k) => { x.m = k + 1; }); if (r.status === 'disahkan') r.status = 'draf'; await save('rps', r, `Hapus pertemuan ${p.m} dari RPS ${m.nama}`); draw(); } : null,
+          onDelete: nPert > 16 ? async () => { r.pertemuan.splice(i, 1); r.pertemuan.forEach((x, k) => { x.m = k + 1; }); if (r.status === 'disahkan') r.status = 'draf'; turunkanDok(r); await save('rps', r, `Hapus pertemuan ${p.m} dari RPS ${m.nama}`); draw(); } : null,
           extra: p.ujian || opsiRiset(S, m).length ? '' : `<div class="ribbon info" style="margin-top:10px">${icon('info')} Daftar penelitian atau PKM pengampu masih kosong. Isi dulu di menu <a href="#riset"><b>Penelitian & PKM Dosen</b></a> (bisa unggah Excel), lalu kembali ke sini.</div>`,
           onSave: async (o) => { const sap = {}; Object.keys(o).filter(k => k.startsWith('sap_')).forEach(k => { sap[k.slice(4)] = o[k]; delete o[k]; }); if ((o.riset || []).length) { o.integ = jenisInteg(S, o.riset); if (!String(o.integUraian || '').trim()) { const e0 = riset(S, o.riset[0]); o.integUraian = `${(o.bentuk === 'Lainnya' ? (o.bentukLain || 'Lainnya') : o.bentuk) || 'Bahan ajar'}: ${e0 ? e0.judul : ''}${o.riset.length > 1 ? ` dan ${o.riset.length - 1} lainnya` : ''}.`; } } else if (p.riset && p.riset.length && !('integ' in o && o.integ)) o.integ = '';
-            r.pertemuan[i] = { ...o, sap, m: p.m, ujian: p.ujian }; { const r2 = ringkasIntegrasi(S, m, r); if (r2.entri.length) { r.penelitian = teksRiset(S, r2.entri, 'Penelitian'); r.pkm = teksRiset(S, r2.entri, 'PKM'); } } if (r.status === 'disahkan') r.status = 'draf'; await save('rps', r, `Ubah RPS ${m.nama} pertemuan ${p.m}`); draw(); } });
+            r.pertemuan[i] = { ...o, sap, m: p.m, ujian: p.ujian }; { const r2 = ringkasIntegrasi(S, m, r); if (r2.entri.length) { r.penelitian = teksRiset(S, r2.entri, 'Penelitian'); r.pkm = teksRiset(S, r2.entri, 'PKM'); } } if (r.status === 'disahkan') r.status = 'draf'; turunkanDok(r); await save('rps', r, `Ubah RPS ${m.nama} pertemuan ${p.m}`); draw(); } });
       });
     }
     const pd = q('#pindah'); if (pd) pd.onclick = async () => {
@@ -139,6 +141,7 @@ export function rpsView(el) {
     q('#print-acp').onclick = () => cetakDok('Analisis Capaian Pembelajaran (ACP)', badanAcp(m, r, true), () => berkasDocxAcp(m, r), namaBerkasAcp(m));
     q('#unduh-paket').onclick = async () => { try { unduh(await berkasDocxRps(m, r), namaBerkasRps(m)); await new Promise(z => setTimeout(z, 400)); unduh(await berkasDocxSap(m, r), namaBerkasSap(m)); await new Promise(z => setTimeout(z, 400)); unduh(await berkasDocxAcp(m, r), namaBerkasAcp(m)); toast('Tiga berkas Word diunduh: RPS, SAP, dan ACP.'); } catch (e) { console.error(e); toast('Berkas Word gagal dibuat. ' + e.message); } };
     q('#asis').onclick = () => bukaAsistenRps(m, draw, blankRps);
+    q('#gen-dok').onclick = () => bukaGeneratorDok(m, draw);
   };
   tombolUnggahRps(el, draw);
   draw();

@@ -204,7 +204,7 @@ export function modelRps(m, r) {
   const cplTampil = (id) => { const c = ckObj(id); return c ? (c.cpl || []).map(cplById).filter(Boolean).map(cplSingkat) : []; };
   const rows10 = ent.map(e => {
     const cl = cplDari(e.ck);
-    return [{ t: String(e.x.m), al: 'c' }, { t: cl.join(', '), al: 'c' }, '', e.ss.map(s => s.kode).join(', ') || '-', pendek(String(e.x.indikator || '').split(/\n/)[0], 90) || '-', e.x.ujian ? `**${e.x.ujian}**${e.x.asesmen ? ': ' + e.x.asesmen : ''}` : (e.x.asesmen || e.x.metode || '-'), { t: `${fmt(e.b, 1)}%`, al: 'c' }, '', '', '', ''];
+    return [{ t: String(e.x.m), al: 'c' }, { t: cl.join(', '), al: 'c' }, '', e.ss.map(s => s.kode).join(', ') || '-', String(e.x.indikator || '').split(/\n/)[0].trim() || '-', e.x.ujian ? `**${e.x.ujian}**${e.x.asesmen ? ': ' + e.x.asesmen : ''}` : (e.x.asesmen || e.x.metode || '-'), { t: `${fmt(e.b, 1)}%`, al: 'c' }, '', '', '', ''];
   });
   const kodeCk = (i) => (ckObj(ent[i].ck) || {}).kode || '-';
   gabung(rows10, 2, (i) => ent[i].ck, (i) => kodeCk(i));

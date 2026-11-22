@@ -72,9 +72,9 @@ function tProdi(el, ed) {
   </tbody></table></div><p class="note">Tingkat 1 mencakup semester 1 dan 2, tingkat 2 semester 3 dan 4, dan seterusnya. ${ed ? 'Klik baris untuk mengubah.' : ''}</p></div>`;
   if (ed) el.querySelectorAll('tr[data-p]').forEach(tr => tr.onclick = () => {
     const p = S.prodi.find(x => x.id === tr.dataset.p);
-    formDrawer({ title: 'Ubah prodi ' + p.id, sub: 'Nama, warna, dan jumlah kelas paralel', obj: { nama: p.nama, c: p.c, k1: p.kelas[1], k2: p.kelas[2], k3: p.kelas[3], k4: p.kelas[4] },
-      fields: [{ k: 'nama', label: 'Nama program studi', full: true }, { k: 'k1', label: 'Kelas tingkat 1', type: 'number' }, { k: 'k2', label: 'Kelas tingkat 2', type: 'number' }, { k: 'k3', label: 'Kelas tingkat 3', type: 'number' }, { k: 'k4', label: 'Kelas tingkat 4', type: 'number' }, { k: 'c', label: 'Warna', type: 'color' }],
-      onSave: async (o) => { if (!o.nama) return 'Nama wajib diisi.'; p.nama = o.nama; p.c = o.c || p.c; p.kelas = { 1: +o.k1 || 0, 2: +o.k2 || 0, 3: +o.k3 || 0, 4: +o.k4 || 0 }; await save('prodi', p, `Ubah kelas paralel ${p.id}: ${Object.values(p.kelas).join('/')}`); rerender(); } });
+    formDrawer({ title: 'Ubah prodi ' + p.id, sub: 'Nama, warna, dan jumlah kelas paralel', obj: { nama: p.nama, kaprodi: p.kaprodi || '', c: p.c, k1: p.kelas[1], k2: p.kelas[2], k3: p.kelas[3], k4: p.kelas[4] },
+      fields: [{ k: 'nama', label: 'Nama program studi', full: true }, { k: 'kaprodi', label: 'Nama Ka Prodi (tercetak pada pengesahan RPS)', full: true }, { k: 'k1', label: 'Kelas tingkat 1', type: 'number' }, { k: 'k2', label: 'Kelas tingkat 2', type: 'number' }, { k: 'k3', label: 'Kelas tingkat 3', type: 'number' }, { k: 'k4', label: 'Kelas tingkat 4', type: 'number' }, { k: 'c', label: 'Warna', type: 'color' }],
+      onSave: async (o) => { if (!o.nama) return 'Nama wajib diisi.'; p.nama = o.nama; p.kaprodi = (o.kaprodi || '').trim(); p.c = o.c || p.c; p.kelas = { 1: +o.k1 || 0, 2: +o.k2 || 0, 3: +o.k3 || 0, 4: +o.k4 || 0 }; await save('prodi', p, `Ubah kelas paralel ${p.id}: ${Object.values(p.kelas).join('/')}`); rerender(); } });
   });
 }
 

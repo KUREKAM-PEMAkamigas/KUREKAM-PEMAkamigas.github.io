@@ -30,6 +30,7 @@ import advisoryView from './views/advisory.js';
 import realisasiView from './views/realisasi.js';
 import skpiView from './views/skpi.js';
 import bahanLedView from './views/bahanled.js';
+import obeView from './views/obe.js';
 import panduanView from './views/panduan.js';
 
 /* ---------------- state ---------------- */
@@ -183,6 +184,7 @@ export const ROUTES = [
   { id: 'mk', t: 'Mata Kuliah & SKS', ic: 'book', c: '#14b8a6', sec: 'Penyusunan Kurikulum', prodi: true, v: mkView },
   { id: 'peta', t: 'Peta Kurikulum', ic: 'grid4', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: petaView },
   { id: 'matriks', t: 'Matriks Keterlacakan', ic: 'link', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: matriksView },
+  { id: 'obe', t: 'Tabel OBE', sub: 'Pemetaan sesuai templat + IABEE', ic: 'layers', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: obeView },
   { id: 'cpmk', t: 'CPMK & Sub-CPMK', ic: 'spark', c: '#0ea5e9', sec: 'Pembelajaran', prodi: true, v: cpmkView },
   { id: 'realisasi', t: 'Realisasi Pembelajaran', sub: 'Hasil, bukti, dan tindak lanjut per MK', ic: 'check', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: realisasiView },
   { id: 'rps', t: 'RPS & SAP', ic: 'audit', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: rpsView },

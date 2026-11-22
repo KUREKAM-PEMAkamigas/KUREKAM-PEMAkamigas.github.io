@@ -4,7 +4,7 @@
 import { S } from './app.js';
 import { APP } from './config.js';
 import { labelKel } from './kode.js';
-import { param, durasi, fmt, kriteriaPi, iabeeOf } from './rules.js';
+import { param, durasi, fmt, kriteriaPi, iabeeOf, cplSingkat } from './rules.js';
 import { detect } from './bloom.js';
 import { teknikDari, rubrikDipakai } from './rubrik.js';
 import { buatDocx, muatBerkas } from './docxlib.js';
@@ -28,7 +28,7 @@ export const CATATAN_RPS = [
   'Teknik penilaian mencakup penilaian formatif dan sumatif (Pasal 27) yang dilakukan melalui Tes tulis, Tes lisan, Observasi, Partisipasi, Unjuk kerja, Laporan, dan Presentasi (dengan instrumen berupa rubrik dan/atau portofolio).',
   'Bentuk pembelajaran sesuai Pasal 16 ayat (1) meliputi: Kuliah, Responsi, Tutorial, Seminar, Praktikum, Praktik, Studio, Penelitian, Perancangan, Pengembangan, Tugas Akhir, Pelatihan Bela Negara, Pertukaran Pelajar, Magang, Wirausaha, Pengabdian kepada Masyarakat, dan/atau bentuk pembelajaran lain yang setara.',
   'Metode Pembelajaran yang berpusat pada mahasiswa (student-centered learning) meliputi: Small Group Discussion, Role-Play & Simulation, Discovery Learning, Self-Directed Learning, Cooperative Learning, Collaborative Learning, Contextual Learning, Project-Based Learning, Case-Based Learning, dan metode lainnya yang setara.',
-  'Materi Pembelajaran adalah rincian atau uraian dari bahan kajian yang dapat disajikan dalam bentuk beberapa pokok dan sub-pokok bahasan. Setiap pertemuan dalam RPS ini dilengkapi dengan konteks kilang dan referensi simulasi (LTSpice) untuk memperkuat relevansi industri.',
+  'Materi Pembelajaran adalah rincian atau uraian dari bahan kajian yang dapat disajikan dalam bentuk beberapa pokok dan sub-pokok bahasan. Materi dikaitkan dengan konteks industri dan, bila relevan, dengan perangkat lunak atau simulasi pendukung untuk memperkuat relevansi industri.',
   'Bobot penilaian adalah persentase penilaian terhadap setiap pencapaian Sub-CPMK yang besarnya proporsional dengan tingkat kesulitan dan kedalaman pencapaian Sub-CPMK tersebut, dengan total keseluruhan 100%.',
   'Singkatan kegiatan belajar (Pasal 16 ayat 2): TM = Tatap Muka; TB = Belajar Terbimbing; PT = Penugasan Terstruktur; BM = Belajar Mandiri (dengan beban 1 SKS setara 45 jam per semester).',
 ];
@@ -67,7 +67,7 @@ export function modelRps(m, r) {
   const cplMk = (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean);
   const cpmk = S.cpmk.filter(c => c.mk === m.id), subs = S.sub.filter(s => s.mk === m.id);
   const cplById = (id) => S.cpl.find(c => c.id === id);
-  const cplKode = (c) => `${c.kode}${c.sn ? ' (' + c.sn + ')' : ''}`;
+  const cplKode = cplSingkat;
   const prak = (+m.P || 0) > (+m.T || 0);
   const tugas = S.tugas.filter(t => t.mk === m.id);
   const nama = (id) => (S.dosen.find(d => d.id === id) || {}).nama;
@@ -145,7 +145,7 @@ export function modelRps(m, r) {
     ['Matakuliah syarat', r.syarat || syarat || '-'],
     ['Integrasi penelitian dan PKM', integ.join('\n') || dots],
   ];
-  B.push({ k: 'tbl', w: [2600, 13200], sz: 20, rows: baris2.map(x => [{ t: `**${x[0]}**`, shade: 'F2F2F2' }, { t: x[1], al: 'j' }]) });
+  B.push({ k: 'tbl', w: [2600, 13200], sz: 20, rows: baris2.map(x => [{ t: `**${x[0]}**`, shade: 'F2F2F2' }, { t: x[1], al: /^(Deskripsi|Bahan)/.test(x[0]) ? 'j' : '' }]) });
 
   /* 7. Rencana pembelajaran 16 pertemuan */
   const rubrikLabel = (txt) => teknikDari(txt).map(k => `Rubrik ${k.rubrik} (${k.nama})`);
@@ -198,16 +198,17 @@ export function modelRps(m, r) {
   ent.sort((a, b) => (cpmkOrder.has(a.ck) ? cpmkOrder.get(a.ck) : 99) - (cpmkOrder.has(b.ck) ? cpmkOrder.get(b.ck) : 99) || a.x.m - b.x.m);
   const ckObj = (id) => cpmk.find(c => c.id === id);
   const cplDari = (id) => { const c = ckObj(id); return c ? (c.cpl || []).map(cplById).filter(Boolean).map(q => q.kode) : []; };
+  const cplTampil = (id) => { const c = ckObj(id); return c ? (c.cpl || []).map(cplById).filter(Boolean).map(cplSingkat) : []; };
   const rows10 = ent.map(e => {
     const cl = cplDari(e.ck);
     return [{ t: String(e.x.m), al: 'c' }, { t: cl.join(', '), al: 'c' }, '', e.ss.map(s => s.kode).join(', ') || '-', pendek(e.x.indikator, 90) || '-', e.x.ujian ? `**${e.x.ujian}**${e.x.asesmen ? ': ' + e.x.asesmen : ''}` : (e.x.asesmen || e.x.metode || '-'), { t: `${fmt(e.b, 1)}%`, al: 'c' }, '', '', '', ''];
   });
   const kodeCk = (i) => (ckObj(ent[i].ck) || {}).kode || '-';
   gabung(rows10, 2, (i) => ent[i].ck, (i) => kodeCk(i));
-  gabung(rows10, 1, (i) => cplDari(ent[i].ck).join(','), (i, j) => cplDari(ent[i].ck).join(', ') || '-');
+  gabung(rows10, 1, (i) => cplDari(ent[i].ck).join(','), (i, j) => cplTampil(ent[i].ck).join('\n') || '-');
   gabung(rows10, 9, (i) => ent[i].ck, (i, j) => `${fmt(ent.slice(i, j + 1).reduce((a, e) => a + e.b, 0), 1)}%`);
   gabung(rows10, 10, (i) => cplDari(ent[i].ck).join(','), () => '');
-  B.push({ k: 'tbl', w: [600, 1000, 1100, 1300, 1700, 3700, 800, 1100, 1200, 1300, 2000], head: 1, sz: 16, rows: [
+  B.push({ k: 'tbl', w: [600, 1300, 1000, 1300, 1700, 3500, 800, 1100, 1200, 1300, 2000], head: 1, sz: 16, rows: [
     ['Mg', 'CPL', 'CPMK', 'Sub-CPMK', 'Indikator', 'Bentuk Penilaian', 'Bobot (%)', 'Nilai Mahasiswa', 'Bobot × Nilai', 'Bobot % CPMK', 'Ketercapaian CPL pada MK'],
     ...rows10,
     [{ t: '**Jumlah**', span: 6, al: 'c' }, { t: `**${fmt(ent.reduce((a, e) => a + e.b, 0), 1)}%**`, al: 'c' }, { t: '', span: 4 }],
@@ -220,9 +221,9 @@ export function modelRps(m, r) {
   B.push({ k: 'h', lvl: 2, t: 'Evaluasi Ketercapaian Indikator Kinerja (PI) untuk IABEE', sb: 240 });
   if (piMk.length) {
     B.push({ k: 'p', t: `Setiap PI dinilai dari instrumen pada CPMK yang mengukurnya. PI dinyatakan tercapai bila persentase mahasiswa yang memperoleh nilai sekurang-kurangnya nilai batas memenuhi kriteria prodi (bawaan: ${P.piMinPersen}% mahasiswa dengan nilai minimal ${P.piMinNilai}). Isi kolom hasil setelah nilai mahasiswa tersedia. Jangan menuliskan nama atau nomor mahasiswa pada tabel ini; cukup jumlah.`, sz: 18 });
-    B.push({ k: 'tbl', w: [900, 900, 4700, 1000, 1700, 1900, 1600, 1100, 2000], head: 1, sz: 16, rows: [
+    B.push({ k: 'tbl', w: [900, 1300, 4300, 1000, 1700, 1900, 1600, 1100, 2000], head: 1, sz: 16, rows: [
       ['Kode PI', 'CPL', 'Rumusan PI', 'Butir IABEE', 'CPMK pengukur', 'Kriteria ketercapaian', 'Mahasiswa memenuhi / seluruh mahasiswa', 'Persen', 'Status'],
-      ...piMk.map(q => { const c = cplById(q.cpl) || {}, kr = kriteriaPi(q, P); return [{ t: q.kode, al: 'c' }, { t: c.kode || '', al: 'c' }, q.teks || '', { t: iabeeOf(c).map(h => `(${h})`).join(' '), al: 'c' }, (q.cpmk || []).map(id => (ckObj(id) || {}).kode).filter(Boolean).join(', ') || '-', `Minimal ${kr.persen}% mahasiswa bernilai ≥ ${kr.nilai}`, { t: '…… / ……', al: 'c' }, '', 'Tercapai / Belum']; }),
+      ...piMk.map(q => { const c = cplById(q.cpl) || {}, kr = kriteriaPi(q, P); return [{ t: q.kode, al: 'c' }, { t: cplSingkat(c), al: 'c' }, q.teks || '', { t: iabeeOf(c).map(h => `(${h})`).join(' '), al: 'c' }, (q.cpmk || []).map(id => (ckObj(id) || {}).kode).filter(Boolean).join(', ') || '-', `Minimal ${kr.persen}% mahasiswa bernilai ≥ ${kr.nilai}`, { t: '…… / ……', al: 'c' }, '', 'Tercapai / Belum']; }),
     ] });
   } else {
     B.push({ k: 'p', t: 'Belum ada indikator kinerja (PI) yang dihubungkan ke CPMK mata kuliah ini. Hubungkan PI dan CPMK pada menu Indikator Kinerja agar ketercapaian CPL dapat dibuktikan untuk akreditasi IABEE.', sz: 18, i: true });

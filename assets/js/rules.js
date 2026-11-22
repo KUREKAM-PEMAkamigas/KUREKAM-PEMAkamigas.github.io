@@ -285,6 +285,25 @@ export function iabeeOf(c) {
   const arr = Array.isArray(v) ? v : String(v || '').split(/[^a-zA-Z]+/);
   return Array.from(new Set(arr.map(x => String(x).trim().toLowerCase()).filter(x => HURUF_IABEE.includes(x)))).sort();
 }
+/* Penulisan singkat CPL: kode CPL ditambah unsur SN Dikti tanpa mengulang kata CPL, misalnya CPL02-P01,
+   CPL05-KU01,KU02, atau CPL01-S01 s.d. S10 (tiga unsur berurutan atau lebih dalam satu ranah). */
+export function cplSingkat(c) {
+  if (!c) return '';
+  const sn = String(c.sn || '').split(/[,;\n]+/).map(x => x.trim().toUpperCase().replace(/^CPL-?/, '')).filter(Boolean);
+  if (!sn.length) return c.kode || '';
+  const grup = new Map();
+  sn.forEach(k => { const m = k.match(/^([A-Z]+)(\d+)$/); const r = m ? m[1] : k; if (!grup.has(r)) grup.set(r, []); grup.get(r).push({ k, n: m ? +m[2] : NaN }); });
+  const out = [];
+  grup.forEach(arr => {
+    arr.sort((a, b) => a.n - b.n); let i = 0;
+    while (i < arr.length) {
+      let j = i; while (j + 1 < arr.length && arr[j + 1].n === arr[j].n + 1) j++;
+      if (j - i >= 2) out.push(`${arr[i].k} s.d. ${arr[j].k}`); else for (let q = i; q <= j; q++) out.push(arr[q].k);
+      i = j + 1;
+    }
+  });
+  return `${c.kode}-${out.join(',')}`;
+}
 export const piOfCpl = (S, cplId) => (S.pi || []).filter(p => p.cpl === cplId).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
 export const kriteriaPi = (p, P) => ({ persen: p && p.minPersen != null && p.minPersen !== '' ? +p.minPersen : P.piMinPersen, nilai: p && p.minNilai != null && p.minNilai !== '' ? +p.minNilai : P.piMinNilai });
 const labelCpmk = (S, c) => { const m = S.mk.find(x => x.id === c.mk); return { ...c, kode: `${m ? m.kode : c.mk}/${c.kode}` }; };

@@ -13,8 +13,8 @@ const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</
 
 export const namaBerkasRps = (m) => `RPS_${m.kode}_${String(m.nama).replace(/[^A-Za-z0-9]+/g, '_')}.docx`;
 
-const CATATAN_JUDUL = 'Catatan sesuai dengan SN Dikti (Permendiktisaintek No. 39 Tahun 2025 jo. Permendiktisaintek No. 10 Tahun 2026):';
-const CATATAN_RPS = [
+export const CATATAN_JUDUL = 'Catatan sesuai dengan SN Dikti (Permendiktisaintek No. 39 Tahun 2025 jo. Permendiktisaintek No. 10 Tahun 2026):';
+export const CATATAN_RPS = [
   ['Capaian Pembelajaran Lulusan PRODI (CPL-PRODI) adalah rumusan standar kompetensi lulusan yang dimiliki oleh setiap lulusan PRODI sesuai jenjangnya (Pasal 6–7), yang mencakup kompetensi terintegrasi meliputi:',
     'penguasaan ilmu pengetahuan dan teknologi, serta kecakapan/keterampilan spesifik dan aplikasinya;',
     'kecakapan umum sebagai dasar penguasaan ilmu pengetahuan, teknologi, dan bidang kerja yang relevan;',
@@ -38,7 +38,7 @@ const DOK = { no: 'FM-BPPAK.01-06', terbit: '11 Januari 2023', rev: '02' };
 const BIRU = 'D9E2F3', ABU = 'E7E6E6';
 const pendek = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 const tglId = (t) => { const x = String(t || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return x ? `${x[3].padStart(2, '0')}-${x[2].padStart(2, '0')}-${x[1]}` : (t || ''); };
-const METODE_SIFAT = [
+export const METODE_SIFAT = [
   ['Small Group Discussion', 'Berpusat pada Mahasiswa', 'Kolaboratif', 'Holistik'],
   ['Role-Play & Simulation', 'Berpusat pada Mahasiswa', 'Kolaboratif', 'Holistik'],
   ['Discovery Learning', 'Saintifik', 'Berpusat pada Mahasiswa', ''],

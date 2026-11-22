@@ -148,15 +148,18 @@ export function modelRps(m, r) {
   B.push({ k: 'tbl', w: [2600, 13200], sz: 20, rows: baris2.map(x => [{ t: `**${x[0]}**`, shade: 'F2F2F2' }, { t: x[1], al: /^(Deskripsi|Bahan)/.test(x[0]) ? 'j' : '' }]) });
 
   /* 7. Rencana pembelajaran 16 pertemuan */
-  const rubrikLabel = (txt) => teknikDari(txt).map(k => `Rubrik ${k.rubrik} (${k.nama})`);
+  const rubrikLabel = (txt) => teknikDari(txt).map(k => `Rubrik ${k.rubrik} (${k.rubrik === 'K1' ? 'Ujian Tulis' : k.nama})`);
+  const pc = (v) => `${String(Math.round((+v || 0) * 100) / 100).replace('.', ',')}%`;
+  /* Indikator: satu per baris, diberi nomor pertemuan.urut (3.1, 3.2, ...); tiga per Sub-CPMK. */
+  const indikatorNomor = (x) => String(x.indikator || '').split(/\n+/).map(t => t.trim().replace(/^\d+(\.\d+)*[.)]?\s+/, '')).filter(Boolean).map((t, i) => `${x.m}.${i + 1} ${t}`).join('\n');
   const rows7 = [
-    [{ t: 'Mg Ke-', rs: 2 }, { t: 'Kemampuan akhir tiap tahapan belajar (Sub-CPMK)', rs: 2 }, { t: 'Penilaian', span: 2 }, { t: 'Bentuk Pembelajaran; Metode Pembelajaran;\nPenugasan Mahasiswa [Estimasi Waktu]', span: 2 }, { t: 'Materi Pembelajaran [Pustaka]', rs: 2 }, { t: 'Bobot Penilaian (%)', rs: 2 }],
-    [{ skip: true }, { skip: true }, 'Indikator', 'Kriteria & Teknik', 'Tatap Muka', 'Daring', { skip: true }, { skip: true }],
-    [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ t: `(${n})`, sz: 16 })),
+    [{ t: 'Mg Ke-', rs: 2 }, { t: 'Kemampuan akhir tiap tahapan belajar (Sub-CPMK)', rs: 2 }, { t: 'Penilaian', span: 2 }, { t: 'Bentuk Pembelajaran; Metode Pembelajaran;\nPenugasan Mahasiswa;', span: 2 }, { t: 'Materi Pembelajaran', rs: 2 }, { t: 'Bobot Penilaian (%)', rs: 2 }],
+    [{ skip: true }, { skip: true }, 'Indikator', 'Kriteria & Teknik', '', '', { skip: true }, { skip: true }],
+    ['(1)', '(2)', '(3)', '(4)', 'Tatap Muka (5)', 'Daring (6)', '(7)', '(8)'].map(t => ({ t, sz: 16, b: true })),
   ];
   pert.forEach(x => {
     if (x.ujian) {
-      rows7.push([{ t: String(x.m), al: 'c' }, { t: `**${x.ujian}**${x.materi ? ': ' + x.materi : ''}${(x.sub || []).length ? '\n' + (x.sub || []).map(subK).filter(Boolean).join(', ') : ''}\nTeknik: ${x.asesmen || '-'}${x.metode ? ' · ' + x.metode : ''}${rubrikLabel(`${x.asesmen || ''}`).length ? '\nKriteria: ' + rubrikLabel(x.asesmen).join(', ') : ''}`, span: 6, shade: 'F2F2F2' }, { t: fmt(x.bobot, 1), al: 'c' }]);
+      rows7.push([{ t: `**${x.m}**`, al: 'c' }, { t: `**${x.ujian}**${x.materi ? ': ' + x.materi : ''}${(x.sub || []).length ? '\n' + (x.sub || []).map(subK).filter(Boolean).join(', ') : ''}\nTeknik: ${x.asesmen || '-'}${x.metode ? ' · ' + x.metode : ''}${rubrikLabel(`${x.asesmen || ''}`).length ? '\nKriteria: ' + rubrikLabel(x.asesmen).join(', ') : ''}`, span: 6, shade: 'F2F2F2' }, { t: `**${pc(x.bobot)}**`, al: 'c' }]);
       return;
     }
     const sk = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).map(s => `**${s.kode}**\n${s.teks}${bloomKode(s.teks)}`).join('\n');
@@ -164,10 +167,10 @@ export function modelRps(m, r) {
     const krit = x.asesmen ? `${rl.length ? 'Kriteria: ' + rl.join(', ') + '\n' : ''}Teknik: ${x.asesmen}` : '';
     const tmk = x.tatap || (x.metode ? 'Metode: ' + x.metode : '');
     const lines = x.integ || (x.riset || []).length ? `\nIntegrasi ${x.integ || 'penelitian dan PKM'}` : '';
-    rows7.push([{ t: String(x.m), al: 'c' }, sk, x.indikator || '', krit, tmk + lines, x.daring || '', x.materi || '', { t: fmt(x.bobot, 1), al: 'c' }]);
+    rows7.push([{ t: `**${x.m}**`, al: 'c' }, sk, indikatorNomor(x), krit, tmk + lines, x.daring || '', x.materi || '', { t: `**${pc(x.bobot)}**`, al: 'c' }]);
   });
   const tot = pert.reduce((a, x) => a + (+x.bobot || 0), 0), ok100 = Math.abs(tot - 100) < 0.05;
-  rows7.push([{ t: '**Jumlah bobot penilaian**', span: 7, al: 'c' }, { t: `**${fmt(tot, 1)}**`, al: 'c', color: ok100 ? '' : 'C00000' }]);
+  rows7.push([{ t: '**Jumlah bobot penilaian**', span: 7, al: 'c' }, { t: `**${pc(tot)}**`, al: 'c', color: ok100 ? '' : 'C00000' }]);
   B.push({ k: 'tbl', w: [600, 2300, 2300, 2100, 2400, 1900, 3500, 700], head: 3, sz: 17, rows: rows7 });
   if (!ok100) B.push({ k: 'p', t: `Perhatian: jumlah bobot penilaian ${fmt(tot, 1)}%, seharusnya 100%.`, color: 'C00000', b: true });
 
@@ -201,7 +204,7 @@ export function modelRps(m, r) {
   const cplTampil = (id) => { const c = ckObj(id); return c ? (c.cpl || []).map(cplById).filter(Boolean).map(cplSingkat) : []; };
   const rows10 = ent.map(e => {
     const cl = cplDari(e.ck);
-    return [{ t: String(e.x.m), al: 'c' }, { t: cl.join(', '), al: 'c' }, '', e.ss.map(s => s.kode).join(', ') || '-', pendek(e.x.indikator, 90) || '-', e.x.ujian ? `**${e.x.ujian}**${e.x.asesmen ? ': ' + e.x.asesmen : ''}` : (e.x.asesmen || e.x.metode || '-'), { t: `${fmt(e.b, 1)}%`, al: 'c' }, '', '', '', ''];
+    return [{ t: String(e.x.m), al: 'c' }, { t: cl.join(', '), al: 'c' }, '', e.ss.map(s => s.kode).join(', ') || '-', pendek(String(e.x.indikator || '').split(/\n/)[0], 90) || '-', e.x.ujian ? `**${e.x.ujian}**${e.x.asesmen ? ': ' + e.x.asesmen : ''}` : (e.x.asesmen || e.x.metode || '-'), { t: `${fmt(e.b, 1)}%`, al: 'c' }, '', '', '', ''];
   });
   const kodeCk = (i) => (ckObj(ent[i].ck) || {}).kode || '-';
   gabung(rows10, 2, (i) => ent[i].ck, (i) => kodeCk(i));

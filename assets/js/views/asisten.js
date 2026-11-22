@@ -78,6 +78,8 @@ export function periksaRps(m, r) {
   [['materi', 'Bahan kajian atau materi', 'bad', 'Isi pokok bahasan tiap pertemuan.'], ['metode', 'Metode dan bentuk pembelajaran', 'bad', 'Sebut bentuk (kuliah, praktikum, praktik lapangan) dan metodenya.'], ['indikator', 'Indikator penilaian', 'near', 'Tulis bukti terukur ketercapaian Sub-CPMK.'], ['asesmen', 'Kriteria dan teknik asesmen', 'near', 'Sebut kriteria (rubrik) dan tekniknya (tes, unjuk kerja, laporan).']].forEach(([f, n, k, s]) => {
     const z = kosong(f); add(z.length ? k : 'ok', n, z.length ? `Kosong di pertemuan ${z.join(', ')}` : 'Terisi di semua pertemuan', z.length ? s : '', AC.rps);
   });
+  const kurangInd = non.filter(p => (p.sub || []).length && String(p.indikator || '').split(/\n+/).filter(t => t.trim()).length < 3 * p.sub.length).map(p => p.m);
+  add(kurangInd.length ? 'near' : 'ok', 'Indikator per Sub-CPMK', kurangInd.length ? `Kurang dari 3 indikator di pertemuan ${kurangInd.join(', ')}` : 'Tiga indikator atau lebih per Sub-CPMK', kurangInd.length ? 'Tulis tiga indikator untuk setiap Sub-CPMK, satu per baris. Bila satu pertemuan memuat dua Sub-CPMK, indikatornya enam.' : '', AC.rps);
   const tanpaSub = non.filter(p => !(p.sub || []).length).map(p => p.m), belum = subs.filter(s => !per.some(p => (p.sub || []).includes(s.id)));
   add(tanpaSub.length ? 'near' : 'ok', 'Pertemuan terhubung Sub-CPMK', tanpaSub.length ? `Belum terhubung di pertemuan ${tanpaSub.join(', ')}` : 'Semua terhubung', tanpaSub.length ? 'Pilih Sub-CPMK yang dicapai di tiap pertemuan.' : '', AC.obe);
   if (subs.length) add(belum.length ? 'bad' : 'ok', 'Sub-CPMK terjadwal', belum.length ? `${belum.length} Sub-CPMK belum dijadwalkan: ${belum.map(s => s.kode).join(', ')}` : 'Semua Sub-CPMK terjadwal', belum.length ? 'Setiap Sub-CPMK harus muncul paling sedikit di satu pertemuan.' : '', AC.obe);
@@ -124,7 +126,7 @@ export function lengkapiRps(m, r0, blankRps, timpa) {
     const met = prak ? 'Praktik terbimbing di laboratorium atau bengkel: demonstrasi, praktik berkelompok, dan pembahasan hasil' : campur ? `${METT[i % 4]}, dilanjutkan praktik terbimbing` : METT[i % 4];
     isi(p, 'materi', tp ? tp.replace(/^./, x => x.toUpperCase()) : '');
     isi(p, 'metode', met);
-    isi(p, 'indikator', tp ? `Ketepatan dan kelengkapan dalam ${tp}` : '');
+    isi(p, 'indikator', tp ? [`Ketepatan dalam ${tp}`, `Kelengkapan dan ketelitian dalam ${tp}`, 'Kemampuan mengaitkan topik ini dengan penerapannya di industri'].join('\n') : '');
     isi(p, 'asesmen', prak || campur ? 'Kriteria: rubrik unjuk kerja dan kepatuhan K3. Teknik: observasi praktik dan laporan' : `Kriteria: rubrik penilaian dan kunci jawaban. Teknik: ${i % 2 ? 'tugas tertulis' : 'kuis'}`);
     isi(p, 'tatap', `Bentuk: ${prak ? 'praktikum' : campur ? 'kuliah dan praktikum' : 'kuliah'}. Metode: ${met.toLowerCase()}. Waktu: ${+m.T ? `teori ${m.T} x ${P.menitTeori} menit` : ''}${campur ? ' dan ' : ''}${+m.P ? `praktik ${m.P} x ${dur} menit` : ''}. Penugasan terstruktur dan belajar mandiri sesuai topik pertemuan.`);
     p.sap = p.sap || {};

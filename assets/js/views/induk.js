@@ -150,8 +150,8 @@ function tParam(el, ed, adm) {
     <p class="note">Yang berhak mengubah: Admin, Wakil Direktur I, dan SPM. Tim kurikulum prodi dapat mengubah kode mata kuliah prodinya sendiri di menu Mata Kuliah.</p></div>
   <div class="card" style="margin-top:18px">${head('Kode baku CPL, PL, BoK, BK, CPMK, dan Sub-CPMK', 'Kode dibuat otomatis dari awalan di bawah ditambah nomor urut; pengguna tidak mengetik kode', 'tag', '#0ea5e9')}
     <div class="pform">
-      ${[['S', 'CPL ranah Sikap'], ['P', 'CPL ranah Pengetahuan'], ['KU', 'CPL ranah Keterampilan umum'], ['KK', 'CPL ranah Keterampilan khusus'], ['pl', 'Profil lulusan'], ['bok', 'Body of Knowledge'], ['bk', 'Bahan kajian'], ['cpmk', 'CPMK (nomor per mata kuliah)'], ['sub', 'Sub-CPMK (awalan, lalu nomor CPMK dan nomor urut)']].map(([k, n]) => `<div class="pfrow"><span>${n}</span><input class="inp" id="kp-${k}" value="${esc(P.kodePrefix[k])}" style="width:130px" ${kb ? '' : 'disabled'}><small>contoh: ${esc(P.kodePrefix[k])}${k === 'sub' ? '1.1' : '1'}</small></div>`).join('')}
-      <div class="pfrow"><span>Penomoran PI</span><span class="muted">kode CPL ditambah titik dan nomor urut (contoh KK1.1)</span><small>tetap</small></div>
+      ${[['cpl', 'CPL (dua digit, misalnya CPL01; unsur SN Dikti ditulis terpisah, CPL04-P03)'], ['pl', 'Profil lulusan'], ['bok', 'Body of Knowledge'], ['bk', 'Bahan kajian'], ['cpmk', 'CPMK (dua digit urut per prodi, misalnya CPMK05)'], ['sub', 'Sub-CPMK (awalan, nomor CPMK, urutan dua digit, misalnya SUB-CPMK0501)']].map(([k, n]) => `<div class="pfrow"><span>${n}</span><input class="inp" id="kp-${k}" value="${esc(P.kodePrefix[k])}" style="width:130px" ${kb ? '' : 'disabled'}><small>contoh: ${esc(P.kodePrefix[k])}${k === 'sub' ? '0501' : ['cpl', 'cpmk'].includes(k) ? '01' : '1'}</small></div>`).join('')}
+      <div class="pfrow"><span>Penomoran PI</span><span class="muted">kode CPL ditambah titik dan nomor urut (contoh CPL04.1)</span><small>tetap</small></div>
     </div>
     ${kb ? `<div class="drawer-act"><div class="sp"></div><button class="btn pri" id="kp-save">${icon('check')} Simpan awalan kode</button></div>` : ''}
     <p class="note">Yang berhak mengubah: Admin, Wakil Direktur I, SPM, dan Kasubbag AK. Nilai awal mengikuti kode yang sudah dipakai di Pedoman. Kode yang sudah ada tidak diubah: perubahan awalan hanya berlaku untuk data yang ditambahkan sesudahnya, jadi ubah sebelum prodi mulai menambah data.</p></div>
@@ -163,7 +163,7 @@ function tParam(el, ed, adm) {
     <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} JP total per minggu adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>`;
   if (kb) el.querySelector('#kp-save').onclick = async () => {
     const kp = {}; for (const k of Object.keys(PARAM_DEFAULT.kodePrefix)) { kp[k] = el.querySelector('#kp-' + k).value.trim(); if (!/^[A-Za-z][A-Za-z0-9-]{0,11}$/.test(kp[k])) { toast('Awalan kode tidak sah (huruf dan angka, maksimal 12 karakter, diawali huruf): ' + kp[k]); return; } }
-    if (new Set(['S', 'P', 'KU', 'KK', 'pl', 'bok', 'bk', 'cpmk'].map(k => kp[k].toUpperCase())).size < 8) { toast('Awalan kode tidak boleh sama satu dengan lainnya.'); return; }
+    if (new Set(['cpl', 'pl', 'bok', 'bk', 'cpmk'].map(k => kp[k].toUpperCase())).size < 5) { toast('Awalan kode tidak boleh sama satu dengan lainnya.'); return; }
     S.settings.param = { ...(S.settings.param || {}), kodePrefix: kp }; await saveSettings(); await addLog('Ubah awalan kode baku CPL, CPMK, dan lainnya'); toast('Awalan kode tersimpan'); rerender();
   };
   if (!adm) return;

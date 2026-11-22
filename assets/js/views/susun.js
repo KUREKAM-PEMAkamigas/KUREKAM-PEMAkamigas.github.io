@@ -5,8 +5,8 @@ import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { detect, smtMinCpl, alasanOk } from '../bloom.js';
 import { badge } from '../bloom.js';
-import { kodeBerikut, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
-import { head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
+import { kodeBerikut, rencanaSelaras, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
+import { tanya, head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
 
 const akadMkF = (m) => !/magang|tugas akhir/i.test(m.kel || '');
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
@@ -54,7 +54,9 @@ export function cplView(el) {
   const cpl = byProdi(S.cpl, ctx.prodi), pl = byProdi(S.pl, ctx.prodi), mk = byProdi(S.mk, ctx.prodi);
   const dukung = cpl.map(c => mk.filter(m => (m.cpl || []).includes(c.id)).length);
   const kl = kelengkapanCpl(S, ctx.prodi), tmb = (r) => ed ? `<button class="btn sm pri btn-ic" data-tambah="${r}">${icon('plus')} Tambah CPL ${RANAH[r].toLowerCase()}</button>` : '';
-  const panel = `<div class="card" style="margin-bottom:18px">${head('Kelengkapan CPL prodi', kl.lengkap && !kl.butirKosong.length && !kl.plKosong.length ? 'Jumlah, ranah, butir IABEE, dan profil lulusan sudah tercakup' : 'Lengkapi sampai semua baris di bawah berstatus cukup', 'target', kl.lengkap ? '#10b981' : '#f5a524')}
+  const sel = ed ? rencanaSelaras(S, ctx.prodi) : { total: 0 };
+  const panelSel = sel.total ? `<div class="ribbon info" style="margin-bottom:14px">${icon('info')} <div><b>${sel.total} kode lama belum mengikuti format baku Pedoman dan Excel OBE</b> (CPL${String(1).padStart(2, '0')}, CPMK01, SUB-CPMK0101, PI CPL01.1): ${sel.cpl.length} CPL, ${sel.cpmk.length} CPMK, ${sel.sub.length} Sub-CPMK, ${sel.pi.length} PI. Hanya kode yang berganti; keterkaitan antardata tetap. <button class="btn sm pri" id="selaras">Selaraskan kode sekarang</button></div></div>` : '';
+  const panel = panelSel + `<div class="card" style="margin-bottom:18px">${head('Kelengkapan CPL prodi', kl.lengkap && !kl.butirKosong.length && !kl.plKosong.length ? 'Jumlah, ranah, butir IABEE, dan profil lulusan sudah tercakup' : 'Lengkapi sampai semua baris di bawah berstatus cukup', 'target', kl.lengkap ? '#10b981' : '#f5a524')}
     <div class="klp-row"><b>CPL prodi: ${kl.total} dari minimal ${kl.min}</b><span class="st ${kl.kurang ? 'bad' : 'ok'}">${kl.kurang ? 'kurang ' + kl.kurang : 'cukup'}</span></div>
     ${kl.ranah.map(x => `<div class="klp-row"><span>${x.nama} (${x.r}): ${x.n} dari minimal ${x.min}</span><span class="st ${x.kurang ? 'bad' : 'ok'}">${x.kurang ? 'kurang ' + x.kurang : 'cukup'}</span><span class="sp"></span>${x.kurang ? tmb(x.r) : ''}</div>`).join('')}
     <div class="klp-row"><span>Butir IABEE (a) sampai (k) yang belum tercakup CPL manapun: ${kl.butirKosong.length ? kl.butirKosong.map(b => `<b>(${b.k})</b> ${esc(b.ringkas)}`).join(', ') : 'tidak ada'}</span><span class="st ${kl.butirKosong.length ? 'bad' : 'ok'}">${kl.butirKosong.length ? kl.butirKosong.length + ' butir' : 'lengkap'}</span></div>
@@ -76,7 +78,7 @@ export function cplView(el) {
     series: [{ type: 'bar', data: dukung.map(v => ({ value: v, itemStyle: { color: v >= 3 ? '#10b981' : v ? '#f5a524' : '#f0616d', borderRadius: [0, 8, 8, 0] } })), barWidth: 14, label: { show: true, position: 'right', fontSize: 11 }, markLine: { symbol: 'none', data: [{ xAxis: 3 }], lineStyle: { color: '#8b5cf6', type: 'dashed' }, label: { formatter: 'min 3' } } }] });
   const lv = {}; cpl.forEach(c => { const b = detect(c.teks, RANAH_HINT[c.ranah]); const k = b ? b.code : '?'; lv[k] = (lv[k] || 0) + 1; });
   chart(el.querySelector('#c-r'), { tooltip: {}, series: [{ type: 'sunburst', radius: ['18%', '92%'], data: Object.keys(RANAH).map((r, i) => ({ name: r, itemStyle: { color: PAL[i] }, children: Object.entries(cpl.filter(c => c.ranah === r).reduce((a, c) => { const b = detect(c.teks, RANAH_HINT[c.ranah]); const k = b ? b.code : '?'; a[k] = (a[k] || 0) + 1; return a; }, {})).map(([k, v]) => ({ name: k, value: v })) })), label: { fontSize: 10 } }] });
-  const form = (x = { ranah: 'KK', pl: [], iabee: [] }) => formDrawer({ title: x.id ? 'Ubah CPL ' + x.kode : 'CPL baru', sub: prodiName(), obj: { ...x, iabee: iabeeOf(x) },
+  const form = (x = { ranah: 'KK', pl: [], iabee: [] }) => formDrawer({ title: x.id ? 'Ubah CPL ' + x.kode : 'CPL baru', sub: prodiName(), obj: { ...x, iabee: iabeeOf(x), sn: String(x.sn || '').split(/[,;\s]+/).map(t => t.trim().toUpperCase().replace(/^CPL-?/, '')).filter(Boolean) },
     onOpen: (dr) => {
       const rn = () => dr.querySelector('[name=ranah]').value;
       const tampil = () => {
@@ -85,15 +87,22 @@ export function cplView(el) {
         const pilih = Array.from(box.querySelectorAll('input:checked')).map(i => i.value), luar = pilih.filter(k => !aj.includes(k));
         dr.querySelector('[data-help=iabee]').innerHTML = `Lazimnya ranah ${RANAH[rn()].toLowerCase()} dikaitkan dengan butir ${aj.map(k => `(${k})`).join(' ')}; butir lain tampak pudar. ${luar.length ? `<span class="st near">Peringatan: ${luar.map(k => `(${k})`).join(' ')} kurang lazim untuk ranah ini. Boleh disimpan bila ada alasannya.</span>` : ''}`;
       };
-      if (!x.id) dr.querySelector('[name=ranah]').addEventListener('change', () => { dr.querySelector('[data-kode=kode] .tag').textContent = kodeBerikut(S, 'cpl', ctx.prodi, { ranah: rn() }); });
-      dr.querySelector('[name=ranah]').addEventListener('change', tampil); dr.querySelectorAll('[data-multi=iabee] input').forEach(i => i.addEventListener('change', tampil)); tampil();
+      const sn = dr.querySelector('[data-multi=sn]'), snAwal = String(x.sn || '').split(/[,;\s]+/).map(t => t.trim().toUpperCase().replace(/^CPL-?/, '')).filter(Boolean); let awal = true;
+      const gambarSn = () => {
+        const pilih = new Set(awal ? snAwal : Array.from(sn.querySelectorAll('input:checked')).map(i => i.value)), r = rn(); awal = false;
+        const semua = [...Array.from({ length: 10 }, (_, i) => `${r}${String(i + 1).padStart(2, '0')}`), ...Array.from(pilih).filter(v => !v.startsWith(r))];
+        sn.innerHTML = semua.map(v => `<label class="cp ${pilih.has(v) ? 'on' : ''}" data-v="${v}"><input type="checkbox" value="${v}" ${pilih.has(v) ? 'checked' : ''}>${v}</label>`).join('');
+        sn.querySelectorAll('input').forEach(i => i.onchange = () => i.parentElement.classList.toggle('on', i.checked));
+      };
+      gambarSn(); dr.querySelector('[name=ranah]').addEventListener('change', () => { gambarSn(); tampil(); }); dr.querySelectorAll('[data-multi=iabee] input').forEach(i => i.addEventListener('change', tampil)); tampil();
     },
-    fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'cpl', ctx.prodi, { ranah: x.ranah }) }, { k: 'ranah', label: 'Ranah', type: 'select', lock: !!x.id, opts: Object.entries(RANAH).map(([v, t]) => ({ v, t })) },
-      { k: 'sn', label: 'Kode unsur SN Dikti (boleh lebih dari satu, pisahkan koma)', ph: 'CPL-S01, CPL-S02', help: 'Dipakai pada kolom CPL di RPS dan pada Tabel OBE. Kode CPL prodi tidak berubah.' },
+    fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'cpl', ctx.prodi) }, { k: 'ranah', label: 'Ranah', type: 'select', opts: Object.entries(RANAH).map(([v, t]) => ({ v, t })) },
+      { k: 'sn', label: 'Unsur SN Dikti (pilih, boleh lebih dari satu)', type: 'multi', opts: [], help: 'Ditulis di RPS setelah kode CPL, misalnya CPL04-P03. Pilihan mengikuti ranah.' },
       { k: 'teks', label: 'Rumusan CPL', type: 'textarea', rows: 3, live: liveBloom(() => RANAH_HINT[document.querySelector('[name=ranah]').value]) },
       { k: 'pl', label: 'Mendukung profil lulusan', type: 'multi', opts: opts(pl) }, { k: 'iabee', label: 'Butir kompetensi lulusan IABEE (boleh lebih dari satu)', type: 'multi', opts: BUTIR_IABEE.map(b => ({ v: b.k, t: `(${b.k}) ${b.ringkas}`, title: b.teks })), help: 'Arahkan kursor ke butir untuk membaca rumusan lengkapnya (Kriteria IABEE 1.2.2).' }],
-    onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; if (!(o.pl || []).length) return 'Pilih minimal satu profil lulusan yang didukung CPL ini.'; if (!o.id) o.kode = kodeBerikut(S, 'cpl', ctx.prodi, { ranah: o.ranah }); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('cpl', o, `Simpan CPL ${o.kode} (${ctx.prodi})`); rerender(); },
+    onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; if (!(o.pl || []).length) return 'Pilih minimal satu profil lulusan yang didukung CPL ini.'; o.sn = (o.sn || []).join(', '); if (!o.id) o.kode = kodeBerikut(S, 'cpl', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('cpl', o, `Simpan CPL ${o.kode} (${ctx.prodi})`); rerender(); },
     onDelete: x.id ? async () => { await remove('cpl', x.id, `Hapus CPL ${x.kode}`); rerender(); } : null });
+  const bs = el.querySelector('#selaras'); if (bs) bs.onclick = async () => { if (!(await tanya('Kode CPL, CPMK, Sub-CPMK, dan PI lama diganti ke format baku. Keterkaitan tidak berubah, tetapi dokumen yang sudah dicetak masih memuat kode lama. Lanjutkan?', 'Selaraskan'))) return; for (const k of ['cpl', 'cpmk', 'sub', 'pi']) if (sel[k].length) await saveMany(k, sel[k], `Selaraskan kode ${k.toUpperCase()} ke format baku (${ctx.prodi})`); rerender(); };
   if (ed) { el.querySelector('#add').onclick = () => form(); el.querySelectorAll('[data-tambah]').forEach(b => b.onclick = () => form({ ranah: b.dataset.tambah, pl: [], iabee: [] })); el.querySelectorAll('tr.click').forEach(r => r.onclick = () => form({ ...S.cpl.find(c => c.id === r.dataset.id) })); }
 }
 

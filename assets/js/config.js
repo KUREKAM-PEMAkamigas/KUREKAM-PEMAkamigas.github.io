@@ -106,8 +106,8 @@ export const PARAM_DEFAULT = {
   cplMin: { total: 9, S: 2, P: 2, KU: 2, KK: 3 },
   /* Butir IABEE (a sampai k) yang lazim dibebankan pada tiap ranah CPL: hanya peringatan, tidak memblokir */
   cplIabee: { S: ['g', 'h', 'k'], KU: ['h', 'i', 'j', 'k'], P: ['a', 'f'], KK: ['a', 'b', 'c', 'd', 'e', 'j'] },
-  /* Awalan kode baku. Kode dibuat otomatis (awalan + nomor urut terkecil yang kosong), tidak diketik. PI = kode CPL + titik + nomor; Sub-CPMK = awalan + nomor CPMK + titik + nomor. */
-  kodePrefix: { S: 'S', P: 'P', KU: 'KU', KK: 'KK', pl: 'PL', bok: 'BOK', bk: 'BK', cpmk: 'CPMK', sub: 'Sub-CPMK' },
+  /* Kode baku mengikuti Excel Tabel Kurikulum OBE dan Pedoman: CPL01 (dua digit, urut per prodi, unsur SN Dikti ditulis terpisah, misalnya CPL04-P03), CPMK01 (urut per prodi, boleh dipakai banyak MK), SUB-CPMK0501 (nomor CPMK dan urutan dua digit), PI = kode CPL + titik + nomor (CPL04.1). Kode dibuat otomatis, tidak diketik. */
+  kodePrefix: { cpl: 'CPL', pl: 'PL', bok: 'BOK', bk: 'BK', cpmk: 'CPMK', sub: 'SUB-CPMK' },
   /* Pedoman edisi 2027: batas praktik, capstone, magang, masa studi (dapat diubah admin, SPM, dan Wakil Direktur I di Data Induk > Parameter) */
   praktikMaxSks: 3, capstoneSks: 4, magangInti: 10, magangKonversi: 10, masaStudiNormal: 8, masaStudiMaks: 14,
   /* Kode baku MK bersama: p = pola nama (regex, huruf besar kecil diabaikan), k = kode, n = nama baku. Urutan penting: pola yang lebih khusus lebih dulu. */

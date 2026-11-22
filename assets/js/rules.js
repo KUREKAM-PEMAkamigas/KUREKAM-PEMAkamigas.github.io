@@ -518,36 +518,60 @@ export function kesiapan(S, pid) {
 /* ---------- Kode baku otomatis dan kelengkapan CPL ---------- */
 export const RANAH_CPL = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
 const nomorKosong = (dipakai) => { let n = 1; while (dipakai.has(n)) n++; return n; };
-const nomorDari = (kode, awalan) => { const m = String(kode || '').match(new RegExp('^' + awalan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$', 'i')); return m ? +m[1] : null; };
+const esc2 = (t) => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const nomorDari = (kode, awalan, digit) => { const m = String(kode || '').match(new RegExp('^' + esc2(awalan) + (digit ? `(\\d{${digit}})` : '(\\d+)') + '$', 'i')); return m ? +m[1] : null; };
+const pad2 = (n) => String(n).padStart(2, '0');
+const angkaKode = (kode) => ((String(kode).match(/\d+/) || ['1'])[0]).replace(/^0+(?=\d)/, '');
 /**
  * Kode berikutnya yang dibuat otomatis (nomor terkecil yang masih kosong; kode lama tidak diubah).
- * jenis: cpl (opsi.ranah), pl, bok, bk, pi (opsi.cpl = objek CPL), cpmk (opsi.mk = id MK), sub (opsi.cpmk = objek CPMK).
+ * jenis: cpl (CPL01), pl, bok, bk, pi (opsi.cpl = objek CPL: CPL04.1), cpmk (CPMK01, urut per prodi), sub (opsi.cpmk = objek CPMK: SUB-CPMK0501).
+ * opsi.pakai = kode lain yang sedang diusulkan dan belum tersimpan.
  */
 export function kodeBerikut(S, jenis, pid, opsi = {}) {
-  const P = param(S).kodePrefix, pakai = new Set();
+  const P = param(S).kodePrefix, pakai = new Set(), ekstra = opsi.pakai || [];
   if (jenis === 'pi') {
     const c = opsi.cpl; (S.pi || []).filter(p => p.cpl === c.id).forEach(p => { const n = nomorDari(p.kode, c.kode + '.'); if (n) pakai.add(n); });
     return `${c.kode}.${nomorKosong(pakai)}`;
   }
   if (jenis === 'sub') {
-    const c = opsi.cpmk, noC = String(c.kode).replace(new RegExp('^' + P.cpmk, 'i'), '');
-    S.sub.filter(s => s.cpmk === c.id).forEach(s => { const n = nomorDari(s.kode, `${P.sub}${noC}.`); if (n) pakai.add(n); });
-    return `${P.sub}${noC}.${nomorKosong(pakai)}`;
+    const aw = `${P.sub}${pad2(angkaKode(opsi.cpmk.kode))}`;
+    [...S.sub.filter(s => s.prodi === pid).map(s => s.kode), ...ekstra].forEach(k => { const n = nomorDari(k, aw, 2); if (n) pakai.add(n); });
+    return `${aw}${pad2(nomorKosong(pakai))}`;
   }
-  if (jenis === 'cpmk') {
-    S.cpmk.filter(c => c.mk === opsi.mk).forEach(c => { const n = nomorDari(c.kode, P.cpmk); if (n) pakai.add(n); });
-    return `${P.cpmk}${nomorKosong(pakai)}`;
-  }
-  const aw = jenis === 'cpl' ? (P[opsi.ranah] || opsi.ranah) : P[jenis];
-  const koleksi = { cpl: S.cpl, pl: S.pl, bok: S.bok, bk: S.bk }[jenis] || [];
-  koleksi.filter(x => x.prodi === pid).forEach(x => { const n = nomorDari(x.kode, aw); if (n) pakai.add(n); });
+  const koleksi = { cpl: S.cpl, pl: S.pl, bok: S.bok, bk: S.bk, cpmk: S.cpmk }[jenis] || [], aw = P[jenis];
+  [...koleksi.filter(x => x.prodi === pid).map(x => x.kode), ...ekstra].forEach(k => { const n = nomorDari(k, aw); if (n) pakai.add(n); });
   if (jenis === 'cpl') { /* id CPL turunan dari kode: jangan memakai kembali nomor yang masih dirujuk MK, CPMK, PI, atau BK */
     const ada = new Set(S.cpl.map(c => c.id)), rujuk = new Set();
     [...S.mk, ...S.cpmk, ...(S.bk || [])].filter(x => x.prodi === pid).forEach(x => (x.cpl || []).forEach(i => rujuk.add(i)));
     (S.pi || []).filter(p => p.prodi === pid).forEach(p => rujuk.add(p.cpl));
     rujuk.forEach(i => { if (!ada.has(i) && String(i).startsWith(pid + '-')) { const n = nomorDari(String(i).slice(pid.length + 1), aw); if (n) pakai.add(n); } });
   }
-  return `${aw}${nomorKosong(pakai)}`;
+  const n = nomorKosong(pakai);
+  return `${aw}${jenis === 'cpl' || jenis === 'cpmk' ? pad2(n) : n}`;
+}
+/** Rencana penyelarasan kode lama (S1, CPMK1, Sub-CPMK1.1) ke format baku. Hanya kode yang diganti; id dan keterkaitan tidak berubah. */
+export function rencanaSelaras(S, pid) {
+  const P = param(S).kodePrefix, hasil = { cpl: [], cpmk: [], sub: [], pi: [] };
+  const sesuai = (k, aw) => new RegExp('^' + esc2(aw) + '\\d{2,}$', 'i').test(String(k || ''));
+  const kodeCpl = {};
+  const cpl = byProdi(S.cpl, pid), pakaiC = new Set(cpl.filter(c => sesuai(c.kode, P.cpl)).map(c => nomorDari(c.kode, P.cpl)));
+  cpl.forEach(c => { if (sesuai(c.kode, P.cpl)) return; const n = nomorKosong(pakaiC); pakaiC.add(n); const baru = `${P.cpl}${pad2(n)}`; kodeCpl[c.id] = { lama: c.kode, baru }; hasil.cpl.push({ ...c, kode: baru }); });
+  (S.pi || []).filter(p => p.prodi === pid && kodeCpl[p.cpl] && String(p.kode).startsWith(kodeCpl[p.cpl].lama + '.')).forEach(p => hasil.pi.push({ ...p, kode: kodeCpl[p.cpl].baru + String(p.kode).slice(kodeCpl[p.cpl].lama.length) }));
+  const mkUrut = (a, b) => { const x = S.mk.find(m => m.id === a) || {}, y = S.mk.find(m => m.id === b) || {}; return (x.smt || 0) - (y.smt || 0) || String(x.nama || '').localeCompare(String(y.nama || ''), 'id'); };
+  const cpmk = byProdi(S.cpmk, pid), pakaiK = new Set(cpmk.filter(c => sesuai(c.kode, P.cpmk)).map(c => nomorDari(c.kode, P.cpmk))), kodeK = {};
+  cpmk.forEach(c => { kodeK[c.id] = c.kode; });
+  [...cpmk].filter(c => !sesuai(c.kode, P.cpmk)).sort((a, b) => mkUrut(a.mk, b.mk) || String(a.mk).localeCompare(String(b.mk)) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }))
+    .forEach(c => { const n = nomorKosong(pakaiK); pakaiK.add(n); kodeK[c.id] = `${P.cpmk}${pad2(n)}`; hasil.cpmk.push({ ...c, kode: kodeK[c.id] }); });
+  const subs = byProdi(S.sub, pid), pakaiS = new Set();
+  const bentuk = (s) => `${P.sub}${pad2(angkaKode(kodeK[s.cpmk] || ''))}`;
+  subs.forEach(s => { if (kodeK[s.cpmk] === (cpmk.find(c => c.id === s.cpmk) || {}).kode && sesuai(s.kode, P.sub) && new RegExp('^' + esc2(bentuk(s)) + '\\d{2}$', 'i').test(s.kode)) pakaiS.add(String(s.kode).toUpperCase()); });
+  [...subs].sort((a, b) => String(a.cpmk).localeCompare(String(b.cpmk)) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })).forEach(s => {
+    if (pakaiS.has(String(s.kode).toUpperCase()) && new RegExp('^' + esc2(bentuk(s)) + '\\d{2}$', 'i').test(s.kode)) return;
+    let n = 1; while (pakaiS.has(`${bentuk(s)}${pad2(n)}`.toUpperCase())) n++;
+    const baru = `${bentuk(s)}${pad2(n)}`; pakaiS.add(baru.toUpperCase()); hasil.sub.push({ ...s, kode: baru });
+  });
+  hasil.total = hasil.cpl.length + hasil.cpmk.length + hasil.sub.length + hasil.pi.length;
+  return hasil;
 }
 /** Anjuran butir IABEE per ranah CPL (peringatan, bukan pemblokiran). */
 export const iabeeAnjuran = (S, ranah) => (param(S).cplIabee || {})[ranah] || [];

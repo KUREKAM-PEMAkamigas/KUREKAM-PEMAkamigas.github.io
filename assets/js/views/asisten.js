@@ -8,7 +8,7 @@ import { kodeBaruMk, kodeBaku } from '../kode.js';
 import { PRODI_DEF, CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci } from '../seed.js';
 import { detect, ANJURAN_SMT } from '../bloom.js';
 import { ringkasIntegrasi } from '../riset.js';
-import { param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
+import { kodeBerikut, param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
 import { usulanProdi, bolehSetuju, setujui, hapusSlotKosong } from '../usulan.js';
 import { head, bar, pctColor, kTag, tanya, prodiName, ro } from './ui.js';
 import { turunkanDok } from './dokgen.js';
@@ -30,17 +30,18 @@ export function usulCpmk(m) {
   let verbs = (prak ? VERB.p : VERB.t)[smt] || VERB.t[6];
   if (/capstone/i.test(m.nama)) verbs = ['merancang', 'mengevaluasi'];
   const n = sksOf(m) <= 1 ? 1 : 2, cpl = m.cpl || [];
+  const kodeBaru = []; 
   return Array.from({ length: n }, (_, i) => {
-    const v = verbs[i];
-    return { id: uid(`${m.id}-CPMK`), mk: m.id, prodi: m.prodi, kode: `CPMK${i + 1}`, usul: true, cpl: cpl.length ? [cpl[i % cpl.length]] : [],
+    const v = verbs[i], kode = kodeBerikut(S, 'cpmk', m.prodi, { pakai: kodeBaru }); kodeBaru.push(kode);
+    return { id: uid(`${m.id}-CPMK`), mk: m.id, prodi: m.prodi, kode, usul: true, cpl: cpl.length ? [cpl[i % cpl.length]] : [],
       teks: `Mampu ${frasa(v, m)}${prak ? ' sesuai prosedur dan kaidah K3' : ''}.` };
   });
 }
 export function usulSub(m, c) {
   const v = (tanpaMampu(c.teks).split(/\s+/)[0] || '').toLowerCase(), sv = SUBV[v] || [v || 'menjelaskan', v || 'menerapkan'];
-  const no = (String(c.kode).match(/\d+/) || ['1'])[0];
-  return sv.map((w, j) => ({ id: uid(`${c.id}-S`), cpmk: c.id, mk: m.id, prodi: m.prodi, kode: `Sub-CPMK${no}.${j + 1}`, bobot: 0, usul: true,
-    teks: `Mampu ${frasa(w, m)}: [pokok bahasan ${j + 1}].` }));
+  const kodeBaru = [];
+  return sv.map((w, j) => { const kode = kodeBerikut(S, 'sub', m.prodi, { cpmk: c, pakai: kodeBaru }); kodeBaru.push(kode); return { id: uid(`${c.id}-S`), cpmk: c.id, mk: m.id, prodi: m.prodi, kode, bobot: 0, usul: true,
+    teks: `Mampu ${frasa(w, m)}: [pokok bahasan ${j + 1}].` }; });
 }
 function ratakanBobotSub(subs) { if (!subs.length) return; const b = Math.floor(100 / subs.length); subs.forEach((s, i) => { s.bobot = i === subs.length - 1 ? 100 - b * (subs.length - 1) : b; }); }
 
@@ -216,8 +217,9 @@ const GEN = {
   async cpl(pid, bidang) {
     const ada = byProdi(S.cpl, pid), pl = byProdi(S.pl, pid).sort((a, b) => a.kode.localeCompare(b.kode));
     const ranahAda = new Set(ada.map(c => c.ranah));
+    const kodeBaru = [];
     const baru = CPL_T.filter(([ranah, k]) => !ada.length || (!ranahAda.has(ranah) && !ada.some(c => c.kode === k)))
-      .map(([ranah, k, t, ia]) => ({ id: `${pid}-${k}${ada.some(c => c.id === `${pid}-${k}`) ? '-' + uid('u') : ''}`, prodi: pid, kode: k, ranah, teks: t.replace('{d}', bidang), iabee: ia, usul: true, pl: PL_CPL.map((a, i) => a.includes(k) && pl[i] ? pl[i].id : null).filter(Boolean) }));
+      .map(([ranah, k, t, ia]) => { const kode = kodeBerikut(S, 'cpl', pid, { pakai: kodeBaru }); kodeBaru.push(kode); return ({ id: `${pid}-${k}${ada.some(c => c.id === `${pid}-${k}`) ? '-' + uid('u') : ''}`, prodi: pid, kode, sn: k.replace(/^([A-Z]+)(\d+)$/, (_, a, b) => a + b.padStart(2, '0')), ranah, teks: t.replace('{d}', bidang), iabee: ia, usul: true, pl: PL_CPL.map((a, i) => a.includes(k) && pl[i] ? pl[i].id : null).filter(Boolean) }); });
     if (baru.length) await saveMany('cpl', baru);
     /* CPL lama yang belum terhubung profil lulusan dihubungkan ke profil pertama */
     return baru.length;

@@ -19,7 +19,10 @@ export const sksOf = (mk) => (+mk.T || 0) + (+mk.P || 0);
 export const jpOf = (mk, P) => Math.round(((+mk.T || 0) * P.menitTeori / 60 + (+mk.P || 0) * durasi(mk, P) / 60) * 100) / 100;
 export const tingkat = (smt) => Math.ceil(smt / 2);
 export const kelasOf = (S, prodiId, smt) => { const p = S.prodi.find(x => x.id === prodiId); return p && p.kelas ? (+p.kelas[tingkat(smt)] || 0) : 0; };
-export const byProdi = (arr, pid) => arr.filter(x => x.prodi === pid);
+export const URUT_RANAH = ['S', 'P', 'KU', 'KK'];
+const noKode = (k) => { const m = String(k || '').match(/(\d+)\s*$/); return m ? +m[1] : 0; };
+/** Daftar milik prodi. CPL selalu tampil menurut urutan baku SN Dikti: Sikap, Pengetahuan, Keterampilan umum, Keterampilan khusus. */
+export const byProdi = (arr, pid) => { const r = arr.filter(x => x.prodi === pid); return r.length && r[0].ranah && URUT_RANAH.includes(r[0].ranah) && r[0].teks !== undefined && !r[0].cpl ? r.slice().sort((x, y) => URUT_RANAH.indexOf(x.ranah) - URUT_RANAH.indexOf(y.ranah) || noKode(x.kode) - noKode(y.kode)) : r; };
 
 /* ---------- Struktur kurikulum per semester ---------- */
 export function struktur(S, pid) {
@@ -549,13 +552,12 @@ export function kodeBerikut(S, jenis, pid, opsi = {}) {
   const n = nomorKosong(pakai);
   return `${aw}${jenis === 'cpl' || jenis === 'cpmk' ? pad2(n) : n}`;
 }
-/** Rencana penyelarasan kode lama (S1, CPMK1, Sub-CPMK1.1) ke format baku. Hanya kode yang diganti; id dan keterkaitan tidak berubah. */
+/** Rencana penyelarasan kode lama dan urutan CPL (S, P, KU, KK) (S1, CPMK1, Sub-CPMK1.1) ke format baku. Hanya kode yang diganti; id dan keterkaitan tidak berubah. */
 export function rencanaSelaras(S, pid) {
   const P = param(S).kodePrefix, hasil = { cpl: [], cpmk: [], sub: [], pi: [] };
   const sesuai = (k, aw) => new RegExp('^' + esc2(aw) + '\\d{2,}$', 'i').test(String(k || ''));
   const kodeCpl = {};
-  const cpl = byProdi(S.cpl, pid), pakaiC = new Set(cpl.filter(c => sesuai(c.kode, P.cpl)).map(c => nomorDari(c.kode, P.cpl)));
-  cpl.forEach(c => { if (sesuai(c.kode, P.cpl)) return; const n = nomorKosong(pakaiC); pakaiC.add(n); const baru = `${P.cpl}${pad2(n)}`; kodeCpl[c.id] = { lama: c.kode, baru }; hasil.cpl.push({ ...c, kode: baru }); });
+  byProdi(S.cpl, pid).forEach((c, i) => { const baru = `${P.cpl}${pad2(i + 1)}`; if (c.kode !== baru) { kodeCpl[c.id] = { lama: c.kode, baru }; hasil.cpl.push({ ...c, kode: baru }); } });
   (S.pi || []).filter(p => p.prodi === pid && kodeCpl[p.cpl] && String(p.kode).startsWith(kodeCpl[p.cpl].lama + '.')).forEach(p => hasil.pi.push({ ...p, kode: kodeCpl[p.cpl].baru + String(p.kode).slice(kodeCpl[p.cpl].lama.length) }));
   const mkUrut = (a, b) => { const x = S.mk.find(m => m.id === a) || {}, y = S.mk.find(m => m.id === b) || {}; return (x.smt || 0) - (y.smt || 0) || String(x.nama || '').localeCompare(String(y.nama || ''), 'id'); };
   const cpmk = byProdi(S.cpmk, pid), pakaiK = new Set(cpmk.filter(c => sesuai(c.kode, P.cpmk)).map(c => nomorDari(c.kode, P.cpmk))), kodeK = {};

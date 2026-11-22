@@ -28,11 +28,12 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     /* isian satu baris yang ternyata berisi baris baru dibuka sebagai kotak teks agar baris tidak menyatu */
     if (!x.type && typeof v === 'string' && v.includes('\n')) x = { ...x, type: 'textarea', rows: Math.min(6, v.split('\n').length + 1) };
     let inp;
-    if (x.type === 'textarea') inp = `<textarea class="inp" name="${x.k}" rows="${x.rows || 3}" placeholder="${esc(x.ph || '')}">${esc(v || '')}</textarea>`;
-    else if (x.type === 'select') inp = `<select class="inp" name="${x.k}">${x.opts.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;
+    if (x.type === 'kode') inp = `<div class="kode-lock" data-kode="${x.k}"><span class="tag" style="--c:#0ea5e9">${esc(v || x.ph || '–')}</span><span class="small muted">dibuat otomatis sesuai pedoman, tidak diketik</span></div>`;
+    else if (x.type === 'textarea') inp = `<textarea class="inp" name="${x.k}" rows="${x.rows || 3}" placeholder="${esc(x.ph || '')}">${esc(v || '')}</textarea>`;
+    else if (x.type === 'select') inp = `<select class="inp" name="${x.k}" ${x.lock ? 'disabled' : ''}>${x.opts.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;
     else if (x.type === 'multi') {
       const sel = new Set(v || []);
-      inp = `<div class="chips-pick" data-multi="${x.k}">${x.opts.length ? x.opts.map(o => `<label class="cp ${sel.has(o.v) ? 'on' : ''}" title="${esc(o.title || o.t)}"><input type="checkbox" value="${esc(o.v)}" ${sel.has(o.v) ? 'checked' : ''}>${esc(o.t)}</label>`).join('') : '<span class="muted small">Belum ada pilihan.</span>'}</div>`;
+      inp = `<div class="chips-pick" data-multi="${x.k}">${x.opts.length ? x.opts.map(o => `<label class="cp ${sel.has(o.v) ? 'on' : ''} ${o.dim ? 'dim' : ''}" data-v="${esc(o.v)}" title="${esc(o.title || o.t)}"><input type="checkbox" value="${esc(o.v)}" ${sel.has(o.v) ? 'checked' : ''}>${esc(o.t)}</label>`).join('') : '<span class="muted small">Belum ada pilihan.</span>'}</div>`;
     } else inp = `<input class="inp" name="${x.k}" type="${x.type || 'text'}" value="${esc(v == null ? '' : v)}" ${x.step ? `step="${x.step}"` : ''} placeholder="${esc(x.ph || '')}">`;
     return `<div class="field ${x.full || x.type === 'textarea' || x.type === 'multi' ? 'full' : ''}"><label>${x.label}</label>${inp}${x.help ? `<div class="hint" data-help="${x.k}">${x.help}</div>` : `<div class="hint" data-help="${x.k}"></div>`}</div>`;
   }).join('');
@@ -43,6 +44,7 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     dr.querySelector('#fd-save').onclick = async () => {
       const out = { ...obj };
       fields.forEach(x => {
+        if (x.type === 'kode') return;
         if (x.type === 'multi') out[x.k] = Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value);
         else { const el = dr.querySelector(`[name="${x.k}"]`); out[x.k] = x.type === 'number' ? (el.value === '' ? null : +el.value) : el.value.trim(); }
       });
@@ -51,7 +53,7 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
       closeDrawer();
     };
     const del = dr.querySelector('#fd-del'); if (del) del.onclick = async () => { if (!(await tanya('Hapus data ini?', 'Hapus'))) return; await onDelete(obj); closeDrawer(); };
-    fields.filter(x => x.live).forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); up(); });
+    fields.filter(x => x.live && x.type !== 'kode').forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); up(); });
     if (onOpen) onOpen(dr);
   }, wide);
 }

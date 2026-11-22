@@ -2,6 +2,7 @@
    Berkas dibaca di peramban (tanpa pustaka luar, tanpa dikirim ke server), hasilnya ditampilkan sebagai draf untuk ditinjau. */
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, openDrawer, addLog } from './app.js';
 import { prodiTag } from './views/ui.js';
+import { mkTanpaCpl } from './rules.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const rapi = (s) => String(s == null ? '' : s).replace(/ /g, ' ').replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
@@ -134,7 +135,7 @@ export function tombolUnggahRps(el, draw) {
 }
 
 function tinjau(hasil, draw) {
-  const boleh = S.mk.filter(m => can('rps', { prodi: m.prodi, mk: m.id }) && m.smt <= 8);
+  const boleh = S.mk.filter(m => can('rps', { prodi: m.prodi, mk: m.id }) && m.smt <= 8 && (!mkTanpaCpl(m) || can('susun', m)));
   const kartu = (h, i) => {
     const o = h.o, opsi = boleh.filter(m => !h.prodi || m.prodi === h.prodi).sort((a, b) => a.smt - b.smt || a.nama.localeCompare(b.nama));
     const sem = h.mk ? susun(o, h.mk) : null; h.sem = sem;

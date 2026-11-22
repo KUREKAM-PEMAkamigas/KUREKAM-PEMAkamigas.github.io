@@ -3,7 +3,7 @@ import { S, ctx, can, save, remove, rerender, esc, icon, uid, saveSettings, addL
 import { APP, BUTIR_IABEE, INDIKATOR_IABEE } from '../config.js';
 import { chart, AX } from '../charts.js';
 import { detect, badge } from '../bloom.js';
-import { byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, kompetensiInti, lulusanRekap, HURUF_IABEE } from '../rules.js';
+import { kodeBerikut, byProdi, param, fmt, iabeeOf, piOfCpl, piTrace, kriteriaPi, kesiapan, kompetensiInti, lulusanRekap, HURUF_IABEE } from '../rules.js';
 import { kirimUmpan, temuanAmi } from '../sinkron.js';
 import { DB } from '../db.js';
 import { head, formDrawer, ro, kpi, animateCounts, prodiName, short, stTag, prodiTag, unduh, loadXLSX } from './ui.js';
@@ -56,15 +56,15 @@ export function piView(el) {
     const mkCpl = new Set(t.mk.filter(m => (m.cpl || []).includes(c.id)).map(m => m.id));
     const pil = t.cpmk.filter(k => (k.cpl || []).includes(c.id) || mkCpl.has(k.mk)).sort((a, b) => kodeCpmk(a).localeCompare(kodeCpmk(b), 'id', { numeric: true }));
     formDrawer({ title: x.id ? 'Ubah PI ' + x.kode : 'PI baru untuk ' + c.kode, sub: short(c.teks, 120), obj: x,
-      fields: [{ k: 'kode', label: 'Kode PI', ph: `${c.kode}.${ps.length + 1}` },
+      fields: [{ k: 'kode', label: 'Kode PI', type: 'kode', ph: x.kode || kodeBerikut(S, 'pi', pid, { cpl: c }) },
         { k: 'teks', label: 'Rumusan PI (perilaku yang dapat diamati dan dinilai)', type: 'textarea', rows: 3, live: livePi },
         { k: 'cpmk', label: 'CPMK yang mengukur PI ini', type: 'multi', opts: pil.map(k => ({ v: k.id, t: kodeCpmk(k), title: `${(S.mk.find(m => m.id === k.mk) || {}).nama || ''}: ${k.teks}` })), help: pil.length ? 'Pilihan berasal dari CPMK yang mendukung CPL ini atau dari MK yang dibebani CPL ini. Arahkan kursor untuk membaca rumusan CPMK.' : 'Belum ada CPMK yang terkait dengan CPL ini. Bebankan CPL ke MK di menu Mata Kuliah, lalu isi CPMK-nya.' },
         { k: 'minPersen', label: 'Kriteria: minimal % mahasiswa', type: 'number', ph: String(P.piMinPersen), help: `Kosongkan untuk memakai nilai bawaan ${P.piMinPersen}%.` },
         { k: 'minNilai', label: 'Kriteria: nilai minimal', type: 'number', ph: String(P.piMinNilai), help: `Kosongkan untuk memakai nilai bawaan ${P.piMinNilai}.` }],
       onSave: async (o) => {
         if (!o.teks) return 'Rumusan PI wajib diisi.';
-        o.kode = o.kode || `${c.kode}.${ps.length + 1}`;
-        if (S.pi.some(p => p.prodi === pid && p.kode === o.kode && p.id !== o.id)) return 'Kode PI sudah dipakai.';
+        o.kode = o.kode || kodeBerikut(S, 'pi', pid, { cpl: c });
+        if (!o.id && ps.length >= P.piPerCplMax) return `Satu CPL maksimal ${P.piPerCplMax} PI (Parameter). Ubah PI yang ada atau minta batas dinaikkan.`;
         if (o.minPersen != null && (o.minPersen < 0 || o.minPersen > 100)) return 'Persentase harus 0 sampai 100.';
         o.id = o.id || uid(pid + '-PI'); o.prodi = pid; o.cpl = c.id;
         await save('pi', o, `Simpan PI ${o.kode} (${pid})`); rerender();

@@ -5,7 +5,7 @@ import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { detect, smtMinCpl, alasanOk } from '../bloom.js';
 import { badge } from '../bloom.js';
-import { cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
+import { kodeBerikut, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
 import { head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
 
 const akadMkF = (m) => !/magang|tugas akhir/i.test(m.kel || '');
@@ -33,8 +33,8 @@ export function visiView(el) {
     <div class="grid g3">${pl.map(x => { const n = S.cpl.filter(c => (c.pl || []).includes(x.id)).length; return `<div class="pl-card tilt ${ed ? 'click' : ''}" data-id="${x.id}"><span class="tag" style="--c:#14b8a6">${x.kode}</span><b>${esc(x.nama)}</b><p>${esc(x.teks)}</p><div class="small muted">${n} CPL mendukung</div></div>`; }).join('') || '<div class="empty">Belum ada profil lulusan.</div>'}</div>
   </div>`;
   const plForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah profil lulusan' : 'Profil lulusan baru', sub: prodiName(), obj: x,
-    fields: [{ k: 'kode', label: 'Kode', ph: 'PL4' }, { k: 'nama', label: 'Nama peran', ph: 'Mis. Supervisor Operasi' }, { k: 'teks', label: 'Deskripsi', type: 'textarea' }, { k: 'profesi', label: 'Contoh profesi (pisahkan koma)', ph: 'Teknisi instrumentasi, Supervisor pemeliharaan', full: true }],
-    onSave: async (o) => { if (!o.kode || !o.nama) return 'Kode dan nama wajib diisi.'; o.id = o.id || `${ctx.prodi}-${o.kode}-${Date.now().toString(36)}`; o.prodi = ctx.prodi; await save('pl', o, `Simpan profil lulusan ${o.kode} (${ctx.prodi})`); rerender(); },
+    fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'pl', ctx.prodi) }, { k: 'nama', label: 'Nama peran', ph: 'Mis. Supervisor Operasi' }, { k: 'teks', label: 'Deskripsi', type: 'textarea' }, { k: 'profesi', label: 'Contoh profesi (pisahkan koma)', ph: 'Teknisi instrumentasi, Supervisor pemeliharaan', full: true }],
+    onSave: async (o) => { if (!o.nama) return 'Nama peran wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'pl', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}-${Date.now().toString(36)}`; o.prodi = ctx.prodi; await save('pl', o, `Simpan profil lulusan ${o.kode} (${ctx.prodi})`); rerender(); },
     onDelete: x.id ? async () => { await remove('pl', x.id, `Hapus profil lulusan ${x.kode}`); rerender(); } : null });
   if (ed) {
     el.querySelector('#add-pl').onclick = () => plForm();
@@ -53,7 +53,14 @@ export function cplView(el) {
   const ed = can('susun');
   const cpl = byProdi(S.cpl, ctx.prodi), pl = byProdi(S.pl, ctx.prodi), mk = byProdi(S.mk, ctx.prodi);
   const dukung = cpl.map(c => mk.filter(m => (m.cpl || []).includes(c.id)).length);
-  el.innerHTML = `
+  const kl = kelengkapanCpl(S, ctx.prodi), tmb = (r) => ed ? `<button class="btn sm pri btn-ic" data-tambah="${r}">${icon('plus')} Tambah CPL ${RANAH[r].toLowerCase()}</button>` : '';
+  const panel = `<div class="card" style="margin-bottom:18px">${head('Kelengkapan CPL prodi', kl.lengkap && !kl.butirKosong.length && !kl.plKosong.length ? 'Jumlah, ranah, butir IABEE, dan profil lulusan sudah tercakup' : 'Lengkapi sampai semua baris di bawah berstatus cukup', 'target', kl.lengkap ? '#10b981' : '#f5a524')}
+    <div class="klp-row"><b>CPL prodi: ${kl.total} dari minimal ${kl.min}</b><span class="st ${kl.kurang ? 'bad' : 'ok'}">${kl.kurang ? 'kurang ' + kl.kurang : 'cukup'}</span></div>
+    ${kl.ranah.map(x => `<div class="klp-row"><span>${x.nama} (${x.r}): ${x.n} dari minimal ${x.min}</span><span class="st ${x.kurang ? 'bad' : 'ok'}">${x.kurang ? 'kurang ' + x.kurang : 'cukup'}</span><span class="sp"></span>${x.kurang ? tmb(x.r) : ''}</div>`).join('')}
+    <div class="klp-row"><span>Butir IABEE (a) sampai (k) yang belum tercakup CPL manapun: ${kl.butirKosong.length ? kl.butirKosong.map(b => `<b>(${b.k})</b> ${esc(b.ringkas)}`).join(', ') : 'tidak ada'}</span><span class="st ${kl.butirKosong.length ? 'bad' : 'ok'}">${kl.butirKosong.length ? kl.butirKosong.length + ' butir' : 'lengkap'}</span></div>
+    <div class="klp-row"><span>Profil lulusan yang belum didukung CPL: ${kl.plKosong.length ? kl.plKosong.map(x => `<b>${x.kode}</b> ${esc(x.nama)}`).join(', ') : 'tidak ada'}</span><span class="st ${kl.plKosong.length ? 'bad' : 'ok'}">${kl.plKosong.length ? kl.plKosong.length + ' profil' : 'lengkap'}</span></div>
+    <p class="note">Kode CPL dibuat otomatis (ranah dan nomor urut). Saat membuat CPL baru, hubungkan dengan profil lulusan (wajib minimal satu) dan butir IABEE; butir yang kurang lazim untuk ranahnya tampak pudar dan hanya memberi peringatan. Minimal tiap ranah diatur di Data Induk, Parameter.</p></div>`;
+  el.innerHTML = panel + `
   <div class="grid g-21">
     <div class="card">${head('Capaian Pembelajaran Lulusan', prodiName() + ' · level dideteksi otomatis dari kata kerja operasional (Taksonomi Bloom)', 'target', '#0ea5e9', ed ? `<button class="btn pri sm" id="add">${icon('plus')} CPL</button>` : ro())}
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kode</th><th>Ranah</th><th>Rumusan</th><th>Bloom</th><th>PL</th><th>IABEE</th><th class="num">PI</th><th class="num">MK</th></tr></thead><tbody>
@@ -70,13 +77,24 @@ export function cplView(el) {
   const lv = {}; cpl.forEach(c => { const b = detect(c.teks, RANAH_HINT[c.ranah]); const k = b ? b.code : '?'; lv[k] = (lv[k] || 0) + 1; });
   chart(el.querySelector('#c-r'), { tooltip: {}, series: [{ type: 'sunburst', radius: ['18%', '92%'], data: Object.keys(RANAH).map((r, i) => ({ name: r, itemStyle: { color: PAL[i] }, children: Object.entries(cpl.filter(c => c.ranah === r).reduce((a, c) => { const b = detect(c.teks, RANAH_HINT[c.ranah]); const k = b ? b.code : '?'; a[k] = (a[k] || 0) + 1; return a; }, {})).map(([k, v]) => ({ name: k, value: v })) })), label: { fontSize: 10 } }] });
   const form = (x = { ranah: 'KK', pl: [], iabee: [] }) => formDrawer({ title: x.id ? 'Ubah CPL ' + x.kode : 'CPL baru', sub: prodiName(), obj: { ...x, iabee: iabeeOf(x) },
-    fields: [{ k: 'kode', label: 'Kode', ph: 'KK5' }, { k: 'ranah', label: 'Ranah', type: 'select', opts: Object.entries(RANAH).map(([v, t]) => ({ v, t })) },
+    onOpen: (dr) => {
+      const rn = () => dr.querySelector('[name=ranah]').value;
+      const tampil = () => {
+        const aj = iabeeAnjuran(S, rn()), box = dr.querySelector('[data-multi=iabee]');
+        box.querySelectorAll('.cp').forEach(l => l.classList.toggle('dim', !aj.includes(l.dataset.v)));
+        const pilih = Array.from(box.querySelectorAll('input:checked')).map(i => i.value), luar = pilih.filter(k => !aj.includes(k));
+        dr.querySelector('[data-help=iabee]').innerHTML = `Lazimnya ranah ${RANAH[rn()].toLowerCase()} dikaitkan dengan butir ${aj.map(k => `(${k})`).join(' ')}; butir lain tampak pudar. ${luar.length ? `<span class="st near">Peringatan: ${luar.map(k => `(${k})`).join(' ')} kurang lazim untuk ranah ini. Boleh disimpan bila ada alasannya.</span>` : ''}`;
+      };
+      if (!x.id) dr.querySelector('[name=ranah]').addEventListener('change', () => { dr.querySelector('[data-kode=kode] .tag').textContent = kodeBerikut(S, 'cpl', ctx.prodi, { ranah: rn() }); });
+      dr.querySelector('[name=ranah]').addEventListener('change', tampil); dr.querySelectorAll('[data-multi=iabee] input').forEach(i => i.addEventListener('change', tampil)); tampil();
+    },
+    fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'cpl', ctx.prodi, { ranah: x.ranah }) }, { k: 'ranah', label: 'Ranah', type: 'select', lock: !!x.id, opts: Object.entries(RANAH).map(([v, t]) => ({ v, t })) },
       { k: 'sn', label: 'Kode unsur SN Dikti (boleh lebih dari satu, pisahkan koma)', ph: 'CPL-S01, CPL-S02', help: 'Dipakai pada kolom CPL di RPS dan pada Tabel OBE. Kode CPL prodi tidak berubah.' },
       { k: 'teks', label: 'Rumusan CPL', type: 'textarea', rows: 3, live: liveBloom(() => RANAH_HINT[document.querySelector('[name=ranah]').value]) },
       { k: 'pl', label: 'Mendukung profil lulusan', type: 'multi', opts: opts(pl) }, { k: 'iabee', label: 'Butir kompetensi lulusan IABEE (boleh lebih dari satu)', type: 'multi', opts: BUTIR_IABEE.map(b => ({ v: b.k, t: `(${b.k}) ${b.ringkas}`, title: b.teks })), help: 'Arahkan kursor ke butir untuk membaca rumusan lengkapnya (Kriteria IABEE 1.2.2).' }],
-    onSave: async (o) => { if (!o.kode || !o.teks) return 'Kode dan rumusan wajib diisi.'; if (!o.id && cpl.some(c => c.kode === o.kode)) return 'Kode sudah dipakai.'; o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('cpl', o, `Simpan CPL ${o.kode} (${ctx.prodi})`); rerender(); },
+    onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; if (!(o.pl || []).length) return 'Pilih minimal satu profil lulusan yang didukung CPL ini.'; if (!o.id) o.kode = kodeBerikut(S, 'cpl', ctx.prodi, { ranah: o.ranah }); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('cpl', o, `Simpan CPL ${o.kode} (${ctx.prodi})`); rerender(); },
     onDelete: x.id ? async () => { await remove('cpl', x.id, `Hapus CPL ${x.kode}`); rerender(); } : null });
-  if (ed) { el.querySelector('#add').onclick = () => form(); el.querySelectorAll('tr.click').forEach(r => r.onclick = () => form({ ...S.cpl.find(c => c.id === r.dataset.id) })); }
+  if (ed) { el.querySelector('#add').onclick = () => form(); el.querySelectorAll('[data-tambah]').forEach(b => b.onclick = () => form({ ranah: b.dataset.tambah, pl: [], iabee: [] })); el.querySelectorAll('tr.click').forEach(r => r.onclick = () => form({ ...S.cpl.find(c => c.id === r.dataset.id) })); }
 }
 
 /* ================= BoK & Bahan Kajian ================= */
@@ -99,12 +117,12 @@ export function bkView(el) {
     data: bok.map((b, i) => ({ name: b.nama, itemStyle: { color: PAL[i % PAL.length] }, children: bk.filter(x => x.bok === b.id).map(x => ({ name: x.nama, value: Math.max(0.5, sksBk(x)) })) })).filter(x => x.children.length) }] });
   const lvOpts = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'P1', 'P2', 'P3', 'P4', 'P5', 'A1', 'A2', 'A3', 'A4', 'A5'].map(v => ({ v, t: v }));
   const bkForm = (x = { cpl: [] }) => formDrawer({ title: x.id ? 'Ubah bahan kajian ' + x.kode : 'Bahan kajian baru', sub: prodiName(), obj: x,
-    fields: [{ k: 'kode', label: 'Kode', ph: 'BK13' }, { k: 'nama', label: 'Nama bahan kajian' }, { k: 'bok', label: 'Bagian dari BoK', type: 'select', opts: bok.map(b => ({ v: b.id, t: `${b.kode} · ${b.nama}` })) },
+    fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'bk', ctx.prodi) }, { k: 'nama', label: 'Nama bahan kajian' }, { k: 'bok', label: 'Bagian dari BoK', type: 'select', opts: bok.map(b => ({ v: b.id, t: `${b.kode} · ${b.nama}` })) },
       { k: 'kedalaman', label: 'Kedalaman (level Bloom)', type: 'select', opts: lvOpts }, { k: 'cpl', label: 'CPL yang dibentuk', type: 'multi', opts: opts(cpl, c => c.teks) }],
-    onSave: async (o) => { if (!o.kode || !o.nama) return 'Kode dan nama wajib diisi.'; o.id = o.id || `${ctx.prodi}-${o.kode}-${Date.now().toString(36)}`; o.prodi = ctx.prodi; await save('bk', o, `Simpan BK ${o.kode} (${ctx.prodi})`); rerender(); },
+    onSave: async (o) => { if (!o.nama) return 'Nama bahan kajian wajib diisi.'; if (!o.bok) return 'Pilih BoK induk.'; o.kode = o.kode || kodeBerikut(S, 'bk', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}-${Date.now().toString(36)}`; o.prodi = ctx.prodi; await save('bk', o, `Simpan BK ${o.kode} (${ctx.prodi})`); rerender(); },
     onDelete: x.id ? async () => { await remove('bk', x.id, `Hapus BK ${x.kode}`); rerender(); } : null });
-  const bokForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah BoK' : 'BoK baru', sub: prodiName(), obj: x, fields: [{ k: 'kode', label: 'Kode', ph: 'BOK7' }, { k: 'nama', label: 'Nama' }, { k: 'sumber', label: 'Sumber rujukan' }],
-    onSave: async (o) => { if (!o.kode || !o.nama) return 'Kode dan nama wajib diisi.'; o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('bok', o, `Simpan BoK ${o.kode}`); rerender(); },
+  const bokForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah BoK' : 'BoK baru', sub: prodiName(), obj: x, fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'bok', ctx.prodi) }, { k: 'nama', label: 'Nama' }, { k: 'sumber', label: 'Sumber rujukan' }],
+    onSave: async (o) => { if (!o.nama) return 'Nama wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'bok', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('bok', o, `Simpan BoK ${o.kode}`); rerender(); },
     onDelete: x.id ? async () => { await remove('bok', x.id, `Hapus BoK ${x.kode}`); rerender(); } : null });
   if (ed) {
     el.querySelector('#add-bk').onclick = () => bkForm(); el.querySelector('#add-bok').onclick = () => bokForm();

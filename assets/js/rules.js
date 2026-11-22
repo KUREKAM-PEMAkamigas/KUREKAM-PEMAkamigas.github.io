@@ -514,3 +514,53 @@ export function kesiapan(S, pid) {
   };
   return INDIKATOR_IABEE.map(d => ({ ...d, target: target[d.no] || d.target, ...hasil[d.no] }));
 }
+
+/* ---------- Kode baku otomatis dan kelengkapan CPL ---------- */
+export const RANAH_CPL = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
+const nomorKosong = (dipakai) => { let n = 1; while (dipakai.has(n)) n++; return n; };
+const nomorDari = (kode, awalan) => { const m = String(kode || '').match(new RegExp('^' + awalan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$', 'i')); return m ? +m[1] : null; };
+/**
+ * Kode berikutnya yang dibuat otomatis (nomor terkecil yang masih kosong; kode lama tidak diubah).
+ * jenis: cpl (opsi.ranah), pl, bok, bk, pi (opsi.cpl = objek CPL), cpmk (opsi.mk = id MK), sub (opsi.cpmk = objek CPMK).
+ */
+export function kodeBerikut(S, jenis, pid, opsi = {}) {
+  const P = param(S).kodePrefix, pakai = new Set();
+  if (jenis === 'pi') {
+    const c = opsi.cpl; (S.pi || []).filter(p => p.cpl === c.id).forEach(p => { const n = nomorDari(p.kode, c.kode + '.'); if (n) pakai.add(n); });
+    return `${c.kode}.${nomorKosong(pakai)}`;
+  }
+  if (jenis === 'sub') {
+    const c = opsi.cpmk, noC = String(c.kode).replace(new RegExp('^' + P.cpmk, 'i'), '');
+    S.sub.filter(s => s.cpmk === c.id).forEach(s => { const n = nomorDari(s.kode, `${P.sub}${noC}.`); if (n) pakai.add(n); });
+    return `${P.sub}${noC}.${nomorKosong(pakai)}`;
+  }
+  if (jenis === 'cpmk') {
+    S.cpmk.filter(c => c.mk === opsi.mk).forEach(c => { const n = nomorDari(c.kode, P.cpmk); if (n) pakai.add(n); });
+    return `${P.cpmk}${nomorKosong(pakai)}`;
+  }
+  const aw = jenis === 'cpl' ? (P[opsi.ranah] || opsi.ranah) : P[jenis];
+  const koleksi = { cpl: S.cpl, pl: S.pl, bok: S.bok, bk: S.bk }[jenis] || [];
+  koleksi.filter(x => x.prodi === pid).forEach(x => { const n = nomorDari(x.kode, aw); if (n) pakai.add(n); });
+  if (jenis === 'cpl') { /* id CPL turunan dari kode: jangan memakai kembali nomor yang masih dirujuk MK, CPMK, PI, atau BK */
+    const ada = new Set(S.cpl.map(c => c.id)), rujuk = new Set();
+    [...S.mk, ...S.cpmk, ...(S.bk || [])].filter(x => x.prodi === pid).forEach(x => (x.cpl || []).forEach(i => rujuk.add(i)));
+    (S.pi || []).filter(p => p.prodi === pid).forEach(p => rujuk.add(p.cpl));
+    rujuk.forEach(i => { if (!ada.has(i) && String(i).startsWith(pid + '-')) { const n = nomorDari(String(i).slice(pid.length + 1), aw); if (n) pakai.add(n); } });
+  }
+  return `${aw}${nomorKosong(pakai)}`;
+}
+/** Anjuran butir IABEE per ranah CPL (peringatan, bukan pemblokiran). */
+export const iabeeAnjuran = (S, ranah) => (param(S).cplIabee || {})[ranah] || [];
+/** Kelengkapan CPL prodi: jumlah total dan per ranah terhadap minimal, butir IABEE a sampai k yang belum tercakup, dan profil lulusan yang belum didukung. */
+export function kelengkapanCpl(S, pid) {
+  const P = param(S), mn = P.cplMin, cpl = byProdi(S.cpl, pid), pl = byProdi(S.pl, pid);
+  const ranah = Object.keys(RANAH_CPL).map(r => { const n = cpl.filter(c => c.ranah === r).length; return { r, nama: RANAH_CPL[r], n, min: +mn[r] || 0, kurang: Math.max(0, (+mn[r] || 0) - n) }; });
+  const tercakup = new Set(); cpl.forEach(c => iabeeOf(c).forEach(k => tercakup.add(k)));
+  return { total: cpl.length, min: +mn.total || 0, kurang: Math.max(0, (+mn.total || 0) - cpl.length), ranah,
+    butirKosong: BUTIR_IABEE.filter(b => !tercakup.has(b.k)),
+    plKosong: pl.filter(x => !cpl.some(c => (c.pl || []).includes(x.id))),
+    lengkap: cpl.length >= (+mn.total || 0) && ranah.every(x => !x.kurang) };
+}
+/** MK akademik yang belum dibebani CPL: CPMK, Sub-CPMK, dan RPS belum boleh diisi. */
+export const mkTanpaCpl = (m) => !!m && !/magang|tugas akhir/i.test(m.kel || '') && !(m.cpl || []).length;
+export const PESAN_KUNCI_CPL = 'Mata kuliah ini belum dibebani CPL oleh prodi, sehingga CPMK, Sub-CPMK, dan RPS belum dapat diisi. Prodi menetapkan CPL pada mata kuliah ini di menu Mata Kuliah & SKS (kolom CPL), lalu pengisian dapat dilanjutkan.';

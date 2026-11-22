@@ -117,6 +117,7 @@ export function can(action, obj = {}) {
     case 'revisi': return r === 'wadir';
     case 'catatanSpm': return r === 'spm';
     case 'induk': return r === 'akademik';
+    case 'kodebaku': return ['wadir', 'spm', 'akademik'].includes(r);                        // pengaturan awalan kode baku CPL, CPMK, dan lain-lain
     case 'param': return false;
     default: return false;
   }

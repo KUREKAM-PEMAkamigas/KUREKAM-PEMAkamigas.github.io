@@ -3,7 +3,7 @@ import { muatUlangAkun, S, ctx, can, save, saveMany, remove, rerender, esc, icon
 import { labelKel, labelGrup } from '../kode.js';
 import { DB, getFirebaseConfig, saveFirebaseConfig, buatTautanFirebase } from '../db.js';
 import { PARAM_DEFAULT, KELOMPOK, KAT_IABEE, GRUP, APP, PERAN, MENU_PERAN } from '../config.js';
-import { param, fmt, KMAP, kelasOf } from '../rules.js';
+import { param, fmt, KMAP, kelasOf, RANAH_CPL, HURUF_IABEE } from '../rules.js';
 import { head, formDrawer, prodiTag, ro, tanya, unduh, loadXLSX } from './ui.js';
 import { DATA_HEAD, JP_DEFAULT } from './bebanprodi.js';
 import { imporObe } from '../obeimpor.js';
@@ -104,6 +104,7 @@ function tDosen(el, ed) {
 /* ---------- parameter ---------- */
 function tParam(el, ed, adm) {
   const P = param(S), J = { ...JP_DEFAULT, ...(S.settings.jp || {}) };
+  const kb = can('kodebaku');
   const num = (id, v, step = 1) => `<input class="inp pnum" type="number" step="${step}" id="${id}" value="${v == null ? '' : v}" ${adm ? '' : 'disabled'}>`;
   el.innerHTML = `
   ${adm ? '' : `<div class="ribbon info">${icon('info')} Parameter hanya dapat diubah oleh Admin setelah ditetapkan pimpinan. Peran lain melihat nilai yang berlaku.</div>`}
@@ -130,6 +131,8 @@ function tParam(el, ed, adm) {
         <div class="pfrow"><span>Kepala formulir SAP</span><span class="duo"><input class="inp" id="d-sap-no" value="${esc(P.dok.sap.no)}" style="width:150px" ${adm ? '' : 'disabled'}><input class="inp" id="d-sap-tg" value="${esc(P.dok.sap.terbit)}" style="width:150px" ${adm ? '' : 'disabled'}><input class="inp" id="d-sap-rv" value="${esc(P.dok.sap.rev)}" style="width:56px" ${adm ? '' : 'disabled'}></span><small>nomor dokumen, tanggal terbit, revisi (samakan dengan penomoran BPPAK)</small></div>
         <div class="pfrow"><span>Kepala formulir ACP</span><span class="duo"><input class="inp" id="d-acp-no" value="${esc(P.dok.acp.no)}" style="width:150px" ${adm ? '' : 'disabled'}><input class="inp" id="d-acp-tg" value="${esc(P.dok.acp.terbit)}" style="width:150px" ${adm ? '' : 'disabled'}><input class="inp" id="d-acp-rv" value="${esc(P.dok.acp.rev)}" style="width:56px" ${adm ? '' : 'disabled'}></span><small>nomor dokumen, tanggal terbit, revisi</small></div>
         <div class="pfrow"><span>Jumlah PI per CPL</span><span class="duo">${num('p-pimin', P.piPerCplMin)}${num('p-pimax', P.piPerCplMax)}</span><small>minimal dan maksimal</small></div>
+        <div class="pfrow"><span>CPL minimal per prodi</span>${num('c-tot', P.cplMin.total)}<small>total CPL</small></div>
+        ${Object.entries(RANAH_CPL).map(([r, n]) => `<div class="pfrow"><span>CPL minimal ranah ${n} (${r})</span><span class="duo">${num('c-' + r, P.cplMin[r])}<input class="inp" id="ci-${r}" value="${esc((P.cplIabee[r] || []).join(', '))}" style="width:120px" ${adm ? '' : 'disabled'}></span><small>jumlah, dan butir IABEE yang lazim (peringatan saja)</small></div>`).join('')}
       </div></div>
   </div>
   <div class="card" style="margin-top:18px">${head('Ketentuan Pedoman: praktik, capstone, magang, masa studi', 'Nilai sementara mengikuti Pedoman edisi 2027; dapat diubah setelah rapat oleh yang berhak', 'book', '#10b981')}
@@ -145,12 +148,24 @@ function tParam(el, ed, adm) {
     ${[...(P.kodeBaku || []), { p: '', k: '', n: '' }, { p: '', k: '', n: '' }].map((x, i) => `<tr><td><input class="inp" id="kb-p-${i}" value="${esc(x.p)}" ${adm ? '' : 'disabled'}></td><td><input class="inp" id="kb-k-${i}" value="${esc(x.k)}" style="width:96px" ${adm ? '' : 'disabled'}></td><td><input class="inp" id="kb-n-${i}" value="${esc(x.n)}" ${adm ? '' : 'disabled'}></td></tr>`).join('')}
     </tbody></table></div>
     <p class="note">Yang berhak mengubah: Admin, Wakil Direktur I, dan SPM. Tim kurikulum prodi dapat mengubah kode mata kuliah prodinya sendiri di menu Mata Kuliah.</p></div>
+  <div class="card" style="margin-top:18px">${head('Kode baku CPL, PL, BoK, BK, CPMK, dan Sub-CPMK', 'Kode dibuat otomatis dari awalan di bawah ditambah nomor urut; pengguna tidak mengetik kode', 'tag', '#0ea5e9')}
+    <div class="pform">
+      ${[['S', 'CPL ranah Sikap'], ['P', 'CPL ranah Pengetahuan'], ['KU', 'CPL ranah Keterampilan umum'], ['KK', 'CPL ranah Keterampilan khusus'], ['pl', 'Profil lulusan'], ['bok', 'Body of Knowledge'], ['bk', 'Bahan kajian'], ['cpmk', 'CPMK (nomor per mata kuliah)'], ['sub', 'Sub-CPMK (awalan, lalu nomor CPMK dan nomor urut)']].map(([k, n]) => `<div class="pfrow"><span>${n}</span><input class="inp" id="kp-${k}" value="${esc(P.kodePrefix[k])}" style="width:130px" ${kb ? '' : 'disabled'}><small>contoh: ${esc(P.kodePrefix[k])}${k === 'sub' ? '1.1' : '1'}</small></div>`).join('')}
+      <div class="pfrow"><span>Penomoran PI</span><span class="muted">kode CPL ditambah titik dan nomor urut (contoh KK1.1)</span><small>tetap</small></div>
+    </div>
+    ${kb ? `<div class="drawer-act"><div class="sp"></div><button class="btn pri" id="kp-save">${icon('check')} Simpan awalan kode</button></div>` : ''}
+    <p class="note">Yang berhak mengubah: Admin, Wakil Direktur I, SPM, dan Kasubbag AK. Nilai awal mengikuti kode yang sudah dipakai di Pedoman. Kode yang sudah ada tidak diubah: perubahan awalan hanya berlaku untuk data yang ditambahkan sesudahnya, jadi ubah sebelum prodi mulai menambah data.</p></div>
   <div class="card" style="margin-top:18px">${head('Kerangka per semester', 'Rentang wajib yang seragam untuk semua prodi (Pedoman Bab IV)', 'grid4', '#6366f1')}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Semester</th><th class="num">SKS</th><th class="num">T min</th><th class="num">T maks</th><th class="num">P min</th><th class="num">P maks</th><th class="num">MK min</th><th class="num">MK maks</th></tr></thead><tbody>
     ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<tr><td><b>Semester ${s}</b></td>${P.kerangka[s].map((v, i) => `<td class="num">${num(`k-${s}-${i}`, v)}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
     ${adm ? `<div class="drawer-act"><button class="btn danger" id="p-def">${icon('loop')} Kembalikan ke nilai pedoman</button><div class="sp"></div><button class="btn pri" id="p-save">${icon('check')} Simpan parameter</button></div>` : ''}
     <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} JP total per minggu adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>`;
+  if (kb) el.querySelector('#kp-save').onclick = async () => {
+    const kp = {}; for (const k of Object.keys(PARAM_DEFAULT.kodePrefix)) { kp[k] = el.querySelector('#kp-' + k).value.trim(); if (!/^[A-Za-z][A-Za-z0-9-]{0,11}$/.test(kp[k])) { toast('Awalan kode tidak sah (huruf dan angka, maksimal 12 karakter, diawali huruf): ' + kp[k]); return; } }
+    if (new Set(['S', 'P', 'KU', 'KK', 'pl', 'bok', 'bk', 'cpmk'].map(k => kp[k].toUpperCase())).size < 8) { toast('Awalan kode tidak boleh sama satu dengan lainnya.'); return; }
+    S.settings.param = { ...(S.settings.param || {}), kodePrefix: kp }; await saveSettings(); await addLog('Ubah awalan kode baku CPL, CPMK, dan lainnya'); toast('Awalan kode tersimpan'); rerender();
+  };
   if (!adm) return;
   const v = (id) => { const x = el.querySelector('#' + id).value; return x === '' ? null : +x; };
   el.querySelector('#p-save').onclick = async () => {
@@ -158,7 +173,7 @@ function tParam(el, ed, adm) {
     const kodeBakuForm = () => { const out = []; for (let i = 0; el.querySelector('#kb-p-' + i); i++) { const p = el.querySelector('#kb-p-' + i).value.trim(), k = el.querySelector('#kb-k-' + i).value.trim(), n = el.querySelector('#kb-n-' + i).value.trim(); if (p && k) out.push({ p, k, n }); } return out; };
     for (const x of kodeBakuForm()) { try { new RegExp(x.p, 'i'); } catch (e) { toast('Pola nama tidak sah: ' + x.p); return; } if (!/^(AK|TP|TO|TM|TI|LG)[1-4]\d{3}$/i.test(x.k)) { toast('Kode tidak sesuai pola: ' + x.k); return; } }
     if (!(v('p-t') > 0) || GK.some(g => !(v('p-' + g) > 0))) { toast('Durasi harus lebih dari nol'); return; }
-    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), praktikMaxSks: v('p-pmaxs') || 3, capstoneSks: v('p-caps') || 4, magangInti: v('p-mgi') || 10, magangKonversi: v('p-mgk') || 10, masaStudiNormal: v('p-msn') || 8, masaStudiMaks: v('p-msm') || 14, kodeBaku: kodeBakuForm(), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), kerangka: ker, dok: { sap: { no: el.querySelector('#d-sap-no').value.trim() || PARAM_DEFAULT.dok.sap.no, terbit: el.querySelector('#d-sap-tg').value.trim() || PARAM_DEFAULT.dok.sap.terbit, rev: el.querySelector('#d-sap-rv').value.trim() || PARAM_DEFAULT.dok.sap.rev }, acp: { no: el.querySelector('#d-acp-no').value.trim() || PARAM_DEFAULT.dok.acp.no, terbit: el.querySelector('#d-acp-tg').value.trim() || PARAM_DEFAULT.dok.acp.terbit, rev: el.querySelector('#d-acp-rv').value.trim() || PARAM_DEFAULT.dok.acp.rev } } };
+    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), praktikMaxSks: v('p-pmaxs') || 3, capstoneSks: v('p-caps') || 4, magangInti: v('p-mgi') || 10, magangKonversi: v('p-mgk') || 10, masaStudiNormal: v('p-msn') || 8, masaStudiMaks: v('p-msm') || 14, kodeBaku: kodeBakuForm(), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), cplMin: { total: v('c-tot') || 0, ...Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, v('c-' + r) || 0])) }, cplIabee: Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, Array.from(new Set(el.querySelector('#ci-' + r).value.toLowerCase().split(/[^a-z]+/).filter(x => HURUF_IABEE.includes(x)))).sort()])), kerangka: ker, dok: { sap: { no: el.querySelector('#d-sap-no').value.trim() || PARAM_DEFAULT.dok.sap.no, terbit: el.querySelector('#d-sap-tg').value.trim() || PARAM_DEFAULT.dok.sap.terbit, rev: el.querySelector('#d-sap-rv').value.trim() || PARAM_DEFAULT.dok.sap.rev }, acp: { no: el.querySelector('#d-acp-no').value.trim() || PARAM_DEFAULT.dok.acp.no, terbit: el.querySelector('#d-acp-tg').value.trim() || PARAM_DEFAULT.dok.acp.terbit, rev: el.querySelector('#d-acp-rv').value.trim() || PARAM_DEFAULT.dok.acp.rev } } };
     S.settings.jp = { dur: v('j-dur') || JP_DEFAULT.dur, perDay: v('j-day') || JP_DEFAULT.perDay, days: v('j-days') || JP_DEFAULT.days };
     await saveSettings(); await addLog('Ubah parameter kurikulum'); toast('Parameter tersimpan'); rerender();
   };

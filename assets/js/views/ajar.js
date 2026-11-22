@@ -3,7 +3,7 @@ import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDraw
 import { labelKel, labelGrup } from '../kode.js';
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
-import { badanRps, berkasWordRps, namaBerkasRps } from '../rpsdok.js';
+import { badanRps, berkasDocxRps, namaBerkasRps } from '../rpsdok.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
 import { detect, badge } from '../bloom.js';
@@ -139,7 +139,7 @@ export function rpsView(el) {
 function cetakRps(m, r) {
   openDrawer(`<div class="no-print filters"><button class="btn pri" onclick="window.print()">${icon('download')} Cetak / simpan PDF</button><button class="btn" id="rep-doc">${icon('download')} Unduh Word (format templat)</button><button class="btn ghost" data-close>Tutup</button></div>
   <div class="report rps-doc" id="rep">${badanRps(m, r, true)}</div>`, (dr) => {
-    dr.querySelector('#rep-doc').onclick = () => unduh(new Blob(['\ufeff', berkasWordRps(m, r)], { type: 'application/msword' }), namaBerkasRps(m));
+    dr.querySelector('#rep-doc').onclick = async () => { try { unduh(await berkasDocxRps(m, r), namaBerkasRps(m)); } catch (e) { console.error(e); toast('Berkas Word gagal dibuat. ' + e.message); } };
   }, true);
   void closeDrawer;
 }

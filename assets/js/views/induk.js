@@ -159,13 +159,17 @@ function tParam(el, ed, adm) {
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Semester</th><th class="num">SKS</th><th class="num">T min</th><th class="num">T maks</th><th class="num">P min</th><th class="num">P maks</th><th class="num">MK min</th><th class="num">MK maks</th></tr></thead><tbody>
     ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<tr><td><b>Semester ${s}</b></td>${P.kerangka[s].map((v, i) => `<td class="num">${num(`k-${s}-${i}`, v)}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
-    ${adm ? `<div class="drawer-act"><button class="btn danger" id="p-def">${icon('loop')} Kembalikan ke nilai pedoman</button><div class="sp"></div><button class="btn pri" id="p-save">${icon('check')} Simpan parameter</button></div>` : ''}
-    <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} JP total per minggu adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>`;
-  if (kb) el.querySelector('#kp-save').onclick = async () => {
-    const kp = {}; for (const k of Object.keys(PARAM_DEFAULT.kodePrefix)) { kp[k] = el.querySelector('#kp-' + k).value.trim(); if (!/^[A-Za-z][A-Za-z0-9-]{0,11}$/.test(kp[k])) { toast('Awalan kode tidak sah (huruf dan angka, maksimal 12 karakter, diawali huruf): ' + kp[k]); return; } }
-    if (new Set(['cpl', 'pl', 'bok', 'bk', 'cpmk'].map(k => kp[k].toUpperCase())).size < 5) { toast('Awalan kode tidak boleh sama satu dengan lainnya.'); return; }
-    S.settings.param = { ...(S.settings.param || {}), kodePrefix: kp }; await saveSettings(); await addLog('Ubah awalan kode baku CPL, CPMK, dan lainnya'); toast('Awalan kode tersimpan'); rerender();
+    <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} JP total per minggu adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>
+  ${adm ? `<div class="savebar"><span id="p-dirty" class="small muted">Ubah angka lalu tekan Simpan parameter.</span><div class="sp"></div><button class="btn danger" id="p-def">${icon('loop')} Kembalikan ke nilai pedoman</button><button class="btn pri" id="p-save">${icon('check')} Simpan parameter</button></div>` : ''}`;
+  const simpanKp = async () => {
+    const kp = {}; for (const k of Object.keys(PARAM_DEFAULT.kodePrefix)) { kp[k] = el.querySelector('#kp-' + k).value.trim(); if (!/^[A-Za-z][A-Za-z0-9-]{0,11}$/.test(kp[k])) { toast('Awalan kode tidak sah (huruf dan angka, maksimal 12 karakter, diawali huruf): ' + kp[k]); return false; } }
+    if (new Set(['cpl', 'pl', 'bok', 'bk', 'cpmk'].map(k => kp[k].toUpperCase())).size < 5) { toast('Awalan kode tidak boleh sama satu dengan lainnya.'); return false; }
+    S.settings.param = { ...(S.settings.param || {}), kodePrefix: kp }; return true;
   };
+  if (kb) el.querySelector('#kp-save').onclick = async () => { if (!(await simpanKp())) return; await saveSettings(); await addLog('Ubah awalan kode baku CPL, CPMK, dan lainnya'); rerender(); };
+  /* penanda perubahan belum disimpan */
+  const kotor = el.querySelector('#p-dirty');
+  if (kotor) el.querySelectorAll('input').forEach(i => i.addEventListener('input', () => { kotor.textContent = 'Ada perubahan yang belum disimpan. Tekan Simpan parameter.'; kotor.style.color = '#d97706'; kotor.style.fontWeight = '700'; }));
   if (!adm) return;
   const v = (id) => { const x = el.querySelector('#' + id).value; return x === '' ? null : +x; };
   el.querySelector('#p-save').onclick = async () => {
@@ -175,7 +179,8 @@ function tParam(el, ed, adm) {
     if (!(v('p-t') > 0) || GK.some(g => !(v('p-' + g) > 0))) { toast('Durasi harus lebih dari nol'); return; }
     S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), praktikMaxSks: v('p-pmaxs') || 3, capstoneSks: v('p-caps') || 4, magangInti: v('p-mgi') || 10, magangKonversi: v('p-mgk') || 10, masaStudiNormal: v('p-msn') || 8, masaStudiMaks: v('p-msm') || 14, kodeBaku: kodeBakuForm(), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), cplMin: { total: v('c-tot') || 0, ...Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, v('c-' + r) || 0])) }, cplIabee: Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, Array.from(new Set(el.querySelector('#ci-' + r).value.toLowerCase().split(/[^a-z]+/).filter(x => HURUF_IABEE.includes(x)))).sort()])), kerangka: ker, dok: { sap: { no: el.querySelector('#d-sap-no').value.trim() || PARAM_DEFAULT.dok.sap.no, terbit: el.querySelector('#d-sap-tg').value.trim() || PARAM_DEFAULT.dok.sap.terbit, rev: el.querySelector('#d-sap-rv').value.trim() || PARAM_DEFAULT.dok.sap.rev }, acp: { no: el.querySelector('#d-acp-no').value.trim() || PARAM_DEFAULT.dok.acp.no, terbit: el.querySelector('#d-acp-tg').value.trim() || PARAM_DEFAULT.dok.acp.terbit, rev: el.querySelector('#d-acp-rv').value.trim() || PARAM_DEFAULT.dok.acp.rev } } };
     S.settings.jp = { dur: v('j-dur') || JP_DEFAULT.dur, perDay: v('j-day') || JP_DEFAULT.perDay, days: v('j-days') || JP_DEFAULT.days };
-    await saveSettings(); await addLog('Ubah parameter kurikulum'); toast('Parameter tersimpan'); rerender();
+    if (kb && !(await simpanKp())) return;
+    await saveSettings(); await addLog('Ubah parameter kurikulum'); rerender();
   };
   el.querySelector('#p-def').onclick = async () => { if (!(await tanya('Semua parameter dikembalikan ke nilai Buku Pedoman 2027. Lanjutkan?'))) return; S.settings.param = {}; delete S.settings.jp; await saveSettings(); await addLog('Parameter dikembalikan ke nilai pedoman'); rerender(); };
 }

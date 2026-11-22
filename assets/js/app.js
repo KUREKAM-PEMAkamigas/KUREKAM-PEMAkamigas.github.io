@@ -163,7 +163,7 @@ export async function remove(col, id, aksi) {
   try { await DB.del(col, id, S[col]); } catch (e) { gagal = true; toast('Gagal menghapus: ' + e.message); }
   try { jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(gagal); }
 }
-export async function saveSettings() { setKodeBaku(param(S).kodeBaku); const doc = Object.assign({ id: 'app' }, S.settings); try { await DB.put('settings', doc, [doc]); } catch (e) { toast('Gagal menyimpan pengaturan'); } }
+export async function saveSettings() { setKodeBaku(param(S).kodeBaku); const doc = Object.assign({ id: 'app' }, S.settings); kerjaMulai('simpan'); let gagal = false; try { await DB.put('settings', doc, [doc]); } catch (e) { gagal = true; toast('Gagal menyimpan pengaturan: ' + e.message); } kerjaSelesai(gagal); }
 export async function addLog(aksi) {
   const doc = { id: 'LOG' + Date.now() + Math.floor(Math.random() * 1000), t: new Date().toISOString(), user: userName() + (DB.user && DB.user.email ? ' · ' + DB.user.email : ''), aksi };
   S.log.unshift(doc); if (S.log.length > 400) S.log.length = 400;

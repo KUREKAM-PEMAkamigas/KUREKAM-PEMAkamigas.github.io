@@ -5,6 +5,9 @@
 import { cekStruktur, rpsOf, rpsLengkap, byProdi } from './rules.js';
 
 export const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+/** Peran pelaksana satu tahap: daftar (bisa beberapa). "Semua" berdiri sendiri. */
+export const perans = (t) => { const a = (Array.isArray(t.perans) && t.perans.length ? t.perans : [t.peran]).filter(k => PELAKSANA[k]); return a.includes('semua') ? ['semua'] : (a.length ? a : ['semua']); };
+export const pelaksanaTeks = (t) => perans(t).map(k => PELAKSANA[k]).join(', ');
 export const PELAKSANA = { prodi: 'Prodi', dosen: 'Dosen', spm: 'SPM', akademik: 'Kasubbag Akademik', wadir: 'Wakil Direktur I', semua: 'Semua' };
 
 /** Tahap bawaan. offset = hari ke-n sejak tanggal mulai (0 = hari mulai), durasi dalam hari. mode: auto dihitung dari data, tanda ditandai pemiliknya. */
@@ -29,9 +32,10 @@ function normTahap(t) {
   const b = TAHAP_BAWAAN.find(x => x.id === t.id) || {};
   const auto = TAHAP_AUTO.includes(t.id);
   const mode = auto ? 'auto' : (t.mode === 'tonggak' ? 'tonggak' : 'tanda');
-  const peran = PELAKSANA[t.peran] ? t.peran : (b.peran || 'semua');
+  const pr = perans({ perans: t.perans, peran: PELAKSANA[t.peran] ? t.peran : (b.peran || 'semua') });
+  const peran = pr[0];
   const out = {
-    id: t.id, nama: String(t.nama || b.nama || 'Tahap baru'), peran, mode,
+    id: t.id, nama: String(t.nama || b.nama || 'Tahap baru'), peran, perans: pr, mode,
     offset: Math.max(0, Math.round(+t.offset || 0)), durasi: Math.max(1, Math.round(+t.durasi || 1)),
     global: mode === 'tanda' && !!t.global, ket: String(t.ket != null ? t.ket : (b.ket || ''))
   };

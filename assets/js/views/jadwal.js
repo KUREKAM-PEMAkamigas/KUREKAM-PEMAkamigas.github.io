@@ -2,11 +2,11 @@
 import { S, ctx, save, remove, rerender, esc, icon, saveSettings, addLog } from '../app.js';
 import { PERAN } from '../config.js';
 import { rpsOf, rpsLengkap } from '../rules.js';
-import { TAHAP_BAWAAN, TAHAP_AUTO, TARGET_BAWAAN, jadwalOf, jadwalTanggal, progresTahap, statusTahap, papan, dosenRps, pengingat, hariIni, tambahHari, selisihHari, fmtTgl, idTanda, PELAKSANA } from '../jadwal.js';
+import { TAHAP_BAWAAN, TAHAP_AUTO, TARGET_BAWAAN, jadwalOf, jadwalTanggal, progresTahap, statusTahap, papan, dosenRps, pengingat, hariIni, tambahHari, selisihHari, fmtTgl, idTanda, PELAKSANA, perans, pelaksanaTeks } from '../jadwal.js';
 import { head, formDrawer, stTag, prodiTag, bar, pctColor, tanya } from './ui.js';
 
 const bisaAtur = () => ['wadir', 'admin', 'developer'].includes(ctx.role);
-const bisaTandai = (t) => ctx.role === 'admin' || ctx.role === 'developer' || ctx.role === t.peran || (t.peran === 'semua' && ctx.role === 'wadir');
+const bisaTandai = (t) => ctx.role === 'admin' || ctx.role === 'developer' || perans(t).includes(ctx.role) || (perans(t).includes('semua') && ctx.role === 'wadir');
 
 /** Banner pengingat untuk Beranda dan RPS & SAP. */
 export function bannerPengingat() {
@@ -23,7 +23,7 @@ function gantt(T, mulai) {
   const nt = Math.min(total, 14), ticks = Array.from({ length: nt }, (_, i) => Math.round(i * total / nt));
   return `<div class="gantt">
     <div class="g-axis"><div class="g-lbl"></div><div class="g-track">${Array.from(new Set(ticks)).map(d => `<span style="left:${d / total * 100}%">${mulai ? fmtTgl(tambahHari(mulai, d)) : 'H+' + d}</span>`).join('')}</div></div>
-    ${T.map(t => { const p = pos(t); return `<div class="g-row"><div class="g-lbl"><b>${esc(t.nama)}</b><small>${esc(PELAKSANA[t.peran])}${mulai ? ` · ${fmtTgl(t.awal)}${t.durasi > 1 ? ' – ' + fmtTgl(t.akhir) : ''}` : ` · hari ke-${t.offset + 1} s.d. ${t.offset + t.durasi}`}</small></div><div class="g-track"><i class="g-bar ${t.mode === 'tonggak' ? 'ms' : ''}" style="left:${p.l}%;width:${p.w}%;--c:#6366f1"></i>${pHari != null ? `<u class="g-now" style="left:${pHari}%"></u>` : ''}</div></div>`; }).join('')}
+    ${T.map(t => { const p = pos(t); return `<div class="g-row"><div class="g-lbl"><b>${esc(t.nama)}</b><small>${esc(pelaksanaTeks(t))}${mulai ? ` · ${fmtTgl(t.awal)}${t.durasi > 1 ? ' – ' + fmtTgl(t.akhir) : ''}` : ` · hari ke-${t.offset + 1} s.d. ${t.offset + t.durasi}`}</small></div><div class="g-track"><i class="g-bar ${t.mode === 'tonggak' ? 'ms' : ''}" style="left:${p.l}%;width:${p.w}%;--c:#6366f1"></i>${pHari != null ? `<u class="g-now" style="left:${pHari}%"></u>` : ''}</div></div>`; }).join('')}
   </div>`;
 }
 
@@ -43,7 +43,7 @@ export default function jadwalView(el) {
   else {
     const kol = T.filter(t => !t.global && t.mode !== 'tonggak');
     h += `<div class="card" style="margin-top:14px">${head('Papan pemantauan', lihatSemua ? 'Status tiap tahap per prodi, dihitung otomatis dari isi aplikasi' : 'Status tahap untuk prodi Anda', 'pulse', '#0ea5e9')}
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Prodi</th>${kol.map(t => `<th>${esc(t.nama)}<br><span class="small muted">${esc(PELAKSANA[t.peran])}${mulai ? ' · ' + fmtTgl(t.akhir) : ''}</span></th>`).join('')}</tr></thead><tbody>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Prodi</th>${kol.map(t => `<th>${esc(t.nama)}<br><span class="small muted">${esc(pelaksanaTeks(t))}${mulai ? ' · ' + fmtTgl(t.akhir) : ''}</span></th>`).join('')}</tr></thead><tbody>
       ${prodiList.map(p => `<tr><td data-l="Prodi">${prodiTag(p.id)}</td>${kol.map(t => { const pr = progresTahap(S, t.id, p.id), st = statusTahap(t, pr, hari); const tom = t.mode === 'tanda' && bisaTandai(t) && (mulai || ctx.role === 'admin') ? `<div style="margin-top:4px">${pr.done ? `<button class="btn sm ghost" data-batal="${t.id}|${p.id}">Batalkan tanda</button>` : `<button class="btn sm pri" data-tanda="${t.id}|${p.id}">${icon('check')} Tandai selesai</button>`}</div>` : ''; return `<td data-l="${esc(t.nama)}">${stTag(st.k, st.t)}<div class="small muted" style="margin-top:3px">${esc(pr.teks)}</div>${pr.pct != null ? bar(pr.pct, pctColor(pr.pct)) : ''}${tom}</td>`; }).join('')}</tr>`).join('')}
       </tbody></table></div>
       ${T.filter(t => t.global).map(t6 => { const pr = progresTahap(S, t6.id, '*'), st = statusTahap(t6, pr, hari); return `<div class="filters" style="margin-top:12px"><b>${esc(t6.nama)}</b> ${stTag(st.k, st.t)} <span class="small muted">${esc(pr.teks)}</span>${bisaTandai(t6) ? (pr.done ? `<button class="btn sm ghost" data-batal="${t6.id}|*">Batalkan tanda</button>` : `<button class="btn sm pri" data-tanda="${t6.id}|*">${icon('check')} Tandai selesai</button>`) : ''}</div>`; }).join('')}</div>
@@ -88,7 +88,7 @@ function barisTahap(t, i, n) {
   return `<div class="tj-row card" data-id="${esc(t.id)}" data-mode="${esc(t.mode)}" style="margin:8px 0;padding:12px">
     <div class="form-grid">
       <div class="field full"><label>Nama tahap</label><input class="inp" data-f="nama" value="${esc(t.nama)}"></div>
-      <div class="field"><label>Pelaksana</label><select class="inp" data-f="peran">${Object.keys(PELAKSANA).map(k => `<option value="${k}" ${k === t.peran ? 'selected' : ''}>${esc(PELAKSANA[k])}</option>`).join('')}</select></div>
+      <div class="field full"><label>Pelaksana (boleh lebih dari satu)</label><div class="chips-pick" data-perans>${Object.keys(PELAKSANA).map(k => `<label class="cp ${perans(t).includes(k) ? 'on' : ''}"><input type="checkbox" value="${k}" ${perans(t).includes(k) ? 'checked' : ''}>${esc(PELAKSANA[k])}</label>`).join('')}</div></div>
       <div class="field"><label>Jenis penilaian</label>${auto ? '<input class="inp" disabled value="Dihitung otomatis dari isi aplikasi">' : `<select class="inp" data-f="jenis">${JENIS.map(o => `<option value="${o.v}" ${o.v === jenisOf(t) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`}</div>
       <div class="field"><label>Mulai hari ke- (0 = hari mulai)</label><input class="inp" type="number" step="1" min="0" data-f="offset" value="${t.offset}"></div>
       <div class="field"><label>Lama (hari)</label><input class="inp" type="number" step="1" min="1" data-f="durasi" value="${t.durasi}"></div>
@@ -107,12 +107,13 @@ function aturJadwal(J) {
   const o = { mulai: J.mulai, rpsMin: J.rpsMin, rpsLengkap: J.rpsLengkap };
   let daftar = J.tahap.map(t => ({ ...t })), dr = null;
   /* baca nilai isian baris ke daftar sebelum menggambar ulang */
-  const baca = () => { if (!dr) return; dr.querySelectorAll('.tj-row').forEach(r => { const t = daftar.find(x => x.id === r.dataset.id); if (!t) return; r.querySelectorAll('[data-f]').forEach(e => { const k = e.dataset.f; if (k === 'jenis') { t.mode = e.value === 'tonggak' ? 'tonggak' : 'tanda'; t.global = e.value === 'global'; } else if (k === 'offset' || k === 'durasi' || k === 'target') t[k] = e.value === '' ? '' : +e.value; else t[k] = e.value; }); }); };
+  const baca = () => { if (!dr) return; dr.querySelectorAll('.tj-row').forEach(r => { const t = daftar.find(x => x.id === r.dataset.id); if (!t) return; t.perans = Array.from(r.querySelectorAll('[data-perans] input:checked')).map(i => i.value); if (t.perans.includes('semua')) t.perans = ['semua']; t.peran = t.perans[0] || 'semua'; r.querySelectorAll('[data-f]').forEach(e => { const k = e.dataset.f; if (k === 'jenis') { t.mode = e.value === 'tonggak' ? 'tonggak' : 'tanda'; t.global = e.value === 'global'; } else if (k === 'offset' || k === 'durasi' || k === 'target') t[k] = e.value === '' ? '' : +e.value; else t[k] = e.value; }); }); };
   const gambar = () => {
     const box = dr.querySelector('#tj-list');
     box.innerHTML = daftar.length ? daftar.map((t, i) => barisTahap(t, i, daftar.length)).join('') : '<div class="empty small">Belum ada tahap. Tambahkan tahap baru di bawah.</div>';
     box.querySelectorAll('.tj-row').forEach(r => {
       const id = r.dataset.id, i = daftar.findIndex(x => x.id === id);
+      r.querySelectorAll('[data-perans] input').forEach(i => i.onchange = () => { const g = r.querySelector('[data-perans]'); if (i.checked && i.value === 'semua') g.querySelectorAll('input').forEach(o => { if (o !== i) o.checked = false; }); else if (i.checked) g.querySelector('input[value="semua"]').checked = false; g.querySelectorAll('.cp').forEach(c => c.classList.toggle('on', c.querySelector('input').checked)); });
       r.querySelector('[data-up]').onclick = () => { baca(); if (i > 0) { [daftar[i - 1], daftar[i]] = [daftar[i], daftar[i - 1]]; gambar(); } };
       r.querySelector('[data-down]').onclick = () => { baca(); if (i < daftar.length - 1) { [daftar[i + 1], daftar[i]] = [daftar[i], daftar[i + 1]]; gambar(); } };
       r.querySelector('[data-hapus]').onclick = async () => { baca(); const t = daftar[i]; if (!(await tanya(`Hapus tahap "${t.nama}"? Tanda selesai yang sudah tercatat tidak ikut terhapus dan muncul kembali bila tahap dengan kode yang sama ditambahkan lagi.`, 'Hapus tahap'))) return; daftar.splice(i, 1); gambar(); };
@@ -122,13 +123,13 @@ function aturJadwal(J) {
     <div class="hint">Tambah, hapus, urutkan, atau ubah nama, pelaksana, waktu, dan target tiap tahap. Tahap bawaan pertama sampai ketiga dihitung otomatis; tahap lain ditandai selesai oleh pelaksananya.</div><div id="tj-list"></div>`;
   formDrawer({ title: 'Atur jadwal tahapan', sub: 'Tanggal tiap tahap = tanggal mulai + hari ke-n. Dapat diubah kapan saja; semua pengguna langsung melihat jadwal baru.', fields: f, obj: o, wide: true, extra, onOpen: (d) => {
     dr = d; gambar();
-    d.querySelector('#tj-tambah').onclick = () => { baca(); const akhir = daftar.length ? Math.max(...daftar.map(t => (+t.offset || 0) + Math.max(1, +t.durasi || 1))) : 0; daftar.push({ id: baruId(), nama: 'Tahap baru', peran: 'prodi', mode: 'tanda', global: false, offset: akhir, durasi: 3, ket: '' }); gambar(); const r = dr.querySelectorAll('.tj-row'); const last = r[r.length - 1]; if (last) { last.scrollIntoView({ block: 'center' }); last.querySelector('[data-f="nama"]').select(); } };
+    d.querySelector('#tj-tambah').onclick = () => { baca(); const akhir = daftar.length ? Math.max(...daftar.map(t => (+t.offset || 0) + Math.max(1, +t.durasi || 1))) : 0; daftar.push({ id: baruId(), nama: 'Tahap baru', peran: 'prodi', perans: ['prodi'], mode: 'tanda', global: false, offset: akhir, durasi: 3, ket: '' }); gambar(); const r = dr.querySelectorAll('.tj-row'); const last = r[r.length - 1]; if (last) { last.scrollIntoView({ block: 'center' }); last.querySelector('[data-f="nama"]').select(); } };
     d.querySelector('#tj-pulih').onclick = async () => { if (!(await tanya('Kembalikan daftar tahap ke tujuh tahap bawaan? Perubahan pada daftar tahap di formulir ini hilang.', 'Pulihkan'))) return; daftar = TAHAP_BAWAAN.map(t => ({ ...t })); gambar(); };
   }, onSave: async (x) => {
     if (x.mulai && !/^\d{4}-\d{2}-\d{2}$/.test(x.mulai)) return 'Tanggal mulai tidak valid.';
     baca();
     if (daftar.some(t => !String(t.nama || '').trim())) return 'Nama tahap tidak boleh kosong.';
-    const tahap = daftar.map(t => { const r = { id: t.id, nama: String(t.nama).trim(), peran: t.peran, mode: t.mode, global: t.mode === 'tanda' && !!t.global, offset: Math.max(0, Math.round(+t.offset || 0)), durasi: Math.max(1, Math.round(+t.durasi || 1)), ket: String(t.ket || '').trim() }; if (TARGET_BAWAAN[t.id] != null) r.target = t.target === '' || t.target == null ? TARGET_BAWAAN[t.id] : Math.max(0, +t.target); return r; });
+    const tahap = daftar.map(t => { const r = { id: t.id, nama: String(t.nama).trim(), peran: t.peran, perans: (t.perans && t.perans.length ? t.perans : [t.peran]), mode: t.mode, global: t.mode === 'tanda' && !!t.global, offset: Math.max(0, Math.round(+t.offset || 0)), durasi: Math.max(1, Math.round(+t.durasi || 1)), ket: String(t.ket || '').trim() }; if (TARGET_BAWAAN[t.id] != null) r.target = t.target === '' || t.target == null ? TARGET_BAWAAN[t.id] : Math.max(0, +t.target); return r; });
     S.settings.jadwal = { mulai: x.mulai || '', rpsMin: Math.max(1, Math.round(+x.rpsMin || 2)), rpsLengkap: Math.min(100, Math.max(10, Math.round(+x.rpsLengkap || 80))), custom: true, tahap };
     await saveSettings(); await addLog(`Atur jadwal tahapan (${tahap.length} tahap)${x.mulai ? `, mulai ${x.mulai}` : ', tanggal mulai dikosongkan'}`); rerender();
   } });

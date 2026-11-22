@@ -13,6 +13,7 @@ import { disposeHero } from './hero3d.js';
 import beranda from './views/beranda.js';
 import { pimpinan, mutu, akademik } from './views/dasbor.js';
 import { visiView, cplView, bkView, mkView } from './views/susun.js';
+import { cpmkMatriksView } from './views/matrikscpmk.js';
 import { petaView, matriksView } from './views/peta.js';
 import { cpmkView, rpsView } from './views/ajar.js';
 import bebanView from './views/beban.js';
@@ -184,6 +185,7 @@ export const ROUTES = [
   { id: 'pi', t: 'Indikator Kinerja (PI)', sub: 'Pemecah CPL untuk asesmen', ic: 'pulse', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: piView },
   { id: 'bk', t: 'BoK & Bahan Kajian', ic: 'layers', c: '#8b5cf6', sec: 'Penyusunan Kurikulum', prodi: true, v: bkView },
   { id: 'mk', t: 'Mata Kuliah & SKS', ic: 'book', c: '#14b8a6', sec: 'Penyusunan Kurikulum', prodi: true, v: mkView },
+  { id: 'cpmkprodi', t: 'Matriks CPL–CPMK', sub: 'CPMK turunan CPL dan MK pemuatnya', ic: 'link', c: '#0ea5e9', sec: 'Penyusunan Kurikulum', prodi: true, v: cpmkMatriksView },
   { id: 'peta', t: 'Peta Kurikulum', ic: 'grid4', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: petaView },
   { id: 'matriks', t: 'Matriks Keterlacakan', ic: 'link', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: matriksView },
   { id: 'obe', t: 'Tabel OBE', sub: 'Pemetaan sesuai templat + IABEE', ic: 'layers', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: obeView },

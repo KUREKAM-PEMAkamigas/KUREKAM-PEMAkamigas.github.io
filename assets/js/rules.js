@@ -559,19 +559,7 @@ export function rencanaSelaras(S, pid) {
   const kodeCpl = {};
   byProdi(S.cpl, pid).forEach((c, i) => { const baru = `${P.cpl}${pad2(i + 1)}`; if (c.kode !== baru) { kodeCpl[c.id] = { lama: c.kode, baru }; hasil.cpl.push({ ...c, kode: baru }); } });
   (S.pi || []).filter(p => p.prodi === pid && kodeCpl[p.cpl] && String(p.kode).startsWith(kodeCpl[p.cpl].lama + '.')).forEach(p => hasil.pi.push({ ...p, kode: kodeCpl[p.cpl].baru + String(p.kode).slice(kodeCpl[p.cpl].lama.length) }));
-  const mkUrut = (a, b) => { const x = S.mk.find(m => m.id === a) || {}, y = S.mk.find(m => m.id === b) || {}; return (x.smt || 0) - (y.smt || 0) || String(x.nama || '').localeCompare(String(y.nama || ''), 'id'); };
-  const cpmk = byProdi(S.cpmk, pid), pakaiK = new Set(cpmk.filter(c => sesuai(c.kode, P.cpmk)).map(c => nomorDari(c.kode, P.cpmk))), kodeK = {};
-  cpmk.forEach(c => { kodeK[c.id] = c.kode; });
-  [...cpmk].filter(c => !sesuai(c.kode, P.cpmk)).sort((a, b) => mkUrut(a.mk, b.mk) || String(a.mk).localeCompare(String(b.mk)) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }))
-    .forEach(c => { const n = nomorKosong(pakaiK); pakaiK.add(n); kodeK[c.id] = `${P.cpmk}${pad2(n)}`; hasil.cpmk.push({ ...c, kode: kodeK[c.id] }); });
-  const subs = byProdi(S.sub, pid), pakaiS = new Set();
-  const bentuk = (s) => `${P.sub}${pad2(angkaKode(kodeK[s.cpmk] || ''))}`;
-  subs.forEach(s => { if (kodeK[s.cpmk] === (cpmk.find(c => c.id === s.cpmk) || {}).kode && sesuai(s.kode, P.sub) && new RegExp('^' + esc2(bentuk(s)) + '\\d{2}$', 'i').test(s.kode)) pakaiS.add(String(s.kode).toUpperCase()); });
-  [...subs].sort((a, b) => String(a.cpmk).localeCompare(String(b.cpmk)) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })).forEach(s => {
-    if (pakaiS.has(String(s.kode).toUpperCase()) && new RegExp('^' + esc2(bentuk(s)) + '\\d{2}$', 'i').test(s.kode)) return;
-    let n = 1; while (pakaiS.has(`${bentuk(s)}${pad2(n)}`.toUpperCase())) n++;
-    const baru = `${bentuk(s)}${pad2(n)}`; pakaiS.add(baru.toUpperCase()); hasil.sub.push({ ...s, kode: baru });
-  });
+  const rc = rencanaCpmk(S, pid); hasil.cpmk = rc.cpmk; hasil.sub = rc.sub;
   hasil.total = hasil.cpl.length + hasil.cpmk.length + hasil.sub.length + hasil.pi.length;
   return hasil;
 }
@@ -590,3 +578,23 @@ export function kelengkapanCpl(S, pid) {
 /** MK akademik yang belum dibebani CPL: CPMK, Sub-CPMK, dan RPS belum boleh diisi. */
 export const mkTanpaCpl = (m) => !!m && !/magang|tugas akhir/i.test(m.kel || '') && !(m.cpl || []).length;
 export const PESAN_KUNCI_CPL = 'Mata kuliah ini belum dibebani CPL oleh prodi, sehingga CPMK, Sub-CPMK, dan RPS belum dapat diisi. Prodi menetapkan CPL pada mata kuliah ini di menu Mata Kuliah & SKS (kolom CPL), lalu pengisian dapat dilanjutkan.';
+
+/* ---------- CPMK tingkat prodi: satu CPMK dapat dipakai banyak MK (lembar 13 sampai 15 Excel OBE) ---------- */
+const kunciCpmk = (c) => String(c.teks || '').toLowerCase().replace(/\s+/g, ' ').trim() + '|' + ((c.cpl || [])[0] || '');
+/** CPMK prodi = kumpulan catatan CPMK per MK yang rumusan dan CPL induknya sama. Diurutkan menurut urutan CPL, lalu nomor. */
+export function cpmkProdi(S, pid) {
+  const urutCpl = byProdi(S.cpl, pid).map(c => c.id), grup = new Map();
+  byProdi(S.cpmk, pid).forEach(c => { const k = kunciCpmk(c); if (!grup.has(k)) grup.set(k, { kunci: k, kode: c.kode, teks: c.teks, cpl: (c.cpl || [])[0] || '', rec: [] }); grup.get(k).rec.push(c); });
+  return [...grup.values()].sort((a, b) => { const x = urutCpl.indexOf(a.cpl), y = urutCpl.indexOf(b.cpl); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || noKode(a.kode) - noKode(b.kode) || String(a.teks).localeCompare(String(b.teks), 'id'); });
+}
+/** Penomoran ulang: CPMK01 dst menurut urutan CPL (Sikap sampai Keterampilan khusus), Sub-CPMK mengikuti nomor CPMK. Hanya kode yang berganti. */
+export function rencanaCpmk(S, pid) {
+  const P = param(S).kodePrefix, out = { cpmk: [], sub: [] }, mkUrut = (a, b) => { const x = S.mk.find(m => m.id === a) || {}, y = S.mk.find(m => m.id === b) || {}; return (x.smt || 0) - (y.smt || 0) || String(x.nama || '').localeCompare(String(y.nama || ''), 'id'); };
+  cpmkProdi(S, pid).forEach((g, i) => {
+    const kode = `${P.cpmk}${pad2(i + 1)}`, ids = new Set(g.rec.map(c => c.id));
+    g.rec.forEach(c => { if (c.kode !== kode) out.cpmk.push({ ...c, kode }); });
+    const subs = byProdi(S.sub, pid).filter(x => ids.has(x.cpmk)).sort((a, b) => mkUrut(a.mk, b.mk) || noKode(a.kode) - noKode(b.kode) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
+    subs.forEach((x, j) => { const k2 = `${P.sub}${pad2(i + 1)}${pad2(j + 1)}`; if (x.kode !== k2) out.sub.push({ ...x, kode: k2 }); });
+  });
+  return out;
+}

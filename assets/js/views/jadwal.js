@@ -29,7 +29,7 @@ function gantt(T, mulai) {
 
 export default function jadwalView(el) {
   const J = jadwalOf(S), T = jadwalTanggal(S), mulai = J.mulai, hari = hariIni();
-  const lihatSemua = ['wadir', 'spm', 'akademik', 'admin', 'developer'].includes(ctx.role);
+  const lihatSemua = ['wadir', 'pimpinan', 'spm', 'akademik', 'admin', 'developer'].includes(ctx.role);
   const prodiList = lihatSemua ? S.prodi : S.prodi.filter(p => p.id === ctx.prodi);
   const rapat = T.find(t => t.id === 't7') || T.find(t => t.mode === 'tonggak');
   const atur = bisaAtur() ? `<button class="btn pri sm" id="atur">${icon('edit')} Atur jadwal</button>` : '';

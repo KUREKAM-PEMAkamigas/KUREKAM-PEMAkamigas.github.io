@@ -195,7 +195,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 export const ROUTES = [
   { id: 'beranda', t: 'Beranda', ic: 'home', c: '#10b981', sec: 'Ringkasan', v: beranda },
   { id: 'jadwal', t: 'Jadwal & Pemantauan', sub: 'Tahapan evaluasi dan progres', ic: 'calendar', c: '#8b5cf6', sec: 'Ringkasan', v: jadwalView },
-  { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
+  { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I dan Pimpinan', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
   { id: 'mutu', t: 'Dasbor Mutu', sub: 'SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag AK', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
   { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },

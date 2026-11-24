@@ -6,7 +6,7 @@ import { PERAN } from '../config.js';
 import { rpsOf, rpsLengkap } from '../rules.js';
 import { formDrawer, prodiTag, short } from './ui.js';
 
-const NAMA = { prodi: 'Kaprodi', spm: 'SPM', akademik: 'Kasubbag AK', wadir: 'Wakil Direktur I', admin: 'Admin', developer: 'Pengembang' };
+const NAMA = { prodi: 'Kaprodi', spm: 'SPM', akademik: 'Kasubbag AK', wadir: 'Wakil Direktur I', pimpinan: 'Pimpinan', admin: 'Admin', developer: 'Pengembang' };
 export const STATUS_V = { perbaiki: ['bad', 'Perlu perbaikan'], terverifikasi: ['ok', 'Terverifikasi'], diperbaiki: ['near', 'Sudah diperbaiki, menunggu cek ulang'] };
 const hariIni = () => new Date().toISOString().slice(0, 10);
 

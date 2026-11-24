@@ -130,6 +130,7 @@ export const PARAM_DEFAULT = {
 export const PERAN = {
   prodi: { nama: 'Prodi', c: '#10b981' },
   dosen: { nama: 'Dosen', c: '#0ea5e9' },
+  pimpinan: { nama: 'Pimpinan', c: '#06b6d4' },
   wadir: { nama: 'Wakil Direktur I', c: '#8b5cf6' },
   spm: { nama: 'SPM', c: '#f0616d' },
   akademik: { nama: 'Kasubbag AK', c: '#f5a524' },
@@ -144,6 +145,7 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 export const MENU_PERAN = {
   dosen: ['beranda', 'jadwal', 'rambu', 'peta', 'cpmkprodi', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bloom'],
   prodi: ['beranda', 'jadwal', 'rambu', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'cpmkprodi', 'peta', 'matriks', 'obe', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  pimpinan: ['beranda', 'jadwal', 'pimpinan', 'mutu', 'akademik', 'iabee', 'capaian', 'lulusan', 'laporan'],
   wadir: ['beranda', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
   spm: ['beranda', 'jadwal', 'rambu', 'mutu', 'visi', 'cpl', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk'],
   akademik: ['beranda', 'jadwal', 'rambu', 'akademik', 'mk', 'peta', 'obe', 'rps', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
@@ -151,7 +153,7 @@ export const MENU_PERAN = {
   developer: null
 };
 /* Halaman kerja utama tiap peran (tombol utama di Beranda). */
-export const RUMAH_PERAN = { dosen: ['rps', 'RPS mata kuliah saya'], prodi: ['asisten', 'Asisten kurikulum'], wadir: ['pimpinan', 'Dasbor pimpinan'], spm: ['mutu', 'Dasbor mutu'], akademik: ['akademik', 'Dasbor akademik'], admin: ['induk', 'Data induk dan pengguna'], developer: ['induk', 'Data induk dan pengguna'] };
+export const RUMAH_PERAN = { pimpinan: ['pimpinan', 'Dasbor pimpinan'], dosen: ['rps', 'RPS mata kuliah saya'], prodi: ['asisten', 'Asisten kurikulum'], wadir: ['pimpinan', 'Dasbor pimpinan'], spm: ['mutu', 'Dasbor mutu'], akademik: ['akademik', 'Dasbor akademik'], admin: ['induk', 'Data induk dan pengguna'], developer: ['induk', 'Data induk dan pengguna'] };
 
 export const ACUAN = [
   'Permendiktisaintek Nomor 39 Tahun 2025 tentang Penjaminan Mutu Pendidikan Tinggi (beserta perubahannya)',

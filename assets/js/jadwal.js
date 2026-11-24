@@ -8,7 +8,7 @@ export const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'S
 /** Peran pelaksana satu tahap: daftar (bisa beberapa). "Semua" berdiri sendiri. */
 export const perans = (t) => { const a = (Array.isArray(t.perans) && t.perans.length ? t.perans : [t.peran]).filter(k => PELAKSANA[k]); return a.includes('semua') ? ['semua'] : (a.length ? a : ['semua']); };
 export const pelaksanaTeks = (t) => perans(t).map(k => PELAKSANA[k]).join(', ');
-export const PELAKSANA = { prodi: 'Prodi', dosen: 'Dosen', spm: 'SPM', akademik: 'Kasubbag Akademik', wadir: 'Wakil Direktur I', semua: 'Semua' };
+export const PELAKSANA = { prodi: 'Prodi', dosen: 'Dosen', spm: 'SPM', akademik: 'Kasubbag Akademik', wadir: 'Wakil Direktur I', pimpinan: 'Pimpinan', semua: 'Semua' };
 
 /** Tahap bawaan. offset = hari ke-n sejak tanggal mulai (0 = hari mulai), durasi dalam hari. mode: auto dihitung dari data, tanda ditandai pemiliknya. */
 export const TAHAP_BAWAAN = [

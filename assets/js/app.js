@@ -370,8 +370,9 @@ function wajibGantiSandi() {
     const v = $('#view'), em = DB.user.email.toLowerCase();
     v.innerHTML = `<div class="card" style="max-width:460px;margin:40px auto"><div class="card-h"><span class="ico-badge" style="--c:#f5a524">${icon('gear')}</span><div><h3>Buat kata sandi Anda sendiri</h3><div class="sub">${esc(em)}</div></div></div>
       <p class="small" style="margin:10px 0">Ini pertama kali Anda masuk. Kata sandi awal sama dengan alamat email, jadi harus diganti dulu. Kata sandi baru hanya Anda yang tahu, admin tidak bisa melihatnya.</p>
-      <form id="wg" style="display:grid;gap:10px">${kolomSandi('wg-b', 'Kata sandi baru, minimal 8 karakter')}${kolomSandi('wg-u', 'Ulangi kata sandi baru')}<div class="muted small" id="wg-msg"></div><button class="btn pri" type="submit">${icon('check')} Simpan dan lanjutkan</button></form></div>`;
+      <form id="wg" style="display:grid;gap:10px">${kolomSandi('wg-b', 'Kata sandi baru, minimal 8 karakter')}${kolomSandi('wg-u', 'Ulangi kata sandi baru')}<div class="muted small" id="wg-msg"></div><button class="btn pri" type="submit">${icon('check')} Simpan dan lanjutkan</button><button class="btn ghost" type="button" id="wg-keluar">Bukan akun saya, keluar</button></form></div>`;
     pasangMata(v);
+    v.querySelector('#wg-keluar').onclick = async () => { try { await DB.logout(); } catch (e) { /* abaikan */ } location.replace(location.pathname + '#beranda'); location.reload(); };
     v.querySelector('#wg').onsubmit = async ev => {
       ev.preventDefault(); const b = v.querySelector('#wg-b').value, u = v.querySelector('#wg-u').value, msg = v.querySelector('#wg-msg');
       if (b.length < 8) { msg.textContent = 'Kata sandi baru minimal 8 karakter.'; return; }

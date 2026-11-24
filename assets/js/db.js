@@ -59,7 +59,16 @@ export const DB = {
   get user() { return user; },
   get error() { return lastError; },
   get needLogin() { return mode === 'firebase' && !user; },
-  async login(email, pass) { const r = await auth.signInWithEmailAndPassword(email, pass); user = r.user; return user; },
+  /** Kata sandi awal = email huruf kecil. Bila gagal karena huruf besar otomatis atau spasi dari papan ketik HP, dicoba sekali lagi dalam bentuk rapi. */
+  async login(email, pass) {
+    email = String(email || '').trim().toLowerCase();
+    try { const r = await auth.signInWithEmailAndPassword(email, pass); user = r.user; return user; }
+    catch (e) {
+      const rapi = String(pass || '').trim().toLowerCase();
+      if (rapi && rapi !== pass && /wrong-password|invalid-credential|invalid-login/.test(e.code || '')) { const r = await auth.signInWithEmailAndPassword(email, rapi); user = r.user; return user; }
+      throw e;
+    }
+  },
   async logout() { if (auth) await auth.signOut(); user = null; },
   /** Ganti kata sandi akun yang sedang masuk. Kata sandi lama diminta ulang demi keamanan. */
   async gantiSandi(lama, baru) {

@@ -18,7 +18,7 @@ const skorTag = (v) => v == null ? '<span class="muted small">belum dinilai</spa
 async function muat(paksa) {
   if (!paksa && Date.now() - muatPada < 120000 && J.length) return;
   const sejak = new Date(Date.now() - rentang * 864e5).toISOString();
-  [J, SESI] = await Promise.all([DB.ambilSejak('jejak', sejak, 20000), DB.ambilSemua('sesi')]);
+  [J, SESI] = await Promise.all([DB.ambilSejak('jejak', sejak, 10000), DB.ambilSemua('sesi')]);
   muatPada = Date.now();
   rawat();
 }

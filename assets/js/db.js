@@ -130,7 +130,7 @@ export const DB = {
   },
   /* ---- jejak aktivitas dan sesi (koleksi terpisah, tidak dimuat semua pengguna) ---- */
   async tulisJejak(col, doc) { if (mode !== 'firebase') return false; try { await fs.collection(PFX + col).doc(String(doc.id)).set(JSON.parse(JSON.stringify(doc))); return true; } catch (e) { return false; } },
-  async ambilSejak(col, sejak, batas = 5000) { if (mode !== 'firebase') return []; const s = await fs.collection(PFX + col).where('t', '>=', sejak).orderBy('t', 'desc').limit(batas).get(); return s.docs.map(d => d.data()); },
+  async ambilSejak(col, sejak, batas = 5000) { batas = Math.min(batas, 10000); if (mode !== 'firebase') return []; const s = await fs.collection(PFX + col).where('t', '>=', sejak).orderBy('t', 'desc').limit(batas).get(); return s.docs.map(d => d.data()); },
   async ambilSemua(col) { if (mode !== 'firebase') return []; const s = await fs.collection(PFX + col).get(); return s.docs.map(d => d.data()); },
   /** Mendengarkan dokumen baru sejak waktu tertentu (tanpa membaca ulang semuanya). Mengembalikan fungsi berhenti. */
   dengar(col, sejak, cb) { if (mode !== 'firebase') return () => {}; return fs.collection(PFX + col).where('t', '>=', sejak).onSnapshot(s => cb(s.docChanges().filter(c => c.type !== 'removed').map(c => c.doc.data())), e => console.warn('Pantau ' + col + ':', e.message)); },

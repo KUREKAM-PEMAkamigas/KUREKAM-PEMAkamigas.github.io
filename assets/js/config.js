@@ -143,10 +143,10 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 
 /* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
 export const MENU_PERAN = {
-  dosen: ['beranda', 'jadwal', 'rambu', 'peta', 'cpmkprodi', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bloom'],
-  prodi: ['beranda', 'jadwal', 'rambu', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'cpmkprodi', 'peta', 'matriks', 'obe', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  dosen: ['beranda', 'kinerja', 'jadwal', 'rambu', 'peta', 'cpmkprodi', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bloom'],
+  prodi: ['beranda', 'kinerja', 'jadwal', 'rambu', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'cpmkprodi', 'peta', 'matriks', 'obe', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
   pimpinan: ['beranda', 'jadwal', 'pimpinan', 'mutu', 'akademik', 'iabee', 'capaian', 'lulusan', 'laporan'],
-  wadir: ['beranda', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
+  wadir: ['beranda', 'pantau', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
   spm: ['beranda', 'jadwal', 'rambu', 'mutu', 'visi', 'cpl', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk'],
   akademik: ['beranda', 'jadwal', 'rambu', 'akademik', 'mk', 'peta', 'obe', 'rps', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,

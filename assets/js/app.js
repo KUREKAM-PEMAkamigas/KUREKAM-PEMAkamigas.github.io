@@ -34,6 +34,8 @@ import bahanLedView from './views/bahanled.js';
 import obeView from './views/obe.js';
 import panduanView from './views/panduan.js';
 import rambuView from './views/rambu.js';
+import { pantauView, kinerjaView } from './views/pantau.js';
+import { mulaiJejak, jejakHalaman, catat, jejakKeluar } from './jejak.js';
 
 /* ---------------- state ---------------- */
 export const S = { prodi: [], dosen: [], pl: [], cpl: [], pi: [], capaian: [], tl: [], capstone: [], lulusan: [], ab: [], real: [], bok: [], bk: [], mk: [], cpmk: [], sub: [], rps: [], tugas: [], revisi: [], lama: [], ajar: [], jadwal: [], riset: [], pengguna: [], log: [], settings: {} };
@@ -161,10 +163,11 @@ export async function remove(col, id, aksi) {
   S[col] = S[col].filter(x => x.id !== id);
   kerjaMulai('hapus'); let gagal = false;
   try { await DB.del(col, id, S[col]); } catch (e) { gagal = true; toast('Gagal menghapus: ' + e.message); }
-  try { jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(gagal); }
+  try { jadwalkanUmpan(); if (aksi) await addLog(aksi, 'hapus'); } finally { kerjaSelesai(gagal); }
 }
 export async function saveSettings() { setKodeBaku(param(S).kodeBaku); const doc = Object.assign({ id: 'app' }, S.settings); kerjaMulai('simpan'); let gagal = false; try { await DB.put('settings', doc, [doc]); } catch (e) { gagal = true; toast('Gagal menyimpan pengaturan: ' + e.message); } kerjaSelesai(gagal); }
-export async function addLog(aksi) {
+export async function addLog(aksi, jenis = 'simpan') {
+  catat(jenis, aksi);
   const doc = { id: 'LOG' + Date.now() + Math.floor(Math.random() * 1000), t: new Date().toISOString(), user: userName() + (DB.user && DB.user.email ? ' · ' + DB.user.email : ''), aksi };
   S.log.unshift(doc); if (S.log.length > 400) S.log.length = 400;
   try { await DB.put('log', doc, S.log); } catch (e) { /* abaikan */ }
@@ -196,6 +199,8 @@ export const ROUTES = [
   { id: 'beranda', t: 'Beranda', ic: 'home', c: '#10b981', sec: 'Ringkasan', v: beranda },
   { id: 'jadwal', t: 'Jadwal & Pemantauan', sub: 'Tahapan evaluasi dan progres', ic: 'calendar', c: '#8b5cf6', sec: 'Ringkasan', v: jadwalView },
   { id: 'pimpinan', t: 'Dasbor Pimpinan', sub: 'Wakil Direktur I dan Pimpinan', ic: 'dash', c: '#8b5cf6', sec: 'Ringkasan', v: pimpinan },
+  { id: 'pantau', t: 'Ruang Pantau', sub: 'Aktivitas dan kinerja pengguna', ic: 'eye', c: '#8b5cf6', sec: 'Ringkasan', v: pantauView },
+  { id: 'kinerja', t: 'Kinerja Saya', sub: 'Kemajuan kerja dan skor', ic: 'pulse', c: '#10b981', sec: 'Ringkasan', v: kinerjaView },
   { id: 'mutu', t: 'Dasbor Mutu', sub: 'SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag AK', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
   { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },
@@ -287,7 +292,7 @@ function renderTop(route) {
   const sm = $('#simBtn'); if (sm) sm.onclick = () => ubahSimulasi(!dalamSimulasi());
   const ps = $('#prodiSel'); if (ps) ps.onchange = e => { ctx.prodi = e.target.value; saveCtx(); route_(); };
   const ds = $('#dosenSel'); if (ds) ds.onchange = e => { ctx.dosen = e.target.value; saveCtx(); route_(); };
-  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { lo.disabled = true; closeDrawer(); disposeAll(); disposeHero(); $('#side').innerHTML = ''; $('#top').innerHTML = ''; $('#view').innerHTML = '<div class="empty">Keluar…</div>'; await DB.logout(); try { sessionStorage.removeItem(SIM_KEY); } catch (e) { /* abaikan */ } DB.useFirebase(); Object.keys(S).forEach(k => { S[k] = k === 'settings' ? {} : []; }); ctx.kunci = false; ctx.akun = null; ctx.izin = null; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } window.dispatchEvent(new Event('kurekam:keluar')); };
+  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { lo.disabled = true; try { await jejakKeluar(); } catch (e) { /* abaikan */ } closeDrawer(); disposeAll(); disposeHero(); $('#side').innerHTML = ''; $('#top').innerHTML = ''; $('#view').innerHTML = '<div class="empty">Keluar…</div>'; await DB.logout(); try { sessionStorage.removeItem(SIM_KEY); } catch (e) { /* abaikan */ } DB.useFirebase(); Object.keys(S).forEach(k => { S[k] = k === 'settings' ? {} : []; }); ctx.kunci = false; ctx.akun = null; ctx.izin = null; try { history.replaceState(null, '', location.pathname + location.search + '#beranda'); } catch (e) { /* abaikan */ } window.dispatchEvent(new Event('kurekam:keluar')); };
 }
 
 export function route_() {
@@ -307,6 +312,7 @@ export function route_() {
   try { r.v(holder); } catch (e) { console.error(e); holder.innerHTML = `<div class="card empty">Terjadi kesalahan saat memuat halaman: ${esc(e.message)}</div>`; }
   tilt(view);
   pasangTabel(view);
+  jejakHalaman(r.id, r.t);
   window.scrollTo({ top: 0 });
 }
 
@@ -392,7 +398,12 @@ export async function start() {
   if (dalamSimulasi()) DB.useLocal();
   let d = await DB.loadAll();
   const st = d.settings && d.settings[0];
-  if (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) { const simpan = d.pengguna || []; d = buildSeed(); d.pengguna = simpan; for (const c of Object.keys(d)) { if (c !== 'pengguna') await DB.replaceAll(c, d[c]); } }
+  /* Pengaman data: di Firebase, data contoh hanya boleh ditulis bila basis data benar-benar kosong.
+     Data yang sudah diisi pengguna tidak pernah ditimpa otomatis, termasuk saat versi data contoh naik atau saat pemuatan sebagian gagal. */
+  const kosong = Object.keys(d).every(c => !(d[c] || []).length || c === 'pengguna' || c === 'log');
+  const bolehSeed = DB.mode !== 'firebase' ? (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) : kosong;
+  if (DB.mode === 'firebase' && !kosong && (!st || (st.seedVersi || 0) < APP.seedVersi)) console.warn('Versi data contoh lebih baru, tetapi data Firebase tidak ditimpa.');
+  if (bolehSeed) { const simpan = d.pengguna || []; d = buildSeed(); d.pengguna = simpan; for (const c of Object.keys(d)) { if (c !== 'pengguna') await DB.replaceAll(c, d[c]); } }
   /* kode prodi Logistik: LO diganti LG. Penggantian dilakukan di memori setiap kali muat; penulisan ke basis data hanya oleh admin. */
   const migLG = migrasiLG(d);
   if (ctx.prodi === 'LO') ctx.prodi = 'LG';
@@ -421,6 +432,7 @@ export async function start() {
     catch (e) { console.warn('Penyeragaman LG ke basis data gagal:', e.message); }
   }
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
+  mulaiJejak();
   if (!pantau) { pantau = true; window.addEventListener('hashchange', route_); }
   route_();
 }

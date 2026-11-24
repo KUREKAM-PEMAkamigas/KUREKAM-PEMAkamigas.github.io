@@ -116,15 +116,24 @@ export const DB = {
     if (mode === 'firebase') await fs.collection(PFX + col).doc(String(id)).delete();
     else lsSet(LS + col, JSON.stringify(all));
   },
+  /** Ganti isi satu koleksi. Aman terhadap putus jaringan: dokumen baru ditulis lebih dulu, baru dokumen lama yang tidak dipakai lagi dihapus. */
   async replaceAll(col, arr) {
     if (mode === 'firebase') {
-      const old = await fs.collection(PFX + col).get();
+      const ref = fs.collection(PFX + col), old = await ref.get(), baru = new Set(arr.map(d => String(d.id)));
       let batch = fs.batch(), n = 0;
       const flush = async () => { await batch.commit(); batch = fs.batch(); n = 0; };
-      for (const d of old.docs) { batch.delete(d.ref); if (++n >= 400) await flush(); }
-      for (const doc of arr) { batch.set(fs.collection(PFX + col).doc(String(doc.id)), JSON.parse(JSON.stringify(doc))); if (++n >= 400) await flush(); }
+      for (const doc of arr) { batch.set(ref.doc(String(doc.id)), JSON.parse(JSON.stringify(doc))); if (++n >= 400) await flush(); }
+      if (n) await flush();
+      for (const d of old.docs) { if (baru.has(d.id)) continue; batch.delete(d.ref); if (++n >= 400) await flush(); }
       if (n) await batch.commit();
     } else lsSet(LS + col, JSON.stringify(arr));
   },
+  /* ---- jejak aktivitas dan sesi (koleksi terpisah, tidak dimuat semua pengguna) ---- */
+  async tulisJejak(col, doc) { if (mode !== 'firebase') return false; try { await fs.collection(PFX + col).doc(String(doc.id)).set(JSON.parse(JSON.stringify(doc))); return true; } catch (e) { return false; } },
+  async ambilSejak(col, sejak, batas = 5000) { if (mode !== 'firebase') return []; const s = await fs.collection(PFX + col).where('t', '>=', sejak).orderBy('t', 'desc').limit(batas).get(); return s.docs.map(d => d.data()); },
+  async ambilSemua(col) { if (mode !== 'firebase') return []; const s = await fs.collection(PFX + col).get(); return s.docs.map(d => d.data()); },
+  /** Mendengarkan dokumen baru sejak waktu tertentu (tanpa membaca ulang semuanya). Mengembalikan fungsi berhenti. */
+  dengar(col, sejak, cb) { if (mode !== 'firebase') return () => {}; return fs.collection(PFX + col).where('t', '>=', sejak).onSnapshot(s => cb(s.docChanges().filter(c => c.type !== 'removed').map(c => c.doc.data())), e => console.warn('Pantau ' + col + ':', e.message)); },
+  async hapusSebelum(col, sebelum, batas = 400) { if (mode !== 'firebase') return 0; const s = await fs.collection(PFX + col).where('t', '<', sebelum).limit(batas).get(); if (!s.size) return 0; const b = fs.batch(); s.docs.forEach(d => b.delete(d.ref)); await b.commit(); return s.size; },
   clearLocal() { COLLECTIONS.forEach(c => { try { localStorage.removeItem(LS + c); } catch (e) { /* abaikan */ } }); }
 };

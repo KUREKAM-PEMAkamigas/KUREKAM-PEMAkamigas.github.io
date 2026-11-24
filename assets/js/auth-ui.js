@@ -12,7 +12,7 @@ export function loginForm() {
     const v = $('#view');
     v.innerHTML = `<div class="card" style="max-width:440px;margin:40px auto"><div class="card-h"><span class="ico-badge" style="--c:#0ea5e9">${icon('db')}</span><div><h3>Masuk ke KUREKAM</h3><div class="sub">Akun sama dengan SIMANTAP (Firebase).</div></div></div>
       <form id="lgn" style="display:grid;gap:10px;margin-top:12px"><input class="inp" id="lg-e" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>${kolomSandi('lg-p', 'Kata sandi')}
-      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><button class="btn" type="button" id="lg-lupa">Lupa kata sandi? Kirim tautan ke email saya</button><div class="small muted">Pengguna baru: kata sandi awal sama dengan alamat email (huruf kecil), lalu Anda diminta menggantinya.</div></form></div>`;
+      <button class="btn pri" type="submit">Masuk</button><div class="muted small" id="lg-msg"></div><button class="btn" type="button" id="lg-lupa">Lupa kata sandi? Kirim tautan ke email saya</button><div class="small muted">Pengguna baru: kata sandi awal sama dengan alamat email (huruf kecil), lalu Anda diminta menggantinya.</div><div class="small muted">Aktivitas di aplikasi ini (masuk, halaman, simpan) dicatat untuk pemantauan kemajuan kurikulum.</div></form></div>`;
     /* Perlindungan terhadap blokir Firebase: tombol dikunci saat memproses dan saat masa tunggu, supaya percobaan berulang tidak memperpanjang blokir. */
     const KUNCI = 'kurekam_tunggu', tombol = v.querySelector('#lgn button[type=submit]'), pesan = v.querySelector('#lg-msg');
     let jam = null;

@@ -2,7 +2,7 @@
    Generator berbasis aturan: menyusun kerangka dan rumusan awal sesuai Buku Pedoman, SN Dikti,
    LAM Teknik, IABEE, dan Taksonomi Bloom. Hasilnya selalu berstatus usulan dan bisa diedit.
    Isi keilmuan (pokok bahasan, pustaka, penelitian) tetap berasal dari dosen dan prodi. */
-import { S, ctx, can, save, saveMany, addLog, esc, icon, toast, uid, openDrawer, rerender } from '../app.js';
+import { S, ctx, can, save, saveMany, addLog, esc, icon, toast, uid, openDrawer, closeDrawer, rerender } from '../app.js';
 import { KELOMPOK, APP } from '../config.js';
 import { kodeBaruMk, kodeBaku } from '../kode.js';
 import { PRODI_DEF, CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci } from '../seed.js';
@@ -52,61 +52,62 @@ const AC = { rps: 'Komponen RPS menurut SN Dikti dan LAM Teknik butir 15', obe: 
 
 /** Memeriksa satu RPS. Mengembalikan daftar temuan { k, butir, temuan, saran, acuan }. */
 export function periksaRps(m, r) {
-  const P = param(S), out = [], add = (k, butir, temuan, saran, acuan) => out.push({ k, butir, temuan, saran, acuan });
+  const P = param(S), out = [], add = (k, butir, temuan, saran, acuan, lok) => out.push({ k, butir, temuan, saran, acuan, lok: lok || [] }), H = (h, l) => [{ l, a: { h } }], I = (f, l) => [{ l, a: { info: f } }];
   const cp = S.cpmk.filter(c => c.mk === m.id), subs = S.sub.filter(s => s.mk === m.id), hint = prakOf(m) ? 'P' : 'C';
   const peng = S.tugas.filter(t => t.mk === m.id);
-  add(peng.length ? 'ok' : 'near', 'Dosen pengampu', peng.length ? `${peng.length} penugasan` : 'Belum ada penugasan dosen', 'Prodi menugaskan dosen di menu Penugasan dan Beban Dosen.', AC.rps);
-  add((m.cpl || []).length ? 'ok' : 'bad', 'CPL yang dibebankan', (m.cpl || []).length ? `${m.cpl.length} CPL` : 'Mata kuliah belum dibebani CPL', 'CPL ditetapkan Prodi di menu Mata Kuliah atau Matriks Keterlacakan.', AC.obe);
+  add(peng.length ? 'ok' : 'near', 'Dosen pengampu', peng.length ? `${peng.length} penugasan` : 'Belum ada penugasan dosen', 'Prodi menugaskan dosen di menu Penugasan dan Beban Dosen.', AC.rps, H('#beban', 'Menu Penugasan'));
+  add((m.cpl || []).length ? 'ok' : 'bad', 'CPL yang dibebankan', (m.cpl || []).length ? `${m.cpl.length} CPL` : 'Mata kuliah belum dibebani CPL', 'CPL ditetapkan Prodi di menu Mata Kuliah atau Matriks Keterlacakan.', AC.obe, H('#mk', 'Menu Mata Kuliah'));
   /* CPMK */
-  if (!cp.length) add('bad', 'CPMK', 'Belum ada CPMK', 'CPMK dirumuskan Prodi. Asisten dapat membuat usulan dari CPL dan tingkat semester.', AC.obe);
+  if (!cp.length) add('bad', 'CPMK', 'Belum ada CPMK', 'CPMK dirumuskan Prodi. Asisten dapat membuat usulan dari CPL dan tingkat semester.', AC.obe, H('#cpmk', 'Menu CPMK'));
   else {
     const tak = cp.filter(c => { const b = detect(c.teks, hint); return !b || b.kabur; }), lepas = cp.filter(c => !(c.cpl || []).length);
-    add(tak.length ? 'bad' : 'ok', 'Kata kerja CPMK', tak.length ? `${tak.length} CPMK tanpa kata kerja operasional terukur: ${tak.map(c => c.kode).join(', ')}` : 'Semua CPMK memakai kata kerja operasional', 'Awali dengan KKO terukur, misalnya menerapkan, menganalisis, mengoperasikan. Hindari memahami dan mengetahui.', AC.bloom);
-    add(lepas.length ? 'bad' : 'ok', 'CPMK terhubung ke CPL', lepas.length ? `${lepas.length} CPMK belum dihubungkan ke CPL: ${lepas.map(c => c.kode).join(', ')}` : 'Semua CPMK terhubung', 'Setiap CPMK mendukung paling sedikit satu CPL yang dibebankan.', AC.obe);
+    add(tak.length ? 'bad' : 'ok', 'Kata kerja CPMK', tak.length ? `${tak.length} CPMK tanpa kata kerja operasional terukur: ${tak.map(c => c.kode).join(', ')}` : 'Semua CPMK memakai kata kerja operasional', 'Awali dengan KKO terukur, misalnya menerapkan, menganalisis, mengoperasikan. Hindari memahami dan mengetahui.', AC.bloom, H('#cpmk', 'Menu CPMK'));
+    add(lepas.length ? 'bad' : 'ok', 'CPMK terhubung ke CPL', lepas.length ? `${lepas.length} CPMK belum dihubungkan ke CPL: ${lepas.map(c => c.kode).join(', ')}` : 'Semua CPMK terhubung', 'Setiap CPMK mendukung paling sedikit satu CPL yang dibebankan.', AC.obe, H('#cpmk', 'Menu CPMK'));
     const rg = ANJURAN_SMT[m.smt], lv = cp.map(c => detect(c.teks, hint)).filter(b => b && b.d === 'C').map(b => b.n);
-    if (rg && lv.length) { const mx = Math.max(...lv); add(mx < rg[0] ? 'near' : 'ok', 'Tingkat kognitif', `Tertinggi C${mx}, anjuran semester ${m.smt} C${rg[0]} sampai C${rg[1]}`, mx < rg[0] ? 'Naikkan paling sedikit satu CPMK ke tingkat yang dianjurkan agar progresi antarsemester terjaga.' : '', AC.bloom); }
+    if (rg && lv.length) { const mx = Math.max(...lv); add(mx < rg[0] ? 'near' : 'ok', 'Tingkat kognitif', `Tertinggi C${mx}, anjuran semester ${m.smt} C${rg[0]} sampai C${rg[1]}`, mx < rg[0] ? 'Naikkan paling sedikit satu CPMK ke tingkat yang dianjurkan agar progresi antarsemester terjaga.' : '', AC.bloom, H('#cpmk', 'Menu CPMK')); }
   }
   /* Sub-CPMK */
-  if (!subs.length) add('bad', 'Sub-CPMK', 'Belum ada Sub-CPMK', 'Uraikan tiap CPMK menjadi kemampuan akhir per tahap belajar. Asisten dapat membuat usulan.', AC.rps);
+  if (!subs.length) add('bad', 'Sub-CPMK', 'Belum ada Sub-CPMK', 'Uraikan tiap CPMK menjadi kemampuan akhir per tahap belajar. Asisten dapat membuat usulan.', AC.rps, H('#cpmk', 'Menu CPMK'));
   else {
     const tot = subs.reduce((a, s) => a + (+s.bobot || 0), 0);
-    add(Math.abs(tot - 100) > 0.5 ? 'bad' : 'ok', 'Bobot Sub-CPMK', `Total ${fmt(tot, 1)}%`, Math.abs(tot - 100) > 0.5 ? 'Jumlah bobot Sub-CPMK harus 100%.' : '', AC.pedoman);
+    add(Math.abs(tot - 100) > 0.5 ? 'bad' : 'ok', 'Bobot Sub-CPMK', `Total ${fmt(tot, 1)}%`, Math.abs(tot - 100) > 0.5 ? 'Jumlah bobot Sub-CPMK harus 100%.' : '', AC.pedoman, H('#cpmk', 'Menu CPMK'));
   }
   if (!r) { add('bad', 'Rencana pertemuan', 'RPS belum dibuat', 'Buat RPS 16 pertemuan, unggah RPS lama dari Word, atau pakai isi otomatis.', AC.rps); return out; }
   const per = r.pertemuan || [], non = per.filter(p => !p.ujian);
-  add(per.length === 16 ? 'ok' : 'bad', 'Jumlah pertemuan', `${per.length} pertemuan`, per.length === 16 ? '' : 'Satu semester 16 pertemuan termasuk UTS (pertemuan 8) dan UAS (pertemuan 16).', AC.pedoman);
-  add(per.some(p => p.ujian === 'UTS') && per.some(p => p.ujian === 'UAS') ? 'ok' : 'bad', 'UTS dan UAS', per.filter(p => p.ujian).map(p => `${p.ujian} pertemuan ${p.m}`).join(', ') || 'Belum ada', 'Tandai pertemuan 8 sebagai UTS dan pertemuan 16 sebagai UAS.', AC.pedoman);
+  const T0 = { tabel: true }, LP = (nums, f, awal = 'Pertemuan') => nums.map(n => ({ l: `${awal} ${n}`, a: { pert: per.findIndex(p => p.m === n), f } })).filter(x => x.a.pert >= 0), LS = (nums) => nums.map(n => ({ l: `SAP ${n}`, a: { sap: per.findIndex(p => p.m === n) } })).filter(x => x.a.sap >= 0);
+  add(per.length === 16 ? 'ok' : 'bad', 'Jumlah pertemuan', `${per.length} pertemuan`, per.length === 16 ? '' : 'Satu semester 16 pertemuan termasuk UTS (pertemuan 8) dan UAS (pertemuan 16).', AC.pedoman, [{ l: 'Tabel pertemuan', a: T0 }]);
+  add(per.some(p => p.ujian === 'UTS') && per.some(p => p.ujian === 'UAS') ? 'ok' : 'bad', 'UTS dan UAS', per.filter(p => p.ujian).map(p => `${p.ujian} pertemuan ${p.m}`).join(', ') || 'Belum ada', 'Tandai pertemuan 8 sebagai UTS dan pertemuan 16 sebagai UAS.', AC.pedoman, [{ l: 'Tabel pertemuan', a: T0 }]);
   const kosong = (f) => non.filter(p => !String(p[f] || '').trim()).map(p => p.m);
-  [['materi', 'Bahan kajian atau materi', 'bad', 'Isi pokok bahasan tiap pertemuan.'], ['metode', 'Metode dan bentuk pembelajaran', 'bad', 'Sebut bentuk (kuliah, praktikum, praktik lapangan) dan metodenya.'], ['indikator', 'Indikator penilaian', 'near', 'Tulis bukti terukur ketercapaian Sub-CPMK.'], ['asesmen', 'Kriteria dan teknik asesmen', 'near', 'Sebut kriteria (rubrik) dan tekniknya (tes, unjuk kerja, laporan).']].forEach(([f, n, k, s]) => {
-    const z = kosong(f); add(z.length ? k : 'ok', n, z.length ? `Kosong di pertemuan ${z.join(', ')}` : 'Terisi di semua pertemuan', z.length ? s : '', AC.rps);
+  [['materi', 'Materi Pembelajaran', 'bad', 'Isi pokok bahasan tiap pertemuan.', '_isi'], ['metode', 'Tatap muka (bentuk dan metode)', 'bad', 'Isi Tatap muka: bentuk, metode, TM, dan PT. Tombol Isi baris standar membantu.', '_tatap'], ['indikator', 'Indikator penilaian', 'near', 'Tulis bukti terukur ketercapaian Sub-CPMK.', '_indikator'], ['asesmen', 'Kriteria dan teknik asesmen', 'near', 'Pilih teknik asesmen; kriteria (rubrik) mengikuti otomatis.', '_teknik']].forEach(([f, n, k, s, fld]) => {
+    const z = kosong(f); add(z.length ? k : 'ok', n, z.length ? `Kosong di pertemuan ${z.join(', ')}` : 'Terisi di semua pertemuan', z.length ? s : '', AC.rps, LP(z, fld));
   });
   const kurangInd = non.filter(p => (p.sub || []).length && String(p.indikator || '').split(/\n+/).filter(t => t.trim()).length < 3 * p.sub.length).map(p => p.m);
-  add(kurangInd.length ? 'near' : 'ok', 'Indikator per Sub-CPMK', kurangInd.length ? `Kurang dari 3 indikator di pertemuan ${kurangInd.join(', ')}` : 'Tiga indikator atau lebih per Sub-CPMK', kurangInd.length ? 'Tulis tiga indikator untuk setiap Sub-CPMK, satu per baris. Bila satu pertemuan memuat dua Sub-CPMK, indikatornya enam.' : '', AC.rps);
+  add(kurangInd.length ? 'near' : 'ok', 'Indikator per Sub-CPMK', kurangInd.length ? `Kurang dari 3 indikator di pertemuan ${kurangInd.join(', ')}` : 'Tiga indikator atau lebih per Sub-CPMK', kurangInd.length ? 'Tulis tiga indikator untuk setiap Sub-CPMK, satu per baris. Bila satu pertemuan memuat dua Sub-CPMK, indikatornya enam.' : '', AC.rps, LP(kurangInd, '_indikator'));
   const tanpaSub = non.filter(p => !(p.sub || []).length).map(p => p.m), belum = subs.filter(s => !per.some(p => (p.sub || []).includes(s.id)));
-  add(tanpaSub.length ? 'near' : 'ok', 'Pertemuan terhubung Sub-CPMK', tanpaSub.length ? `Belum terhubung di pertemuan ${tanpaSub.join(', ')}` : 'Semua terhubung', tanpaSub.length ? 'Pilih Sub-CPMK yang dicapai di tiap pertemuan.' : '', AC.obe);
-  if (subs.length) add(belum.length ? 'bad' : 'ok', 'Sub-CPMK terjadwal', belum.length ? `${belum.length} Sub-CPMK belum dijadwalkan: ${belum.map(s => s.kode).join(', ')}` : 'Semua Sub-CPMK terjadwal', belum.length ? 'Setiap Sub-CPMK harus muncul paling sedikit di satu pertemuan.' : '', AC.obe);
+  add(tanpaSub.length ? 'near' : 'ok', 'Pertemuan terhubung Sub-CPMK', tanpaSub.length ? `Belum terhubung di pertemuan ${tanpaSub.join(', ')}` : 'Semua terhubung', tanpaSub.length ? 'Pilih Sub-CPMK yang dicapai di tiap pertemuan.' : '', AC.obe, LP(tanpaSub, 'sub'));
+  if (subs.length) add(belum.length ? 'bad' : 'ok', 'Sub-CPMK terjadwal', belum.length ? `${belum.length} Sub-CPMK belum dijadwalkan: ${belum.map(s => s.kode).join(', ')}` : 'Semua Sub-CPMK terjadwal', belum.length ? 'Setiap Sub-CPMK harus muncul paling sedikit di satu pertemuan.' : '', AC.obe, [{ l: 'Tabel pertemuan', a: T0 }]);
   const bl = r.bahanList || [];
   if (bl.length) {
     const bkTanpa = bl.map((b, i) => ({ b, i })).filter(x => !(x.b.sub || []).length), subTanpa = subs.filter(x => !bl.some(b => (b.sub || []).includes(x.id)));
     const bkLepas = bl.map((b, i) => ({ b, i })).filter(x => (x.b.sub || []).length && !(x.b.sub || []).some(id => per.some(p => (p.sub || []).includes(id))));
-    add(bkTanpa.length ? 'near' : 'ok', 'Bahan kajian terpetakan ke Sub-CPMK', bkTanpa.length ? `Bahan kajian nomor ${bkTanpa.map(x => x.i + 1).join(', ')} belum dipetakan` : 'Semua bahan kajian terpetakan', bkTanpa.length ? 'Di Deskripsi & pustaka, klik Sub-CPMK di bawah tiap bahan kajian.' : '', AC.obe);
-    if (subs.length) add(subTanpa.length ? 'near' : 'ok', 'Sub-CPMK punya bahan kajian', subTanpa.length ? `${subTanpa.map(x => x.kode).join(', ')} belum ada bahan kajiannya` : 'Setiap Sub-CPMK punya bahan kajian', subTanpa.length ? 'Petakan paling sedikit satu bahan kajian untuk setiap Sub-CPMK, atau tambah bahan kajian yang kurang.' : '', AC.obe);
-    if (bkLepas.length) add('near', 'Bahan kajian muncul di pertemuan', `Bahan kajian nomor ${bkLepas.map(x => x.i + 1).join(', ')} belum muncul di pertemuan mana pun`, 'Sub-CPMK pada bahan kajian ini belum dijadwalkan di pertemuan.', AC.obe);
+    add(bkTanpa.length ? 'near' : 'ok', 'Bahan kajian terpetakan ke Sub-CPMK', bkTanpa.length ? `Bahan kajian nomor ${bkTanpa.map(x => x.i + 1).join(', ')} belum dipetakan` : 'Semua bahan kajian terpetakan', bkTanpa.length ? 'Di Deskripsi & pustaka, klik Sub-CPMK di bawah tiap bahan kajian.' : '', AC.obe, I('_bahan', 'Bahan kajian'));
+    if (subs.length) add(subTanpa.length ? 'near' : 'ok', 'Sub-CPMK punya bahan kajian', subTanpa.length ? `${subTanpa.map(x => x.kode).join(', ')} belum ada bahan kajiannya` : 'Setiap Sub-CPMK punya bahan kajian', subTanpa.length ? 'Petakan paling sedikit satu bahan kajian untuk setiap Sub-CPMK, atau tambah bahan kajian yang kurang.' : '', AC.obe, I('_bahan', 'Bahan kajian'));
+    if (bkLepas.length) add('near', 'Bahan kajian muncul di pertemuan', `Bahan kajian nomor ${bkLepas.map(x => x.i + 1).join(', ')} belum muncul di pertemuan mana pun`, 'Sub-CPMK pada bahan kajian ini belum dijadwalkan di pertemuan.', AC.obe, I('_bahan', 'Bahan kajian'));
   }
   const bobot = per.reduce((a, p) => a + (+p.bobot || 0), 0);
-  add(Math.abs(bobot - 100) > 0.5 ? 'bad' : 'ok', 'Bobot penilaian', `Total ${fmt(bobot, 1)}%`, Math.abs(bobot - 100) > 0.5 ? 'Jumlah bobot seluruh pertemuan termasuk UTS dan UAS harus 100%. Pakai tombol Sesuaikan bobot.' : '', AC.rps);
-  [['deskripsi', 'Deskripsi mata kuliah', 'bad'], ['bahan', 'Bahan kajian', 'near'], ['pustaka', 'Pustaka', 'bad']].forEach(([f, n, k]) => add(String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'ok' : k, n, String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'Terisi' : 'Belum diisi', f === 'pustaka' ? 'Tulis pustaka utama dan pendukung. Asisten tidak mengarang pustaka.' : 'Bisa diisi otomatis lalu disunting.', AC.rps));
-  if (String(r.pustaka || '').trim()) { const th = (r.pustaka.match(/\b(19|20)\d{2}\b/g) || []).map(Number), now = new Date().getFullYear(); if (th.length && !th.some(y => y >= now - 10)) add('near', 'Kemutakhiran pustaka', `Terbitan terbaru ${Math.max(...th)}`, 'Tambahkan paling sedikit satu pustaka atau standar terbitan sepuluh tahun terakhir.', AC.rps); }
+  add(Math.abs(bobot - 100) > 0.5 ? 'bad' : 'ok', 'Bobot penilaian', `Total ${fmt(bobot, 1)}%`, Math.abs(bobot - 100) > 0.5 ? 'Jumlah bobot seluruh pertemuan termasuk UTS dan UAS harus 100%. Pakai tombol Sesuaikan bobot.' : '', AC.rps, [{ l: 'Tabel pertemuan', a: T0 }, ...LP(per.map(p => p.m).slice(0, 0), 'bobot')]);
+  [['deskripsi', 'Deskripsi mata kuliah', 'bad', 'deskripsi'], ['bahan', 'Bahan kajian', 'near', '_bahan'], ['pustaka', 'Pustaka', 'bad', '_pusU']].forEach(([f, n, k, fld]) => add(String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'ok' : k, n, String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'Terisi' : 'Belum diisi', f === 'pustaka' ? 'Tulis pustaka utama dan pendukung. Asisten tidak mengarang pustaka.' : 'Bisa diisi otomatis lalu disunting.', AC.rps, I(fld, 'Deskripsi & pustaka')));
+  if (String(r.pustaka || '').trim()) { const th = (r.pustaka.match(/\b(19|20)\d{2}\b/g) || []).map(Number), now = new Date().getFullYear(); if (th.length && !th.some(y => y >= now - 10)) add('near', 'Kemutakhiran pustaka', `Terbitan terbaru ${Math.max(...th)}`, 'Tambahkan paling sedikit satu pustaka atau standar terbitan sepuluh tahun terakhir.', AC.rps, I('_pusU', 'Deskripsi & pustaka')); }
   const ni = integrasiOf(r);
   const ri = ringkasIntegrasi(S, m, r);
   add('ok', 'Integrasi penelitian dan PKM', ni ? `${ni} pertemuan terintegrasi` : 'Tidak ada integrasi (opsional)', 'Tidak semua mata kuliah perlu terintegrasi. Bila ada, pilih penelitian atau PKM dari daftar di pertemuan terkait.', AC.integ);
-  if (ri.bad.length || ri.near.length) add('near', 'Kecocokan integrasi dengan materi', ri.bad.length ? `Belum sesuai di pertemuan ${ri.bad.map(x => x.m).join(', ')}` : `Perlu dicek di pertemuan ${ri.near.map(x => x.m).join(', ')}`, 'Pilih penelitian atau PKM yang topiknya sesuai materi pertemuan, atau tulis kaitannya di kolom Kaitan dengan materi.', AC.integ);
+  if (ri.bad.length || ri.near.length) add('near', 'Kecocokan integrasi dengan materi', ri.bad.length ? `Belum sesuai di pertemuan ${ri.bad.map(x => x.m).join(', ')}` : `Perlu dicek di pertemuan ${ri.near.map(x => x.m).join(', ')}`, 'Pilih penelitian atau PKM yang topiknya sesuai materi pertemuan, atau tulis kaitannya di kolom Kaitan dengan materi.', AC.integ, LP([...ri.bad, ...ri.near].map(x => x.m), 'riset'));
   const aktif = non.some(p => /kasus|case|proyek|project|problem|pbl|praktik|praktikum|simulasi/i.test(`${p.metode} ${p.tatap || ''}`));
-  add(aktif ? 'ok' : 'near', 'Pembelajaran aktif', aktif ? 'Ada metode kasus, proyek, atau praktik' : 'Belum ada metode kasus, proyek, atau praktik', aktif ? '' : 'Masukkan case method, team-based project, atau praktik terbimbing pada beberapa pertemuan.', AC.vokasi);
+  add(aktif ? 'ok' : 'near', 'Pembelajaran aktif', aktif ? 'Ada metode kasus, proyek, atau praktik' : 'Belum ada metode kasus, proyek, atau praktik', aktif ? '' : 'Masukkan case method, team-based project, atau praktik terbimbing pada beberapa pertemuan.', AC.vokasi, LP(non.slice(0, 4).map(p => p.m), '_tatap'));
   const sap = non.filter(p => !(p.sap && String(p.sap.inti || '').trim())).length;
-  add(sap ? 'near' : 'ok', 'SAP', sap ? `${sap} pertemuan belum punya SAP` : 'SAP lengkap', sap ? 'Isi pendahuluan, kegiatan inti, penutup, dan media. Bisa diisi otomatis lalu disunting.' : '', AC.pedoman);
+  add(sap ? 'near' : 'ok', 'SAP', sap ? `${sap} pertemuan belum punya SAP` : 'SAP lengkap', sap ? 'Isi pendahuluan, kegiatan inti, penutup, dan media. Bisa diisi otomatis lalu disunting.' : '', AC.pedoman, LS(non.filter(p => !(p.sap && String(p.sap.inti || '').trim())).map(p => p.m)));
   const ctoh = [r.deskripsi, r.bahan, ...per.map(p => `${p.materi} ${p.indikator || ''}`), ...subs.map(s => s.teks), ...cp.map(c => c.teks)].filter(t => CONTOH.test(t || '')).length;
-  if (ctoh) add('near', 'Isian contoh generator', `${ctoh} isian masih bertanda kurung siku`, 'Ganti teks dalam kurung siku, misalnya [pokok bahasan 1], dengan isi sebenarnya.', AC.rps);
+  if (ctoh) add('near', 'Isian contoh generator', `${ctoh} isian masih bertanda kurung siku`, 'Ganti teks dalam kurung siku, misalnya [pokok bahasan 1], dengan isi sebenarnya.', AC.rps, [{ l: 'Tabel pertemuan', a: T0 }, { l: 'Deskripsi & pustaka', a: { info: '_bahan' } }]);
   return out;
 }
 
@@ -161,7 +162,20 @@ function sesuaikanBobot(r) {
   return true;
 }
 
-const tabelTemuan = (ck) => `<div class="tbl-wrap" style="max-height:52vh"><table class="tbl"><thead><tr><th>Butir</th><th>Temuan</th><th>Saran pengisian</th><th>Acuan</th><th>Status</th></tr></thead><tbody>${ck.map(c => `<tr><td><b>${esc(c.butir)}</b></td><td>${esc(c.temuan)}</td><td class="small">${esc(c.k === 'ok' ? '' : c.saran)}</td><td class="small muted">${esc(c.acuan)}</td><td>${kTag(c.k)}</td></tr>`).join('')}</tbody></table></div>`;
+const tabelTemuan = (ck) => `<div class="tbl-wrap" style="max-height:52vh"><table class="tbl"><thead><tr><th>Butir</th><th>Temuan</th><th>Saran pengisian</th><th>Perbaiki di</th><th>Acuan</th><th>Status</th></tr></thead><tbody>${ck.map(c => `<tr><td><b>${esc(c.butir)}</b></td><td>${esc(c.temuan)}</td><td class="small">${esc(c.k === 'ok' ? '' : c.saran)}</td><td>${c.k === 'ok' ? '' : (c.lok || []).map(x => `<button class="btn sm lok" data-lok="${esc(JSON.stringify(x.a))}">${esc(x.l)}</button>`).join(' ')}</td><td class="small muted">${esc(c.acuan)}</td><td>${kTag(c.k)}</td></tr>`).join('')}</tbody></table></div>`;
+
+/** Menuju lokasi perbaikan: menu lain, editor Deskripsi & pustaka, lembar Pertemuan, editor SAP, atau tabel pertemuan. */
+export function menujuLokasi(a) {
+  closeDrawer();
+  if (a.h) { location.hash = a.h; return; }
+  const sorot = (el) => { if (!el) return; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('sorot'); setTimeout(() => el.classList.remove('sorot'), 3500); };
+  const fokus = (f) => setTimeout(() => { const el = f && document.querySelector(`.drawer [name="${f}"], .drawer [data-list="${f}"], .drawer [data-multi="${f}"]`); sorot(el && el.closest('.field')); }, 300);
+  const tutup = () => toast('RPS ini tidak dapat diubah dari akun ini atau sedang berstatus disahkan.');
+  if (a.tabel) { sorot(document.querySelector('.rps-cq')); return; }
+  if (a.info) { const b = document.querySelector('#ed-info'); if (!b) return tutup(); b.click(); fokus(a.info); return; }
+  if (a.sap != null) { const b = document.querySelector(`[data-sap="${a.sap}"]`); if (!b) return tutup(); b.click(); return; }
+  if (a.pert != null) { const tr = document.querySelector(`tr.click[data-i="${a.pert}"]`); if (!tr) return tutup(); tr.click(); fokus(a.f); }
+}
 
 /** Laci Asisten RPS. blankRps disuplai halaman RPS agar bentuk data seragam. */
 export function bukaAsistenRps(m, draw, blankRps) {
@@ -185,6 +199,7 @@ export function bukaAsistenRps(m, draw, blankRps) {
       draw(); bukaAsistenRps(m, draw, blankRps);
     };
     const q = (s) => dr.querySelector(s);
+    dr.querySelectorAll('[data-lok]').forEach(b => { b.onclick = () => menujuLokasi(JSON.parse(b.dataset.lok)); });
     if (q('#as-isi')) q('#as-isi').onclick = () => jalankan(false);
     if (q('#as-batal')) q('#as-batal').onclick = async () => { if (!(await tanya('Isi RPS dikembalikan ke keadaan sebelum tindakan Asisten terakhir. Perubahan yang Anda ketik sesudahnya ikut hilang. CPMK dan Sub-CPMK usulan yang sempat dibuat tidak dihapus. Lanjutkan?', 'Batalkan'))) return; const o = JSON.parse(r.cadangan); await save('rps', o, `Batalkan tindakan Asisten RPS ${m.nama}`); draw(); bukaAsistenRps(m, draw, blankRps); };
     if (q('#as-ulang')) q('#as-ulang').onclick = async () => { if (await tanya('Seluruh rencana pertemuan, bobot, dan SAP mata kuliah ini diganti dengan usulan baru. Deskripsi dan bahan kajian juga ditulis ulang. Pustaka tidak diubah. Lanjutkan?', 'Susun ulang')) jalankan(true); };

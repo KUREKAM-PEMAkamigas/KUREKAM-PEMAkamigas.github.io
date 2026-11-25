@@ -124,7 +124,7 @@ export function modelRps(m, r) {
   const nS = Math.max(subs.length, 1), wS = Math.floor(11700 / nS), wKor = [2200, 1900, ...Array(nS).fill(wS)]; wKor[wKor.length - 1] += 11700 - wS * nS;
   B.push({ k: 'tbl', w: wKor, head: 1, sz: nS > 8 ? 16 : 18, rows: [
     [{ t: 'Korelasi CPMK terhadap Sub-CPMK', span: 2 }, ...(subs.length ? subs.map(s => s.kode) : [''])],
-    ...(cpmk.length ? cpmk : [{ kode: '', id: '' }]).map(c => ['', { t: `**${c.kode}**`, al: 'c' }, ...(subs.length ? subs.map(s => ({ t: s.cpmk === c.id ? '✓' : '', al: 'c' })) : [''])]),
+    ...(cpmk.length ? cpmk : [{ kode: '', id: '' }]).map(c => [{ t: `**${c.kode}**`, span: 2, al: 'c' }, ...(subs.length ? subs.map(s => ({ t: s.cpmk === c.id ? '✓' : '', al: 'c' })) : [''])]),
   ] });
 
   /* 6. Deskripsi, bahan kajian, pustaka, dosen, syarat, integrasi */

@@ -193,6 +193,11 @@ export function openDrawer(html, onMount, wide) {
   if (onMount) onMount(bg.querySelector('.drawer'));
 }
 export function closeDrawer() { const d = document.getElementById('drawer'); if (d) d.remove(); }
+/* klik di luar panel lebar: panel ditutup (bila ada perubahan, bertanya dulu dan klik tidak diteruskan) */
+document.addEventListener('click', (e) => {
+  const d = document.querySelector('#drawer.nobg .drawer'); if (!d || !d.__tutup || d.contains(e.target) || e.target.closest('.modal-bg, .toast, #toast')) return;
+  if (d.__kotor && d.__kotor()) { e.stopPropagation(); e.preventDefault(); d.__tutup(); } else closeDrawer();
+}, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { const d = document.querySelector('#drawer .drawer'); if (d && d.__tutup) d.__tutup(); else closeDrawer(); } });
 
 /* ---------------- navigasi ---------------- */

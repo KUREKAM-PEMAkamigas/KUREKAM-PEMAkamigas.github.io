@@ -99,6 +99,8 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
       };
       const timer = setInterval(() => { if (!document.body.contains(dr)) clearInterval(timer); else otomatis(); }, 120000);
       dr.__flush = () => { if (kotor) otomatis(); };
+      dr.__kotor = () => kotor;
+      const xb = dr.querySelector('.card-h [data-close]'); if (xb) { xb.innerHTML = `${icon('close')} Tutup`; xb.classList.add('tutup-besar'); }
       dr.__tutup = async () => {
         if (!kotor) { closeDrawer(); return; }
         const j = await tanya3('Ada perubahan yang belum disimpan. Apa yang ingin dilakukan?', 'Simpan dan tutup', 'Buang perubahan', 'Kembali mengedit');

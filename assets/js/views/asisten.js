@@ -85,6 +85,14 @@ export function periksaRps(m, r) {
   const tanpaSub = non.filter(p => !(p.sub || []).length).map(p => p.m), belum = subs.filter(s => !per.some(p => (p.sub || []).includes(s.id)));
   add(tanpaSub.length ? 'near' : 'ok', 'Pertemuan terhubung Sub-CPMK', tanpaSub.length ? `Belum terhubung di pertemuan ${tanpaSub.join(', ')}` : 'Semua terhubung', tanpaSub.length ? 'Pilih Sub-CPMK yang dicapai di tiap pertemuan.' : '', AC.obe);
   if (subs.length) add(belum.length ? 'bad' : 'ok', 'Sub-CPMK terjadwal', belum.length ? `${belum.length} Sub-CPMK belum dijadwalkan: ${belum.map(s => s.kode).join(', ')}` : 'Semua Sub-CPMK terjadwal', belum.length ? 'Setiap Sub-CPMK harus muncul paling sedikit di satu pertemuan.' : '', AC.obe);
+  const bl = r.bahanList || [];
+  if (bl.length) {
+    const bkTanpa = bl.map((b, i) => ({ b, i })).filter(x => !(x.b.sub || []).length), subTanpa = subs.filter(x => !bl.some(b => (b.sub || []).includes(x.id)));
+    const bkLepas = bl.map((b, i) => ({ b, i })).filter(x => (x.b.sub || []).length && !(x.b.sub || []).some(id => per.some(p => (p.sub || []).includes(id))));
+    add(bkTanpa.length ? 'near' : 'ok', 'Bahan kajian terpetakan ke Sub-CPMK', bkTanpa.length ? `Bahan kajian nomor ${bkTanpa.map(x => x.i + 1).join(', ')} belum dipetakan` : 'Semua bahan kajian terpetakan', bkTanpa.length ? 'Di Deskripsi & pustaka, klik Sub-CPMK di bawah tiap bahan kajian.' : '', AC.obe);
+    if (subs.length) add(subTanpa.length ? 'near' : 'ok', 'Sub-CPMK punya bahan kajian', subTanpa.length ? `${subTanpa.map(x => x.kode).join(', ')} belum ada bahan kajiannya` : 'Setiap Sub-CPMK punya bahan kajian', subTanpa.length ? 'Petakan paling sedikit satu bahan kajian untuk setiap Sub-CPMK, atau tambah bahan kajian yang kurang.' : '', AC.obe);
+    if (bkLepas.length) add('near', 'Bahan kajian muncul di pertemuan', `Bahan kajian nomor ${bkLepas.map(x => x.i + 1).join(', ')} belum muncul di pertemuan mana pun`, 'Sub-CPMK pada bahan kajian ini belum dijadwalkan di pertemuan.', AC.obe);
+  }
   const bobot = per.reduce((a, p) => a + (+p.bobot || 0), 0);
   add(Math.abs(bobot - 100) > 0.5 ? 'bad' : 'ok', 'Bobot penilaian', `Total ${fmt(bobot, 1)}%`, Math.abs(bobot - 100) > 0.5 ? 'Jumlah bobot seluruh pertemuan termasuk UTS dan UAS harus 100%. Pakai tombol Sesuaikan bobot.' : '', AC.rps);
   [['deskripsi', 'Deskripsi mata kuliah', 'bad'], ['bahan', 'Bahan kajian', 'near'], ['pustaka', 'Pustaka', 'bad']].forEach(([f, n, k]) => add(String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'ok' : k, n, String(r[f] || '').trim() && !/^diisi dosen/i.test(r[f]) ? 'Terisi' : 'Belum diisi', f === 'pustaka' ? 'Tulis pustaka utama dan pendukung. Asisten tidak mengarang pustaka.' : 'Bisa diisi otomatis lalu disunting.', AC.rps));

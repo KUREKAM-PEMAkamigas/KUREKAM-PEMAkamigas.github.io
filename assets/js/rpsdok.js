@@ -65,7 +65,7 @@ function gabung(rows, kol, kunci, isi) {
 export function modelRps(m, r) {
   const P = param(S), p = S.prodi.find(x => x.id === m.prodi) || { nama: m.prodi };
   const cplMk = (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean);
-  const cpmk = S.cpmk.filter(c => c.mk === m.id), subs = S.sub.filter(s => s.mk === m.id);
+  const cpmk = S.cpmk.filter(c => c.mk === m.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })), subs = S.sub.filter(s => s.mk === m.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
   const cplById = (id) => S.cpl.find(c => c.id === id);
   const cplKode = cplSingkat;
   const prak = (+m.P || 0) > (+m.T || 0);
@@ -162,7 +162,7 @@ export function modelRps(m, r) {
       rows7.push([{ t: `**${x.m}**`, al: 'c' }, { t: `**${x.ujian}**${x.materi ? ': ' + x.materi : ''}${(x.sub || []).length ? '\n' + (x.sub || []).map(subK).filter(Boolean).join(', ') : ''}\nTeknik: ${x.asesmen || '-'}${x.metode ? ' · ' + x.metode : ''}${rubrikLabel(`${x.asesmen || ''}`).length ? '\nKriteria: ' + rubrikLabel(x.asesmen).join(', ') : ''}`, span: 6, shade: 'F2F2F2' }, { t: `**${pc(x.bobot)}**`, al: 'c' }]);
       return;
     }
-    const sk = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).map(s => `**${s.kode}**\n${s.teks}${bloomKode(s.teks)}`).join('\n');
+    const sk = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })).map(s => `**${s.kode}**\n${s.teks}${bloomKode(s.teks)}`).join('\n');
     const rl = rubrikLabel(x.asesmen);
     const krit = x.asesmen ? `${rl.length ? 'Kriteria: ' + rl.join(', ') + '\n' : ''}Teknik: ${x.asesmen}` : '';
     const tmk = x.tatap || (x.metode ? 'Metode: ' + x.metode : '');
@@ -193,7 +193,7 @@ export function modelRps(m, r) {
   const cpmkOrder = new Map(cpmk.map((c, i) => [c.id, i]));
   const ent = [];
   pert.forEach(x => {
-    const ss = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean);
+    const ss = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
     const g = new Map(); ss.forEach(s => { if (!g.has(s.cpmk)) g.set(s.cpmk, []); g.get(s.cpmk).push(s); });
     if (!g.size) { if (+x.bobot) ent.push({ x, ck: '', ss: [], b: +x.bobot || 0 }); return; }
     g.forEach((arr, ck) => ent.push({ x, ck, ss: arr, b: (+x.bobot || 0) * arr.length / ss.length }));

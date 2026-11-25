@@ -71,7 +71,7 @@ export function modelSap(m, r) {
     ] });
 
     /* I. Sub-CPMK dan capaian */
-    const subs = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean);
+    const subs = (x.sub || []).map(id => S.sub.find(s => s.id === id)).filter(Boolean).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
     const subTeks = subs.map(s => { const b = bloomDari(s.teks, k.prak); return `**${s.kode}**${b ? ` (${b.code} — ${b.nama})` : ''}: ${s.teks}`; }).join('\n') || BELUM;
     const cpmkIds = Array.from(new Set(subs.map(s => s.cpmk))), cpmkObj = cpmkIds.map(id => S.cpmk.find(c => c.id === id)).filter(Boolean);
     const cplObj = Array.from(new Set(cpmkObj.flatMap(c => c.cpl || []))).map(id => S.cpl.find(c => c.id === id)).filter(Boolean);

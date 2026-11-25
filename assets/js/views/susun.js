@@ -14,6 +14,8 @@ const RANAH_HINT = { S: 'A', P: 'C', KU: 'C', KK: 'C' };
 const liveBloom = (hintKey) => (v) => { const b = detect(v, hintKey()); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"${b.kabur ? ' <span class="st near">kurang terukur</span>' : ''}` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional, misalnya "menerapkan", "menganalisis", "merancang".'); };
 
 /* ================= Visi & Profil Lulusan ================= */
+/* nama peran hasil impor Excel pernah dipotong dengan tanda … dari awal deskripsi; tidak ditampilkan agar tidak terpotong */
+const namaPL = (x) => (x.nama && /…$/.test(x.nama) && String(x.teks || '').startsWith(x.nama.slice(0, -1)) ? '' : x.nama || '');
 export function visiView(el) {
   const p = S.prodi.find(x => x.id === ctx.prodi); const ed = can('susun');
   const pl = byProdi(S.pl, ctx.prodi);
@@ -30,9 +32,9 @@ export function visiView(el) {
     </div>
   </div>
   <div class="card" style="margin-top:18px">${head('Profil lulusan', 'Peran lulusan 3–5 tahun setelah lulus, dirumuskan bersama pemangku kepentingan', 'user', '#14b8a6', ed ? `<button class="btn pri sm" id="add-pl">${icon('plus')} Profil lulusan</button>` : '')}
-    <div class="grid g3">${pl.map(x => { const n = S.cpl.filter(c => (c.pl || []).includes(x.id)).length; return `<div class="pl-card tilt ${ed ? 'click' : ''}" data-id="${x.id}"><span class="tag" style="--c:#14b8a6">${x.kode}</span><b>${esc(x.nama)}</b><p>${esc(x.teks)}</p><div class="small muted">${n} CPL mendukung</div></div>`; }).join('') || '<div class="empty">Belum ada profil lulusan.</div>'}</div>
+    <div class="grid g3">${pl.map(x => { const n = S.cpl.filter(c => (c.pl || []).includes(x.id)).length; return `<div class="pl-card tilt ${ed ? 'click' : ''}" data-id="${x.id}"><span class="tag" style="--c:#14b8a6">${x.kode}</span>${namaPL(x) ? `<b>${esc(namaPL(x))}</b>` : ''}<p>${esc(x.teks)}</p><div class="small muted">${n} CPL mendukung</div></div>`; }).join('') || '<div class="empty">Belum ada profil lulusan.</div>'}</div>
   </div>`;
-  const plForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah profil lulusan' : 'Profil lulusan baru', sub: prodiName(), obj: x,
+  const plForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah profil lulusan' : 'Profil lulusan baru', sub: prodiName(), obj: { ...x, nama: namaPL(x) },
     fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'pl', ctx.prodi) }, { k: 'nama', label: 'Nama peran', ph: 'Mis. Supervisor Operasi' }, { k: 'teks', label: 'Deskripsi', type: 'textarea' }, { k: 'profesi', label: 'Contoh profesi (pisahkan koma)', ph: 'Teknisi instrumentasi, Supervisor pemeliharaan', full: true }],
     onSave: async (o) => { if (!o.nama) return 'Nama peran wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'pl', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}-${Date.now().toString(36)}`; o.prodi = ctx.prodi; await save('pl', o, `Simpan profil lulusan ${o.kode} (${ctx.prodi})`); rerender(); },
     onDelete: x.id ? async () => { await remove('pl', x.id, `Hapus profil lulusan ${x.kode}`); rerender(); } : null });

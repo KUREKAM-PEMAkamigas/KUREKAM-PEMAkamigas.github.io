@@ -286,7 +286,6 @@ const bagianDesk = (r) => {
     ['Deskripsi singkat', !!String((r && r.deskripsi) || '').trim() && !/^diisi dosen/i.test(r.deskripsi), 'wajib'],
     ['Kata kunci topik (minimal 5)', kunci.length >= 5, 'wajib'],
     ['Pustaka utama (minimal 1)', pu.utama.filter(x => String(x).trim()).length >= 1, 'wajib'],
-    ['Penerapan di industri migas', !!String((r && r.penerapan) || '').trim(), 'wajib'],
   ];
 };
 export const deskLengkap = (r) => bagianDesk(r).every(b => b[1]);
@@ -338,7 +337,7 @@ export function deskView(el) {
           { k: '_kunci', label: '1. Kata kunci topik (satu kotak per istilah; minimal 5, wajib)', type: 'list', tambah: 'Tambah kata kunci', nomor: (i) => `${i + 1}.`, ph: 'Contoh: dioda penyearah', help: 'Tulis istilah inti materi mata kuliah. Ini bahan utama generator.' },
           { k: '_pusU', label: '2. Pustaka utama (minimal 1, wajib; nomor otomatis)', type: 'list', tambah: 'Tambah pustaka utama', nomor: (i) => `(${i + 1})`, ph: 'Penulis, tahun, judul, edisi, penerbit', help: 'Aplikasi tidak mengarang pustaka. Tulis buku atau standar yang benar-benar dipakai.' },
           { k: '_pusP', label: '3. Pustaka pendukung (boleh kosong)', type: 'list', tambah: 'Tambah pustaka pendukung', nomor: (i) => `(S${i + 1})`, ph: 'Penulis, tahun, judul, penerbit atau tautan' },
-          { k: 'penerapan', label: '4. Penerapan di industri migas (satu atau dua kalimat, wajib)', type: 'textarea', rows: 2, ph: 'Contoh: sensor dan pengondisi sinyal pada sistem instrumentasi kilang' },
+          { k: 'penerapan', label: '4. Penerapan di industri migas (opsional; satu atau dua kalimat, memperkaya narasi generator)', type: 'textarea', rows: 2, ph: 'Contoh: sensor dan pengondisi sinyal pada sistem instrumentasi kilang' },
           { k: '_syarat', label: '5. Mata kuliah syarat (opsional; klik untuk memilih)', type: 'multi', opts: kandidat.map(x => ({ v: x.id, t: `${x.nama} (smt ${x.smt})`, title: `${x.kode} · ${x.nama}` })), help: lamaSyarat ? `Isian lama: “${esc(base.syarat)}”. Pilih ulang dari daftar; bila tidak memilih, isian lama dipertahankan.` : 'Kosongkan bila tidak ada.' },
           { k: '_gen', type: 'html', label: 'Penyusun draf deskripsi', html: `<button type="button" class="btn sm vio" id="dk-gen">${icon('spark')} Susun draf deskripsi dari isian di atas</button> <span class="small muted" id="dk-ket">Kosongkan kotak deskripsi dulu bila ingin menyusun ulang.</span>` },
           { k: 'deskripsi', label: '6. Deskripsi singkat mata kuliah (3 sampai 5 kalimat, wajib)', type: 'textarea', rows: 7 }],

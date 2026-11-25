@@ -3,6 +3,7 @@
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, openDrawer, addLog } from './app.js';
 import { prodiTag } from './views/ui.js';
 import { mkTanpaCpl } from './rules.js';
+import { asesmenBersih } from './rubrik.js';
 import { pecahPustaka, gabungUtama, gabungPend, pecahBahan, gabungBahan } from './rpsisi.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -112,7 +113,7 @@ function susun(o, mk) {
   const sumB = sub.reduce((a, s) => a + s.bobot, 0); if (sub.length && Math.abs(sumB - 100) > 0.5) { const d = Math.round((100 - sumB) * 10) / 10; sub[sub.length - 1].bobot = Math.round((sub[sub.length - 1].bobot + d) * 10) / 10; }
   const semua = sub.map(s => s.id), subById = (n) => (sub.find(s => s._n === parseInt(n, 10)) || {}).id;
   const per = [];
-  o.minggu.forEach(w => per.push({ m: w.m, sub: subById(w.subKode) ? [subById(w.subKode)] : [], materi: w.materi, metode: [w.bentuk, w.metode].filter(Boolean).join('; '), asesmen: w.asesmen, bobot: w.bobot, indikator: w.indikator, tatap: w.tatap, daring: w.daring, integ: '', integUraian: '', sap: {} }));
+  o.minggu.forEach(w => per.push({ m: w.m, sub: subById(w.subKode) ? [subById(w.subKode)] : [], materi: w.materi, metode: [w.bentuk, w.metode].filter(Boolean).join('; '), asesmen: asesmenBersih(w.asesmen), bobot: w.bobot, indikator: w.indikator, tatap: w.tatap, daring: w.daring, integ: '', integUraian: '', sap: {} }));
   o.ujian.forEach(u => per.push({ m: u.m, ujian: u.jenis, sub: semua, materi: u.jenis === 'UTS' ? 'Ujian Tengah Semester' : 'Ujian Akhir Semester', metode: 'Ujian', asesmen: u.teks, bobot: u.bobot, sap: {} }));
   per.sort((a, b) => a.m - b.m);
   if (per.length && per.length !== 16) pes.push(`RPS memuat ${per.length} pertemuan (Pedoman umumnya 16 termasuk UTS dan UAS). Dibaca apa adanya.`);

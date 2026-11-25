@@ -16,6 +16,17 @@ export function teknikDari(teks) {
   return TEKNIK.filter(k => k.re.test(t));
 }
 
+/** Kriteria (rubrik) dan teknik penilaian dari teks asesmen. Satu teknik selalu memakai satu rubrik. */
+export function kriteriaTeknik(teks) {
+  const tk = teknikDari(teks);
+  return { teknik: tk.map(k => k.nama), kriteria: tk.map(k => `Rubrik ${k.rubrik} (${k.rubrik === 'K1' ? 'Ujian Tulis' : k.nama})`) };
+}
+/** Teks asesmen yang rapi: hanya nama teknik, dipisah koma. Bila tidak ada yang dikenali, teks lama dipertahankan tanpa awalan Kriteria/Teknik. */
+export function asesmenBersih(teks) {
+  const t = kriteriaTeknik(teks).teknik;
+  return t.length ? t.join(', ') : String(teks || '').replace(/Kriteria\s*:[^\n]*?(?=Teknik\s*:|$)/i, '').replace(/^\s*Teknik\s*:\s*/i, '').trim();
+}
+
 const L4 = ['Sangat Baik (4)', 'Baik (3)', 'Cukup (2)', 'Kurang (1)'];
 
 export const RUBRIK = {

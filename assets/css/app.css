@@ -757,3 +757,12 @@ details.dtl { border-top: 1px solid rgba(24,35,58,.08); padding: 8px 0; } detail
 .rmsn { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card-solid); }
 .rmsn-b { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
 .rmsn .cp[data-v] { text-transform: none; }
+
+.langkah{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.langkah .lk{flex:1;min-width:130px;border:1px solid var(--line,#e2e8f0);border-radius:10px;padding:8px 10px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.langkah .lk b{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;background:#e2e8f0;font-size:12px}
+.langkah .lk.ok{border-color:#10b981}.langkah .lk.ok b{background:#10b981;color:#fff}
+.langkah .lk small{color:#64748b}
+.dsk{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
+.dsk-h{margin:14px 0 4px;font-size:13px;color:#475569}
+.dsk-t{line-height:1.55}

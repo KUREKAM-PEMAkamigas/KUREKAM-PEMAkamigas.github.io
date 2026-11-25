@@ -15,7 +15,7 @@ import { pimpinan, mutu, akademik } from './views/dasbor.js';
 import { visiView, cplView, bkView, mkView } from './views/susun.js';
 import { cpmkMatriksView } from './views/matrikscpmk.js';
 import { petaView, matriksView } from './views/peta.js';
-import { cpmkView, rpsView } from './views/ajar.js';
+import { cpmkView, rpsView, deskView } from './views/ajar.js';
 import bebanView from './views/beban.js';
 import { periksaView, bloomView, revisiView, laporanView } from './views/evaluasi.js';
 import indukView from './views/induk.js';
@@ -219,6 +219,7 @@ export const ROUTES = [
   { id: 'peta', t: 'Peta Kurikulum', ic: 'grid4', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: petaView },
   { id: 'matriks', t: 'Matriks Keterlacakan', ic: 'link', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: matriksView },
   { id: 'obe', t: 'Tabel OBE', sub: 'Pemetaan sesuai templat + IABEE', ic: 'layers', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: obeView },
+  { id: 'deskmk', t: 'Deskripsi Singkat MK', sub: 'Substansi MK: kata kunci, pustaka', ic: 'book', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: deskView },
   { id: 'cpmk', t: 'CPMK & Sub-CPMK', ic: 'spark', c: '#0ea5e9', sec: 'Pembelajaran', prodi: true, v: cpmkView },
   { id: 'realisasi', t: 'Realisasi Pembelajaran', sub: 'Hasil, bukti, dan tindak lanjut per MK', ic: 'check', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: realisasiView },
   { id: 'rps', t: 'RPS & SAP', ic: 'audit', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: rpsView },
@@ -242,7 +243,7 @@ export const ROUTES = [
 ];
 
 /* Menu samping lipat: otomatis pada halaman yang butuh ruang lebar, bisa diatur manual, dan mengintip saat disentuh atau didekati. */
-const PREF_SIDE = 'kurekam_side', HALAMAN_LEBAR = new Set(['rps', 'cpmk', 'peta', 'matriks', 'bebanprodi']);
+const PREF_SIDE = 'kurekam_side', HALAMAN_LEBAR = new Set(['rps', 'deskmk', 'cpmk', 'peta', 'matriks', 'bebanprodi']);
 const lebar = () => window.innerWidth > 900;
 function tutupSide() { const s = $('#side'); if (!s) return; s.classList.remove('open', 'peek'); document.body.classList.remove('side-open'); const a = document.querySelector('.app'); if (a) a.classList.remove('peeking'); }
 function terapkanSide(id) {

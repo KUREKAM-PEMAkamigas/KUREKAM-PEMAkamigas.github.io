@@ -21,7 +21,7 @@ import { rapikanEntri, normRiset, opsiRiset, riset, ringkasIntegrasi, teksRiset,
 
 const akad = (m) => !/magang|tugas akhir/i.test(m.kel);
 const hintOf = (m) => (+m.P > +m.T ? 'P' : 'C');
-const namaBahan = (m) => { const r = rpsOf(S, m.id); if (!r) return []; const l = (r.bahanList && r.bahanList.length ? r.bahanList : pecahBahan(r.bahan)).map(b => (b.t || '').trim()).filter(Boolean); return l; };
+const namaBahan = (m) => { const r = rpsOf(S, m.id); if (!r) return []; const l = (r.bahanList && r.bahanList.length ? r.bahanList : pecahBahan(r.bahan)).map(b => (b.t || '').trim()).filter(Boolean); return Array.from(new Set([...(r.kataKunci || []), ...l])); };
 const mine = (m) => ctx.role !== 'dosen' || S.tugas.some(t => t.mk === m.id && t.dosen === ctx.dosen);
 const live = (m) => (v) => { const b = detect(v, hintOf(m)); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"${b.kabur ? ' <span class="st near">tidak terukur, ganti KKO</span>' : ''}` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional.'); };
 const liveCpmk = (m) => (v) => {
@@ -88,7 +88,7 @@ export function cpmkView(el) {
     const sForm = (x) => formDrawer({ title: x.id ? 'Ubah ' + x.kode : 'Sub-CPMK baru', sub: m.nama, obj: x,
       fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode }, { k: 'bobot', label: 'Bobot penilaian (%)', type: 'number' }, penyS(x).field, { k: 'teks', label: 'Rumusan Sub-CPMK (kemampuan akhir tahap belajar)', type: 'textarea', live: live({ T: 1, P: 0 }) }],
       onOpen: (dr) => penyS(x).pasang(dr),
-      onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'sub', m.prodi, { cpmk: S.cpmk.find(c => c.id === x.cpmk) }); o.id = o.id || uid(x.cpmk + '-S'); o.mk = m.id; o.prodi = m.prodi; o.bobot = +o.bobot || 0; await save('sub', o, `Simpan ${o.kode} ${m.nama}`); draw(); },
+      onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'sub', m.prodi, { cpmk: S.cpmk.find(c => c.id === x.cpmk) }); o.id = o.id || uid(x.cpmk + '-S'); o.mk = m.id; o.prodi = m.prodi; o.bobot = +o.bobot || 0; const baruSub = !x.id; await save('sub', o, `Simpan ${o.kode} ${m.nama}`); if (baruSub) { const rr = rpsOf(S, m.id); if (rr) { let ubah = false; rr.pertemuan.forEach(p => { if (p.ujian && !(p.sub || []).includes(o.id)) { p.sub = [...(p.sub || []), o.id]; ubah = true; } }); if (ubah) await save('rps', rr, `Sub-CPMK baru masuk UTS dan UAS ${m.nama}`); } } draw(); },
       onDelete: x.id ? async () => { await remove('sub', x.id, `Hapus ${x.kode}`); draw(); } : null });
     const ac = R.querySelector('#add-c'); if (ac) ac.onclick = () => cForm();
     if (edC) {
@@ -103,7 +103,7 @@ export function cpmkView(el) {
 }
 
 /* ================= RPS & SAP ================= */
-function blankRps(m) {
+export function blankRps(m) {
   const ss = S.sub.filter(s => s.mk === m.id); const prak = m.P > m.T;
   return { id: m.id, mk: m.id, prodi: m.prodi, deskripsi: '', pustaka: '', penelitian: '', pkm: '', status: 'draf', pertemuan: Array.from({ length: 16 }, (_, i) => { const w = i + 1; if (w === 8 || w === 16) return { m: w, ujian: w === 8 ? 'UTS' : 'UAS', sub: ss.map(s => s.id), materi: w === 8 ? 'Ujian Tengah Semester' : 'Ujian Akhir Semester', metode: prak ? 'Ujian praktik' : 'Ujian tertulis', asesmen: prak ? 'Unjuk kerja' : 'Tes tertulis', bobot: w === 8 ? 20 : 25, sap: {} }; return { m: w, sub: [], materi: '', metode: '', asesmen: '', bobot: 0, integ: '', integUraian: '', sap: {} }; }) };
 }
@@ -129,7 +129,7 @@ export function rpsView(el) {
       ${alasanRps(m, r) ? `<div style="margin-top:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px"><b>Validasi usulan.</b> RPS belum dapat diajukan atau disahkan: ${esc(alasanRps(m, r))}.${r && r.usulTinjau && ed ? ` Baca seluruh pertemuan, sunting bila perlu, lalu <button class="btn sm pri" id="tinjau">Saya sudah membaca dan menyetujui isi RPS</button>` : ''}${usulanMk(m.id).length ? ' Usulan CPMK dan Sub-CPMK disetujui Prodi di Asisten Kurikulum.' : ''}</div>` : ''}
       ${kartuVerif(m)}
       <div class="filters" style="margin-top:12px">
-        ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Deskripsi & pustaka</button>` : ''}
+        ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Bahan kajian & jam tugas</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
         <button class="btn sm" id="print">${icon('download')} Cetak / Unduh RPS</button>
         <button class="btn sm vio" id="gen-dok">${icon('spark')} Generator SAP & ACP${(r.sapStatus === 'disahkan' ? '' : ' · SAP ' + (r.sapStatus || 'draf')) + (r.acpStatus === 'disahkan' ? '' : ' · ACP ' + (r.acpStatus || 'draf'))}</button>
@@ -149,17 +149,9 @@ export function rpsView(el) {
         const tmPert = (+m.T || 0) * P.menitTeori + (+m.P || 0) * durasi(m, P), jd = jamDefault(m, tmPert);
         const subOpt = subs.map(s => ({ v: s.id, t: s.kode.replace(/^sub-cpmk/i, 'S'), title: s.teks }));
         const bahan = (r.bahanList && r.bahanList.length ? r.bahanList : pecahBahan(r.bahan));
-        const kandidat = S.mk.filter(x => x.id !== m.id && +x.smt <= +m.smt && x.prodi === m.prodi).sort((x, y) => (+x.smt - +y.smt) || String(x.nama).localeCompare(y.nama));
-        const idSyarat = (r.syaratIds && r.syaratIds.length ? r.syaratIds : kenaliSyarat(r.syarat, kandidat)).filter(id => kandidat.some(x => x.id === id));
-        const pu = pecahPustaka(r.pustaka, r.pustakaPendukung);
-        const obj = { ...r, _bahan: bahan, _syarat: idSyarat, _pusU: pu.utama, _pusP: pu.pend, jamTerstruktur: r.jamTerstruktur == null ? jd.terstruktur : r.jamTerstruktur, jamMandiri: r.jamMandiri == null ? jd.mandiri : r.jamMandiri };
-        const lamaSyarat = String(r.syarat || '').trim() && !idSyarat.length;
-        formDrawer({ title: 'Deskripsi dan pustaka', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
-          fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 9 },
-            { k: '_bahan', label: 'Bahan kajian (satu kotak per nomor; boleh ditambah, diubah, atau dihapus)', type: 'listsub', tambah: 'Tambah bahan kajian', sub: subOpt, ph: 'Tulis satu bahan kajian', help: 'Klik Sub-CPMK di bawah tiap bahan kajian untuk memetakan bahan kajian terhadap Sub-CPMK.' },
-            { k: '_syarat', label: 'Mata kuliah syarat (opsional; klik untuk memilih, semester di bawahnya atau semester berjalan)', type: 'multi', opts: kandidat.map(x => ({ v: x.id, t: `${x.nama} (smt ${x.smt})`, title: `${x.kode} · ${x.nama}` })), help: lamaSyarat ? `Isian lama: “${esc(r.syarat)}”. Pilih ulang dari daftar; bila tidak memilih, isian lama dipertahankan.` : 'Kosongkan bila tidak ada mata kuliah syarat.' },
-            { k: '_pusU', label: 'Pustaka utama (satu kotak per pustaka; nomor otomatis)', type: 'list', tambah: 'Tambah pustaka utama', nomor: (i) => `(${i + 1})`, ph: 'Penulis, tahun, judul, edisi, penerbit' },
-            { k: '_pusP', label: 'Pustaka pendukung (boleh kosong)', type: 'list', tambah: 'Tambah pustaka pendukung', nomor: (i) => `(S${i + 1})`, ph: 'Penulis, tahun, judul, penerbit atau tautan' },
+        const obj = { ...r, _bahan: bahan, jamTerstruktur: r.jamTerstruktur == null ? jd.terstruktur : r.jamTerstruktur, jamMandiri: r.jamMandiri == null ? jd.mandiri : r.jamMandiri };
+        formDrawer({ title: 'Bahan kajian dan jam tugas', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
+          fields: [{ k: '_bahan', label: 'Bahan kajian (satu kotak per nomor; boleh ditambah, diubah, atau dihapus)', type: 'listsub', tambah: 'Tambah bahan kajian', sub: subOpt, ph: 'Tulis satu bahan kajian', help: 'Klik Sub-CPMK di bawah tiap bahan kajian untuk memetakan bahan kajian terhadap Sub-CPMK.' },
             { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester) · wajib', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester) · wajib', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' },
             { k: '_jam', type: 'html', html: `<div class="jamtot" id="jam-tot"></div><button type="button" class="btn sm" id="jam-auto" style="margin-top:8px">${icon('spark')} Isi ulang otomatis (170 menit × 16 per SKS)</button>` }],
           onOpen: (dr) => {
@@ -172,9 +164,7 @@ export function rpsView(el) {
           onSave: async (o) => {
             if (o.jamTerstruktur == null || o.jamMandiri == null) return 'Tugas terstruktur dan tugas mandiri wajib diisi (menit per semester).';
             o.bahanList = o._bahan; o.bahan = gabungBahan(o._bahan);
-            o.syaratIds = o._syarat; if (o._syarat.length) o.syarat = o._syarat.map(id => (kandidat.find(x => x.id === id) || {}).nama).filter(Boolean).join('; '); else if (!lamaSyarat) o.syarat = '';
-            o.pustaka = gabungUtama(o._pusU); o.pustakaPendukung = gabungPend(o._pusP);
-            ['_bahan', '_syarat', '_pusU', '_pusP', '_jam'].forEach(k => delete o[k]);
+            ['_bahan', '_jam'].forEach(k => delete o[k]);
             turunkanDok(o); await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw();
           } });
       };
@@ -258,4 +248,92 @@ function cetakRps(m, r) {
     dr.querySelector('#rep-doc').onclick = async () => { try { unduh(await berkasDocxRps(m, r), namaBerkasRps(m)); } catch (e) { console.error(e); toast('Berkas Word gagal dibuat. ' + e.message); } };
   }, true);
   void closeDrawer;
+}
+
+
+/* ================= Deskripsi Singkat Mata Kuliah (sumber isian untuk generator) ================= */
+const bagianDesk = (r) => {
+  const kunci = (r && r.kataKunci) || [], pu = pecahPustaka(r && r.pustaka, r && r.pustakaPendukung);
+  return [
+    ['Deskripsi singkat', !!String((r && r.deskripsi) || '').trim() && !/^diisi dosen/i.test(r.deskripsi), 'wajib'],
+    ['Kata kunci topik (minimal 5)', kunci.length >= 5, 'wajib'],
+    ['Pustaka utama (minimal 1)', pu.utama.filter(x => String(x).trim()).length >= 1, 'wajib'],
+    ['Penerapan di industri migas', !!String((r && r.penerapan) || '').trim(), 'wajib'],
+  ];
+};
+export const deskLengkap = (r) => bagianDesk(r).every(b => b[1]);
+/** Draf deskripsi dari nama MK, kata kunci, penerapan, dan CPL. Hanya usulan; dosen menyunting. */
+export function susunDeskripsi(m, kunci, penerapan) {
+  const cpl = (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean).filter(c => c.ranah !== 'S');
+  const klas = (+m.P > +m.T) ? 'praktik' : 'teori';
+  const daftar = kunci.filter(Boolean); const kk = daftar.length > 1 ? daftar.slice(0, -1).join(', ') + ', dan ' + daftar[daftar.length - 1] : daftar[0] || '';
+  let t = `${m.nama} adalah mata kuliah ${klas} yang diberikan pada semester ${m.smt} dengan bobot ${m.T} SKS teori dan ${m.P} SKS praktik.`;
+  if (kk) t += ` Cakupan mata kuliah meliputi ${kk}.`;
+  if (penerapan) t += ` Penerapannya di industri migas: ${penerapan.replace(/[.\s]+$/, '')}.`;
+  const c0 = cpl[0]; if (c0 && c0.teks) t += ` Mata kuliah ini mendukung capaian lulusan: ${c0.teks.replace(/[.\s]+$/, '')}.`;
+  return t;
+}
+export function deskView(el) {
+  el.innerHTML = `<div class="grid g-12 split-mk"><div class="card" id="left"></div><div id="right"></div></div>`;
+  const draw = () => {
+    mkList(el.querySelector('#left'), draw, m => { const r = rpsOf(S, m.id); return deskLengkap(r) ? '<span class="st ok">lengkap</span>' : '<span class="st near">belum</span>'; });
+    const m = S.mk.find(x => x.id === sel), R = el.querySelector('#right');
+    if (!m) { R.innerHTML = '<div class="card empty">Pilih mata kuliah.</div>'; return; }
+    if (mkTanpaCpl(m)) { R.innerHTML = `<div class="card">${head(esc(m.nama), 'Belum dapat diisi', 'audit', '#10b981', ro())}<div class="ribbon bad">${icon('alert')} <b>Terkunci.</b> ${PESAN_KUNCI_CPL}</div></div>`; return; }
+    const r = rpsOf(S, m.id), ed = can('rps', { prodi: m.prodi, mk: m.id }) && (!r || r.status !== 'disahkan' || ctx.role === 'prodi' || ['admin', 'developer'].includes(ctx.role));
+    const bg = bagianDesk(r), lengkap = bg.every(b => b[1]);
+    const nCp = S.cpmk.filter(c => c.mk === m.id).length, nSub = S.sub.filter(x => x.mk === m.id).length;
+    const langkah = [['1', 'Deskripsi singkat MK', lengkap, '#deskmk'], ['2', 'CPMK dan Sub-CPMK', nCp && nSub, '#cpmk'], ['3', 'Bahan kajian', r && ((r.bahanList || []).length || String(r.bahan || '').trim()), '#cpmk'], ['4', 'RPS dan SAP', r && rpsLengkap(r) >= 90, '#rps']];
+    const pu = pecahPustaka(r && r.pustaka, r && r.pustakaPendukung), kunci = (r && r.kataKunci) || [];
+    const syarat = (r && r.syaratIds || []).map(id => (S.mk.find(x => x.id === id) || {}).nama).filter(Boolean);
+    R.innerHTML = `<div class="card">${head(esc(m.nama), `Semester ${m.smt} · ${m.T}T + ${m.P}P · isi dulu sebelum menyusun CPMK, Sub-CPMK, bahan kajian, dan RPS`, 'audit', '#10b981')}
+      <div class="langkah">${langkah.map(l => `<a class="lk ${l[2] ? 'ok' : ''}" href="${l[3]}"><b>${l[0]}</b> ${l[1]}<small>${l[2] ? 'terisi' : 'belum'}</small></a>`).join('')}</div>
+      <div class="ribbon" style="margin-top:12px">Isian di halaman ini adalah <b>substansi mata kuliah</b>. Generator memakainya untuk menyusun usulan CPMK, Sub-CPMK, bahan kajian, indikator, dan materi. Makin tegas kata kunci dan pustakanya, makin tepat usulannya.</div>
+      <div class="dsk">${bg.map(b => `<span class="st ${b[1] ? 'ok' : 'bad'}">${b[1] ? '✓' : '✗'} ${b[0]}</span>`).join(' ')}</div>
+      <h4 class="dsk-h">Deskripsi singkat</h4><div class="dsk-t">${r && r.deskripsi ? esc(r.deskripsi) : '<span class="muted">Belum diisi.</span>'}</div>
+      <h4 class="dsk-h">Kata kunci topik</h4><div>${kunci.length ? kunci.map(k => `<span class="cp on" style="cursor:default">${esc(k)}</span>`).join(' ') : '<span class="muted">Belum diisi.</span>'}</div>
+      <h4 class="dsk-h">Penerapan di industri migas</h4><div class="dsk-t">${r && r.penerapan ? esc(r.penerapan) : '<span class="muted">Belum diisi.</span>'}</div>
+      <h4 class="dsk-h">Pustaka utama</h4><div class="dsk-t">${pu.utama.filter(Boolean).map((x, i) => `(${i + 1}) ${esc(x)}`).join('<br>') || '<span class="muted">Belum diisi.</span>'}</div>
+      <h4 class="dsk-h">Pustaka pendukung</h4><div class="dsk-t">${pu.pend.filter(Boolean).map((x, i) => `(S${i + 1}) ${esc(x)}`).join('<br>') || '<span class="muted">Boleh kosong.</span>'}</div>
+      <h4 class="dsk-h">Mata kuliah syarat</h4><div class="dsk-t">${syarat.length ? esc(syarat.join('; ')) : '<span class="muted">Tidak ada.</span>'}</div>
+      <div class="filters" style="margin-top:14px">${ed ? `<button class="btn pri" id="ed-desk">${icon('edit')} ${lengkap ? 'Ubah' : 'Isi'} deskripsi singkat MK</button>` : '<span class="muted small">Hanya prodi dan dosen pengampu yang dapat mengisi.</span>'}</div></div>`;
+    if (!ed) return;
+    R.querySelector('#ed-desk').onclick = () => {
+      const kandidat = S.mk.filter(x => x.id !== m.id && +x.smt <= +m.smt && x.prodi === m.prodi).sort((x, y) => (+x.smt - +y.smt) || String(x.nama).localeCompare(y.nama));
+      const base = r || blankRps(m);
+      const idSyarat = (base.syaratIds && base.syaratIds.length ? base.syaratIds : kenaliSyarat(base.syarat, kandidat)).filter(id => kandidat.some(x => x.id === id));
+      const pu2 = pecahPustaka(base.pustaka, base.pustakaPendukung), lamaSyarat = String(base.syarat || '').trim() && !idSyarat.length;
+      const isi = (a, n) => (a.length >= n ? a : [...a, ...Array(n - a.length).fill('')]);
+      const obj = { ...base, _kunci: isi(kunci, 5), _syarat: idSyarat, _pusU: isi(pu2.utama, 1), _pusP: pu2.pend, penerapan: base.penerapan || '' };
+      formDrawer({ title: 'Deskripsi singkat mata kuliah', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
+        fields: [
+          { k: '_kunci', label: '1. Kata kunci topik (satu kotak per istilah; minimal 5, wajib)', type: 'list', tambah: 'Tambah kata kunci', nomor: (i) => `${i + 1}.`, ph: 'Contoh: dioda penyearah', help: 'Tulis istilah inti materi mata kuliah. Ini bahan utama generator.' },
+          { k: '_pusU', label: '2. Pustaka utama (minimal 1, wajib; nomor otomatis)', type: 'list', tambah: 'Tambah pustaka utama', nomor: (i) => `(${i + 1})`, ph: 'Penulis, tahun, judul, edisi, penerbit', help: 'Aplikasi tidak mengarang pustaka. Tulis buku atau standar yang benar-benar dipakai.' },
+          { k: '_pusP', label: '3. Pustaka pendukung (boleh kosong)', type: 'list', tambah: 'Tambah pustaka pendukung', nomor: (i) => `(S${i + 1})`, ph: 'Penulis, tahun, judul, penerbit atau tautan' },
+          { k: 'penerapan', label: '4. Penerapan di industri migas (satu atau dua kalimat, wajib)', type: 'textarea', rows: 2, ph: 'Contoh: sensor dan pengondisi sinyal pada sistem instrumentasi kilang' },
+          { k: '_syarat', label: '5. Mata kuliah syarat (opsional; klik untuk memilih)', type: 'multi', opts: kandidat.map(x => ({ v: x.id, t: `${x.nama} (smt ${x.smt})`, title: `${x.kode} · ${x.nama}` })), help: lamaSyarat ? `Isian lama: “${esc(base.syarat)}”. Pilih ulang dari daftar; bila tidak memilih, isian lama dipertahankan.` : 'Kosongkan bila tidak ada.' },
+          { k: '_gen', type: 'html', label: 'Penyusun draf deskripsi', html: `<button type="button" class="btn sm vio" id="dk-gen">${icon('spark')} Susun draf deskripsi dari isian di atas</button> <span class="small muted" id="dk-ket">Kosongkan kotak deskripsi dulu bila ingin menyusun ulang.</span>` },
+          { k: 'deskripsi', label: '6. Deskripsi singkat mata kuliah (3 sampai 5 kalimat, wajib)', type: 'textarea', rows: 7 }],
+        onOpen: (dr) => {
+          const ta = dr.querySelector('textarea[name="deskripsi"]'), ket = dr.querySelector('#dk-ket');
+          dr.querySelector('#dk-gen').onclick = () => {
+            if (ta.value.trim()) { ket.textContent = 'Deskripsi sudah terisi. Kosongkan dulu bila ingin menyusun ulang.'; return; }
+            const kk = Array.from(dr.querySelectorAll('[data-list="_kunci"] textarea, [data-list="_kunci"] input')).map(i => i.value.trim()).filter(Boolean);
+            if (kk.length < 2) { ket.textContent = 'Isi kata kunci dulu (minimal 2 istilah).'; return; }
+            ta.value = susunDeskripsi(m, kk, (dr.querySelector('[name="penerapan"]').value || '').trim());
+            ta.dispatchEvent(new Event('input', { bubbles: true })); ket.textContent = 'Draf dibuat. Sunting agar sesuai mata kuliah.';
+          };
+        },
+        onSave: async (o) => {
+          const kk = (o._kunci || []).map(x => String(x).trim()).filter(Boolean), pu3 = (o._pusU || []).map(x => String(x).trim()).filter(Boolean);
+          const r2 = { ...(rpsOf(S, m.id) || blankRps(m)) };
+          r2.deskripsi = o.deskripsi || ''; r2.kataKunci = kk; r2.penerapan = o.penerapan || '';
+          r2.pustaka = gabungUtama(pu3); r2.pustakaPendukung = gabungPend((o._pusP || []).filter(x => String(x).trim()));
+          r2.syaratIds = o._syarat || []; if (r2.syaratIds.length) r2.syarat = r2.syaratIds.map(id => (kandidat.find(x => x.id === id) || {}).nama).filter(Boolean).join('; '); else if (!lamaSyarat) r2.syarat = '';
+          turunkanDok(r2); await save('rps', r2, `Deskripsi singkat ${m.nama}`); draw();
+          const sisa = bagianDesk(r2).filter(b => !b[1]).map(b => b[0]); if (sisa.length) toast('Tersimpan. Masih wajib: ' + sisa.join(', ') + '.');
+        } });
+    };
+  };
+  draw();
 }

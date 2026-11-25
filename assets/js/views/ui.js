@@ -44,7 +44,7 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     if (x.type === 'html') inp = x.html;
     else if (DAFTAR.includes(x.type)) {
       const arr = Array.isArray(v) ? v : [];
-      inp = `<div class="lbox" data-list="${x.k}"><div class="lrows">${arr.map((it, i) => barisDaftar(x, it, i)).join('')}</div><div class="lact"><button type="button" class="btn sm pri" data-ladd>${icon('plus')} ${esc(x.tambah || 'Tambah isian')}</button>${(x.quick || []).length ? `<span class="muted small">atau pilih cepat:</span>${x.quick.map(q => `<button type="button" class="cp" data-q="${esc(q)}">+ ${esc(q.length > 48 ? q.slice(0, 47) + '…' : q)}</button>`).join('')}` : ''}</div></div>`;
+      inp = `<div class="lbox" data-list="${x.k}"><div class="lrows">${arr.map((it, i) => barisDaftar(x, it, i)).join('')}</div><div class="lact"><button type="button" class="btn sm pri" data-ladd>${icon('plus')} ${esc(x.tambah || 'Tambah isian')}</button>${(x.paket || []).length ? `<button type="button" class="btn sm vio" data-paket>${icon('spark')} Isi baris standar</button>` : ''}${(x.quick || []).length ? `<span class="muted small">atau pilih cepat:</span>${x.quick.map(q => `<button type="button" class="cp" data-q="${esc(q)}">+ ${esc(q.length > 48 ? q.slice(0, 47) + '…' : q)}</button>`).join('')}` : ''}</div></div>`;
     } else if (x.type === 'kode') inp = `<div class="kode-lock" data-kode="${x.k}"><span class="tag" style="--c:#0ea5e9">${esc(v || x.ph || '–')}</span><span class="small muted">dibuat otomatis sesuai pedoman, tidak diketik</span></div>`;
     else if (x.type === 'textarea') inp = `<textarea class="inp" name="${x.k}" rows="${x.rows || 3}" placeholder="${esc(x.ph || '')}">${esc(v || '')}</textarea>`;
     else if (x.type === 'select') inp = `<select class="inp" name="${x.k}" ${x.lock ? 'disabled' : ''}>${x.opts.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;
@@ -60,8 +60,8 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     dr.querySelectorAll('.cp input').forEach(i => i.onchange = () => i.parentElement.classList.toggle('on', i.checked));
     const sibuk = (b, on, teks) => { dr.querySelectorAll('.drawer-act .btn').forEach(x => { x.disabled = on; }); if (b) { if (on) { b.dataset.t = b.innerHTML; b.innerHTML = '<span class="spin"></span> ' + teks; } else if (b.dataset.t) b.innerHTML = b.dataset.t; } };
     const galat = (m) => { dr.querySelectorAll('.ribbon.bad').forEach(x => x.remove()); dr.querySelector('.drawer-act').insertAdjacentHTML('beforebegin', `<div class="ribbon bad">${esc(m)}</div>`); };
-    dr.querySelector('#fd-save').onclick = async () => {
-      const btn = dr.querySelector('#fd-save'), out = { ...obj };
+    const ambil = () => {
+      const out = { ...obj };
       fields.forEach(x => {
         if (x.type === 'kode' || x.type === 'html') return;
         if (DAFTAR.includes(x.type)) {
@@ -70,6 +70,10 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
         } else if (x.type === 'multi') out[x.k] = Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value);
         else { const el = dr.querySelector(`[name="${x.k}"]`); out[x.k] = x.type === 'number' ? (el.value === '' ? null : +el.value) : el.value.trim(); }
       });
+      return out;
+    };
+    dr.querySelector('#fd-save').onclick = async () => {
+      const btn = dr.querySelector('#fd-save'), out = ambil();
       sibuk(btn, true, 'Menyimpan…');
       let err; try { err = await onSave(out); } catch (e) { console.error(e); err = 'Gagal menyimpan: ' + e.message; }
       if (err) { sibuk(btn, false); galat(err); return; }
@@ -81,6 +85,27 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
       try { await onDelete(obj); } catch (e) { console.error(e); sibuk(del, false); galat('Gagal menghapus: ' + e.message); return; }
       closeDrawer(); rerender();
     };
+    /* layar lebar: perubahan ditandai, disimpan otomatis tiap 2 menit, dan penutupan selalu bertanya bila belum disimpan */
+    if (full) {
+      let kotor = false, jalan = false; const form = dr.querySelector('#fd'), st = document.createElement('span'); st.className = 'small muted'; st.id = 'fd-status'; dr.querySelector('.drawer-act .sp').before(st);
+      const jam = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const tandai = () => { if (!kotor) { kotor = true; st.textContent = 'Ada perubahan belum disimpan'; } };
+      form.addEventListener('input', tandai); form.addEventListener('change', tandai); form.addEventListener('click', e => { if (e.target.closest('button,.cp')) tandai(); });
+      const otomatis = async () => {
+        if (!kotor || jalan || !document.body.contains(dr)) return; jalan = true;
+        const out = ambil(); st.textContent = 'Menyimpan otomatis…';
+        try { const err = await onSave(out); if (err) st.textContent = 'Belum bisa simpan otomatis: ' + err; else { kotor = false; st.textContent = 'Tersimpan otomatis pukul ' + jam(); } } catch (e) { st.textContent = 'Simpan otomatis gagal, tekan Simpan'; }
+        jalan = false;
+      };
+      const timer = setInterval(() => { if (!document.body.contains(dr)) clearInterval(timer); else otomatis(); }, 120000);
+      dr.__flush = () => { if (kotor) otomatis(); };
+      dr.__tutup = async () => {
+        if (!kotor) { closeDrawer(); return; }
+        const j = await tanya3('Ada perubahan yang belum disimpan. Apa yang ingin dilakukan?', 'Simpan dan tutup', 'Buang perubahan', 'Kembali mengedit');
+        if (j === 'ya') dr.querySelector('#fd-save').click(); else if (j === 'buang') closeDrawer();
+      };
+      dr.querySelectorAll('[data-close]').forEach(b => { b.onclick = dr.__tutup; });
+    }
     /* daftar kotak: tambah, hapus, pilihan cepat, tinggi kotak mengikuti isi */
     dr.querySelectorAll('[data-list]').forEach(box => {
       const x = fields.find(f => f.k === box.dataset.list), rows = box.querySelector('.lrows');
@@ -91,6 +116,7 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
       rows.querySelectorAll('.lrow').forEach(ikat);
       box.querySelector('[data-ladd]').onclick = () => tambah(x.type === 'listpus' ? {} : '');
       box.querySelectorAll('[data-q]').forEach(b => { b.onclick = () => tambah(b.dataset.q); });
+      const pk = box.querySelector('[data-paket]'); if (pk) pk.onclick = () => (x.paket || []).forEach(t => tambah(t));
     });
     /* keterangan di bawah pilihan (misalnya isi Sub-CPMK yang dipilih) */
     fields.filter(x => x.info).forEach(x => { const el = dr.querySelector(`[data-info="${x.k}"]`), pil = () => Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value); const up = () => { el.innerHTML = x.info(pil()); }; dr.querySelectorAll(`[data-multi="${x.k}"] input`).forEach(i => i.addEventListener('change', up)); up(); });
@@ -119,6 +145,16 @@ export function tanya(pesan, ya = 'Ya, lanjutkan') {
     const done = (v) => { bg.remove(); res(v); };
     bg.querySelector('[data-y]').onclick = () => done(true); bg.querySelector('[data-n]').onclick = () => done(false);
     bg.addEventListener('click', e => { if (e.target === bg) done(false); });
+    document.body.appendChild(bg); bg.querySelector('[data-y]').focus();
+  });
+}
+/** Dialog tiga pilihan: 'ya', 'buang', atau 'batal'. */
+export function tanya3(pesan, ya, buang, batal) {
+  return new Promise(res => {
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal card" role="alertdialog" aria-modal="true"><p>${esc(pesan)}</p><div class="drawer-act"><button class="btn danger" data-b>${esc(buang)}</button><div class="sp"></div><button class="btn ghost" data-n>${esc(batal)}</button><button class="btn pri" data-y>${esc(ya)}</button></div></div>`;
+    const done = (v) => { bg.remove(); res(v); };
+    bg.querySelector('[data-y]').onclick = () => done('ya'); bg.querySelector('[data-b]').onclick = () => done('buang'); bg.querySelector('[data-n]').onclick = () => done('batal');
     document.body.appendChild(bg); bg.querySelector('[data-y]').focus();
   });
 }

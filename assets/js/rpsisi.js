@@ -60,12 +60,27 @@ export const pecahIndikator = (s) => pecahBaris(s).map(x => x.replace(/^\d+(\.\d
 export const pecahMetode = (s) => bersih(s).split(/[;\n]+/).map(x => x.trim()).filter(Boolean);
 
 export const METODE_DEF = ['Kuliah Offline', 'Kuliah Daring (teleconference)', 'Praktikum', 'Contextual Learning', 'Collaborative Learning', 'Case-Based Learning', 'Project-Based Learning', 'Problem-Based Learning', 'Diskusi kelompok', 'Studi kasus', 'Demonstrasi', 'Tanya jawab'];
-export const DARING_DEF = ['Bentuk: Kuliah Tatap Maya (teleconference)', 'https://akamigas.siakadcloud.com/', 'Metode: Contextual Learning, Collaborative Learning'];
-export const tatapDef = (menit) => ['Bentuk: Kuliah Offline', 'Metode: Contextual Learning, Collaborative Learning', `Alokasi waktu: TM ${menit} menit`, 'Penugasan: Tugas terstruktur dan mandiri sesuai materi'];
+/** Tatap muka (TM) dan penugasan terstruktur (PT) per pertemuan. 1 SKS = 170 menit per minggu: teori TM 60 + PT 110, praktik seluruhnya TM. Format [TM: 1×SKS×menit]. */
+export function tmPt(m, P, dur) {
+  const T = +m.T || 0, Pr = +m.P || 0, tm = [];
+  if (T) tm.push(`[TM: 1×${T}×${P.menitTeori}"]`);
+  if (Pr) tm.push(`[TM: 1×${Pr}×${dur}"]`);
+  return { tm, pt: T ? `[PT: 1×${T}×${170 - P.menitTeori}"]` : '' };
+}
+export function tatapDef(m, P, dur, no) {
+  const { tm, pt } = tmPt(m, P, dur), j = ['Bentuk: Kuliah Offline', 'Metode: Contextual Learning', ...tm];
+  if (pt && no) j.push(`Tugas Terstruktur-${no} ${pt}`);
+  return j;
+}
+export function daringDef(m, P, dur, no) {
+  const { tm, pt } = tmPt(m, P, dur), j = ['Bentuk: Kuliah Tatap Maya (teleconference)', 'https://akamigas.siakadcloud.com/', 'Metode: Contextual Learning', ...tm];
+  if (pt && no) j.push(`Upload Tugas Terstruktur-${no} di https://edlink.id/ ${pt}`);
+  return j;
+}
 
-/** Jam belajar 1 semester: 45 jam per SKS (2700 menit). Sisa setelah tatap muka 16 pertemuan dibagi dua. */
+/** Jam belajar 1 semester: 170 menit x 16 pertemuan per SKS (2720 menit, sekitar 45 jam). Sisa setelah tatap muka dibagi dua. */
 export function jamDefault(m, menitPerPertemuan) {
-  const sks = (+m.T || 0) + (+m.P || 0), tm = 16 * menitPerPertemuan, target = sks * 2700, sisa = Math.max(0, target - tm);
+  const sks = (+m.T || 0) + (+m.P || 0), tm = 16 * menitPerPertemuan, target = sks * 2720, sisa = Math.max(0, target - tm);
   const st = Math.round(sisa / 2 / 10) * 10;
   return { sks, tm, target, terstruktur: st, mandiri: Math.max(0, Math.round((sisa - st) / 10) * 10) };
 }

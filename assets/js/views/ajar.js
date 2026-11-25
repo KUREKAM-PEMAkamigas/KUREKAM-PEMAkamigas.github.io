@@ -13,7 +13,7 @@ import { kartuVerif, ikatVerif, formVerif, verifOf } from './verifrps.js';
 import { bukaGeneratorDok, turunkanDok } from './dokgen.js';
 import { detect, badge, ANJURAN_SMT, selisihRentang, kkoSemester } from '../bloom.js';
 import { kodeBerikut, cpmkProdi, mkTanpaCpl, PESAN_KUNCI_CPL, INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
-import { pecahBahan, gabungBahan, pecahPustaka, gabungUtama, gabungPend, opsiPustaka, pecahMateri, gabungMateri, pecahBaris, pecahIndikator, pecahMetode, METODE_DEF, DARING_DEF, tatapDef, jamDefault, kenaliSyarat } from '../rpsisi.js';
+import { pecahBahan, gabungBahan, pecahPustaka, gabungUtama, gabungPend, opsiPustaka, pecahMateri, gabungMateri, pecahBaris, pecahIndikator, pecahMetode, METODE_DEF, daringDef, tatapDef, jamDefault, kenaliSyarat } from '../rpsisi.js';
 import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, stTag, bar, pctColor, opts } from './ui.js';
 import { rapikanEntri, normRiset, opsiRiset, riset, ringkasIntegrasi, teksRiset, jenisInteg, kecocokan, labelRiset, BENTUK } from '../riset.js';
 
@@ -151,10 +151,10 @@ export function rpsView(el) {
             { k: '_pusU', label: 'Pustaka utama (satu kotak per pustaka; nomor otomatis)', type: 'list', tambah: 'Tambah pustaka utama', nomor: (i) => `(${i + 1})`, ph: 'Penulis, tahun, judul, edisi, penerbit' },
             { k: '_pusP', label: 'Pustaka pendukung (boleh kosong)', type: 'list', tambah: 'Tambah pustaka pendukung', nomor: (i) => `(S${i + 1})`, ph: 'Penulis, tahun, judul, penerbit atau tautan' },
             { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester) · wajib', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester) · wajib', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' },
-            { k: '_jam', type: 'html', html: `<div class="jamtot" id="jam-tot"></div><button type="button" class="btn sm" id="jam-auto" style="margin-top:8px">${icon('spark')} Isi ulang otomatis (45 jam per SKS)</button>` }],
+            { k: '_jam', type: 'html', html: `<div class="jamtot" id="jam-tot"></div><button type="button" class="btn sm" id="jam-auto" style="margin-top:8px">${icon('spark')} Isi ulang otomatis (170 menit × 16 per SKS)</button>` }],
           onOpen: (dr) => {
             const g = (n) => +dr.querySelector(`[name="${n}"]`).value || 0, el = dr.querySelector('#jam-tot');
-            const up = () => { const tot = jd.tm + g('jamTerstruktur') + g('jamMandiri') + g('jamTerbimbing'), sel = tot - jd.target; el.innerHTML = `Tatap muka 16 pertemuan <b>${fmt(jd.tm)}</b> menit + tugas = <b>${fmt(tot)} menit (${fmt(tot / 60, 1)} jam)</b>. Target ${jd.sks} SKS × 45 jam = ${fmt(jd.target)} menit (${fmt(jd.target / 60, 1)} jam). ${Math.abs(sel) <= 30 ? '<span class="st ok">Sesuai</span>' : `<span class="st near">${sel > 0 ? 'Lebih' : 'Kurang'} ${fmt(Math.abs(sel))} menit</span>`}`; };
+            const up = () => { const tot = jd.tm + g('jamTerstruktur') + g('jamMandiri') + g('jamTerbimbing'), sel = tot - jd.target; el.innerHTML = `Tatap muka 16 pertemuan <b>${fmt(jd.tm)}</b> menit + tugas = <b>${fmt(tot)} menit (${fmt(tot / 60, 1)} jam)</b>. Target ${jd.sks} SKS × 170 menit × 16 pertemuan = ${fmt(jd.target)} menit (${fmt(jd.target / 60, 1)} jam). ${Math.abs(sel) <= 30 ? '<span class="st ok">Sesuai</span>' : `<span class="st near">${sel > 0 ? 'Lebih' : 'Kurang'} ${fmt(Math.abs(sel))} menit</span>`}`; };
             dr.querySelectorAll('[name^="jam"]').forEach(i => i.addEventListener('input', up));
             dr.querySelector('#jam-auto').onclick = () => { dr.querySelector('[name="jamTerstruktur"]').value = jd.terstruktur; dr.querySelector('[name="jamMandiri"]').value = jd.mandiri; up(); };
             up();
@@ -181,8 +181,8 @@ export function rpsView(el) {
             { k: 'judul', label: 'Judul topik untuk SAP (boleh kosong, terisi dari poin pertama materi)', full: true },
             { k: '_indikator', label: 'Indikator penilaian (satu kotak per indikator; tiga per Sub-CPMK, nomor otomatis)', type: 'list', nomor: (i) => `${p.m}.${i + 1}`, tambah: 'Tambah indikator', ph: 'Misalnya: Ketepatan menjelaskan struktur dan cara kerja JFET' },
             { k: 'asesmen', label: 'Kriteria dan teknik asesmen', type: 'textarea', rows: 2 },
-            { k: '_tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'list', quick: tatapDef(tmP), nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Bentuk: Kuliah Offline' },
-            { k: '_daring', label: 'Daring (bila ada)', type: 'list', quick: DARING_DEF, nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Bentuk: Kuliah Tatap Maya' },
+            { k: '_tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'list', paket: tatapDef(m, P, durasi(m, P), p.ujian ? 0 : p.m), quick: tatapDef(m, P, durasi(m, P), p.ujian ? 0 : p.m), nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Bentuk: Kuliah Offline' },
+            { k: '_daring', label: 'Daring (bila ada)', type: 'list', paket: daringDef(m, P, durasi(m, P), p.ujian ? 0 : p.m), quick: daringDef(m, P, durasi(m, P), p.ujian ? 0 : p.m), nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Bentuk: Kuliah Tatap Maya' },
             { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
             ...(p.ujian ? [] : [{ k: 'riset', label: 'Penelitian atau PKM yang diintegrasikan (pilih dari daftar pengampu)', type: 'multi', opts: opsiRiset(S, m).map(e => ({ v: e.id, t: `${e.jenis}: ${short(e.judul, 60)}${e.tahun ? ' (' + e.tahun + ')' : ''}`, title: labelRiset(S, e) })) },
               { k: 'bentuk', label: 'Dipakai sebagai', type: 'select', opts: [{ v: '', t: 'Pilih bentuk' }, ...BENTUK.map(v => ({ v, t: v })), { v: 'Lainnya', t: 'Lainnya (tulis sendiri)' }] }, { k: 'bentukLain', label: 'Bila memilih Lainnya, tulis bentuknya', ph: 'Contoh: Materi pengayaan, tugas proyek akhir' },

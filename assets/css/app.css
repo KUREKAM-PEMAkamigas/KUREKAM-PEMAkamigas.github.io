@@ -722,8 +722,10 @@ details.dtl { border-top: 1px solid rgba(24,35,58,.08); padding: 8px 0; } detail
 .savebar .sp { flex: 1; }
 
 /* ---- Editor RPS layar penuh dan daftar kotak isian ---- */
-.drawer.full { width: 100%; max-width: none; padding: 22px max(16px, 5vw) 28px; font-size: 15px; }
-.drawer.full > * { max-width: 1120px; margin-left: auto; margin-right: auto; }
+.drawer-bg.nobg { background: none; backdrop-filter: none; pointer-events: none; }
+.drawer-bg.nobg .drawer { pointer-events: auto; box-shadow: -10px 0 40px rgba(15, 23, 42, .28); border-left: 1px solid var(--line); }
+.drawer.full { width: min(60vw, 1040px); min-width: min(100%, 680px); padding: 20px 26px 28px; font-size: 15px; }
+@media (max-width: 900px) { .drawer.full { width: 100%; min-width: 0; padding: 16px; } }
 .drawer.full .field label { font-size: 13px; }
 .drawer.full .inp, .drawer.full textarea.inp { font-size: 15px; line-height: 1.5; }
 .lbox { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--card-solid); }

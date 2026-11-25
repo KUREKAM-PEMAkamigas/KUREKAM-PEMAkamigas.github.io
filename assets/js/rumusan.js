@@ -12,13 +12,12 @@ export function penyusun(opsi) {
   const kode = kodeLevel(opsi.ranah, opsi.prak), anj = ANJURAN_SMT[+opsi.smt];
   const batasN = opsi.batas && LEVELS[opsi.batas] ? LEVELS[opsi.batas].n : 9, batasD = opsi.batas && LEVELS[opsi.batas] ? LEVELS[opsi.batas].d : '';
   const lvTombol = kode.map(k => { const L = LEVELS[k], blk = batasD && L.d === batasD && L.n > batasN, bintang = anj && L.d === 'C' && L.n >= anj[0] && L.n <= anj[1]; return `<label class="cp ${blk ? 'blk' : ''}" data-lv="${k}" title="${esc(L.en)}${bintang ? ' · dianjurkan untuk semester ' + opsi.smt : ''}${blk ? ' · melampaui induknya' : ''}"><input type="checkbox" ${blk ? 'disabled' : ''}>${k} ${esc(L.nama)}${bintang ? ' ★' : ''}</label>`; }).join('');
-  const html = `<div class="rmsn"><div class="small muted" style="margin-bottom:6px">Pilih tingkat Bloom dan kata kerja, lalu klik <b>Buat narasi awal</b>. Narasi dibuat dari ${opsi.jenis === 'sub' ? 'CPMK induk dan topik' : 'CPL dan bahan kajian'}, lalu Bapak/Ibu sunting.</div>
+  const html = `<div class="rmsn"><div class="small muted" style="margin-bottom:6px">Pilih tingkat Bloom dan kata kerja, lalu klik <b>Buat narasi awal</b>. Narasi dibuat dari ${opsi.jenis === 'sub' ? 'CPMK induk dan kata kunci MK yang belum dipakai Sub-CPMK lain' : 'CPL dan bahan kajian'}, lalu Bapak/Ibu sunting.</div>
     <div class="rmsn-b"><b>1. Tingkat Bloom</b>${anj ? `<span class="small muted"> · ★ dianjurkan semester ${opsi.smt}: C${anj[0]} sampai C${anj[1]}</span>` : ''}<div class="chips-pick" id="rm-lv">${lvTombol}</div></div>
     <div class="rmsn-b"><b>2. Kata kerja operasional</b><div class="chips-pick" id="rm-kko"><span class="muted small">Pilih tingkat Bloom dulu.</span></div></div>
-    ${opsi.jenis === 'sub' ? `<div class="rmsn-b"><b>3. Topik atau bahan kajian</b><input class="inp" id="rm-topik" list="rm-topik-l" placeholder="Pilih dari daftar atau tulis sendiri" style="width:100%"><datalist id="rm-topik-l">${(opsi.topik || []).map(t => `<option value="${esc(t)}">`).join('')}</datalist></div>` : ''}
     <button type="button" class="btn sm vio" id="rm-buat">Buat narasi awal</button> <span class="small muted" id="rm-ket"></span></div>`;
   const pasang = (dr) => {
-    let lv = '', kk = '';
+    let lv = '', kk = '', idx = 0;
     const ta = dr.querySelector('textarea[name="teks"]'), kko = dr.querySelector('#rm-kko'), ket = dr.querySelector('#rm-ket');
     const pilihLv = (k) => {
       lv = k; kk = '';
@@ -34,7 +33,12 @@ export function penyusun(opsi) {
     dr.querySelector('#rm-buat').onclick = () => {
       if (!lv || !kk) { ket.textContent = 'Pilih tingkat Bloom dan kata kerja dulu.'; return; }
       const basis = String(opsi.basis() || '').trim(); let objek = '';
-      if (opsi.jenis === 'sub') { const tp = (dr.querySelector('#rm-topik').value || '').trim(); objek = tp ? tp.charAt(0).toLowerCase() + tp.slice(1) : objekDari(basis); if (tp && basis) { const o = objekDari(basis); if (o && o.length <= 110) objek += ` untuk mendukung ${o}`; } }
+      if (opsi.jenis === 'sub') {
+        const pakai = (opsi.pakai ? opsi.pakai() : []).join(' ').toLowerCase(), kand = (opsi.topik || []).filter(t => !pakai.includes(String(t).toLowerCase()));
+        if (!(opsi.topik || []).length) { ket.textContent = 'Isi kata kunci dulu di menu Deskripsi Singkat MK, lalu kembali ke sini.'; return; }
+        const daftar = kand.length ? kand : opsi.topik, tp = daftar[idx % daftar.length]; idx++;
+        const o = objekDari(basis); objek = tp.charAt(0).toLowerCase() + tp.slice(1); if (o && o.length <= 110) objek += ` untuk mendukung ${o}`;
+      }
       else { objek = objekDari(basis); const bk = (opsi.konteks || []).slice(0, 2); if (bk.length) objek += ` pada bahan kajian ${bk.join(' dan ')}`; }
       if (!objek) { ket.textContent = opsi.jenis === 'sub' ? 'Isi topik atau pastikan CPMK induk sudah ada.' : 'Isi rumusan CPL dulu.'; return; }
       ta.value = `Mahasiswa mampu ${kk} ${objek}.`;

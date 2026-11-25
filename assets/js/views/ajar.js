@@ -276,7 +276,7 @@ export function usulBahan(m, r, subs) {
   let g = 0; sisa.forEach(k => { const i = grup.findIndex(a => !a.length); if (i >= 0) grup[i].push(k); else { grup[g % grup.length].push(k); g++; } });
   const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   const pustaka = pecahPustaka(r.pustaka, r.pustakaPendukung).utama.filter(Boolean);
-  return grup.map((a, i) => a.length ? { t: `${cap(a.join(', '))}: konsep, karakteristik, dan penerapannya${(r.penerapan || '').trim() ? ' pada ' + r.penerapan.trim().replace(/[.\s]+$/, '').replace(/^./, c => c.toLowerCase()) : ''}${pustaka.length ? ` (acuan: pustaka (1))` : ''}`, sub: [subs[i].id] } : null).filter(Boolean);
+  return grup.map((a, i) => a.length ? { t: `${cap(a.join(', '))}: konsep, karakteristik, dan penerapannya${pustaka.length ? ` (acuan: pustaka (1))` : ''}`, sub: [subs[i].id] } : null).filter(Boolean);
 }
 
 /* ================= Deskripsi Singkat Mata Kuliah (sumber isian untuk generator) ================= */
@@ -289,14 +289,13 @@ const bagianDesk = (r) => {
   ];
 };
 export const deskLengkap = (r) => bagianDesk(r).every(b => b[1]);
-/** Draf deskripsi dari nama MK, kata kunci, penerapan, dan CPL. Hanya usulan; dosen menyunting. */
-export function susunDeskripsi(m, kunci, penerapan) {
+/** Draf deskripsi dari nama MK, kata kunci, dan CPL. Hanya usulan; dosen menyunting. */
+export function susunDeskripsi(m, kunci) {
   const cpl = (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean).filter(c => c.ranah !== 'S');
   const klas = (+m.P > +m.T) ? 'praktik' : 'teori';
   const daftar = kunci.filter(Boolean); const kk = daftar.length > 1 ? daftar.slice(0, -1).join(', ') + ', dan ' + daftar[daftar.length - 1] : daftar[0] || '';
   let t = `${m.nama} adalah mata kuliah ${klas} yang diberikan pada semester ${m.smt} dengan bobot ${m.T} SKS teori dan ${m.P} SKS praktik.`;
   if (kk) t += ` Cakupan mata kuliah meliputi ${kk}.`;
-  if (penerapan) t += ` Penerapannya di industri migas: ${penerapan.replace(/[.\s]+$/, '')}.`;
   const c0 = cpl[0]; if (c0 && c0.teks) t += ` Mata kuliah ini mendukung capaian lulusan: ${c0.teks.replace(/[.\s]+$/, '')}.`;
   return t;
 }
@@ -319,7 +318,6 @@ export function deskView(el) {
       <div class="dsk">${bg.map(b => `<span class="st ${b[1] ? 'ok' : 'bad'}">${b[1] ? '✓' : '✗'} ${b[0]}</span>`).join(' ')}</div>
       <h4 class="dsk-h">Deskripsi singkat</h4><div class="dsk-t">${r && r.deskripsi ? esc(r.deskripsi) : '<span class="muted">Belum diisi.</span>'}</div>
       <h4 class="dsk-h">Kata kunci topik</h4><div>${kunci.length ? kunci.map(k => `<span class="cp on" style="cursor:default">${esc(k)}</span>`).join(' ') : '<span class="muted">Belum diisi.</span>'}</div>
-      <h4 class="dsk-h">Penerapan di industri migas</h4><div class="dsk-t">${r && r.penerapan ? esc(r.penerapan) : '<span class="muted">Belum diisi.</span>'}</div>
       <h4 class="dsk-h">Pustaka utama</h4><div class="dsk-t">${pu.utama.filter(Boolean).map((x, i) => `(${i + 1}) ${esc(x)}`).join('<br>') || '<span class="muted">Belum diisi.</span>'}</div>
       <h4 class="dsk-h">Pustaka pendukung</h4><div class="dsk-t">${pu.pend.filter(Boolean).map((x, i) => `(S${i + 1}) ${esc(x)}`).join('<br>') || '<span class="muted">Boleh kosong.</span>'}</div>
       <h4 class="dsk-h">Mata kuliah syarat</h4><div class="dsk-t">${syarat.length ? esc(syarat.join('; ')) : '<span class="muted">Tidak ada.</span>'}</div>
@@ -331,30 +329,29 @@ export function deskView(el) {
       const idSyarat = (base.syaratIds && base.syaratIds.length ? base.syaratIds : kenaliSyarat(base.syarat, kandidat)).filter(id => kandidat.some(x => x.id === id));
       const pu2 = pecahPustaka(base.pustaka, base.pustakaPendukung), lamaSyarat = String(base.syarat || '').trim() && !idSyarat.length;
       const isi = (a, n) => (a.length >= n ? a : [...a, ...Array(n - a.length).fill('')]);
-      const obj = { ...base, _kunci: isi(kunci, 5), _syarat: idSyarat, _pusU: isi(pu2.utama, 1), _pusP: pu2.pend, penerapan: base.penerapan || '' };
+      const obj = { ...base, _kunci: isi(kunci, 5), _syarat: idSyarat, _pusU: isi(pu2.utama, 1), _pusP: pu2.pend };
       formDrawer({ title: 'Deskripsi singkat mata kuliah', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
         fields: [
           { k: '_kunci', label: '1. Kata kunci topik (satu kotak per istilah; minimal 5, wajib)', type: 'list', tambah: 'Tambah kata kunci', nomor: (i) => `${i + 1}.`, ph: 'Contoh: dioda penyearah', help: 'Tulis istilah inti materi mata kuliah. Ini bahan utama generator.' },
           { k: '_pusU', label: '2. Pustaka utama (minimal 1, wajib; nomor otomatis)', type: 'list', tambah: 'Tambah pustaka utama', nomor: (i) => `(${i + 1})`, ph: 'Penulis, tahun, judul, edisi, penerbit', help: 'Aplikasi tidak mengarang pustaka. Tulis buku atau standar yang benar-benar dipakai.' },
           { k: '_pusP', label: '3. Pustaka pendukung (boleh kosong)', type: 'list', tambah: 'Tambah pustaka pendukung', nomor: (i) => `(S${i + 1})`, ph: 'Penulis, tahun, judul, penerbit atau tautan' },
-          { k: 'penerapan', label: '4. Penerapan di industri migas (opsional; satu atau dua kalimat, memperkaya narasi generator)', type: 'textarea', rows: 2, ph: 'Contoh: sensor dan pengondisi sinyal pada sistem instrumentasi kilang' },
-          { k: '_syarat', label: '5. Mata kuliah syarat (opsional; klik untuk memilih)', type: 'multi', opts: kandidat.map(x => ({ v: x.id, t: `${x.nama} (smt ${x.smt})`, title: `${x.kode} · ${x.nama}` })), help: lamaSyarat ? `Isian lama: “${esc(base.syarat)}”. Pilih ulang dari daftar; bila tidak memilih, isian lama dipertahankan.` : 'Kosongkan bila tidak ada.' },
+          { k: '_syarat', label: '4. Mata kuliah syarat (opsional; klik untuk memilih)', type: 'multi', opts: kandidat.map(x => ({ v: x.id, t: `${x.nama} (smt ${x.smt})`, title: `${x.kode} · ${x.nama}` })), help: lamaSyarat ? `Isian lama: “${esc(base.syarat)}”. Pilih ulang dari daftar; bila tidak memilih, isian lama dipertahankan.` : 'Kosongkan bila tidak ada.' },
           { k: '_gen', type: 'html', label: 'Penyusun draf deskripsi', html: `<button type="button" class="btn sm vio" id="dk-gen">${icon('spark')} Susun draf deskripsi dari isian di atas</button> <span class="small muted" id="dk-ket">Kosongkan kotak deskripsi dulu bila ingin menyusun ulang.</span>` },
-          { k: 'deskripsi', label: '6. Deskripsi singkat mata kuliah (3 sampai 5 kalimat, wajib)', type: 'textarea', rows: 7 }],
+          { k: 'deskripsi', label: '5. Deskripsi singkat mata kuliah (3 sampai 5 kalimat, wajib)', type: 'textarea', rows: 7 }],
         onOpen: (dr) => {
           const ta = dr.querySelector('textarea[name="deskripsi"]'), ket = dr.querySelector('#dk-ket');
           dr.querySelector('#dk-gen').onclick = () => {
             if (ta.value.trim()) { ket.textContent = 'Deskripsi sudah terisi. Kosongkan dulu bila ingin menyusun ulang.'; return; }
             const kk = Array.from(dr.querySelectorAll('[data-list="_kunci"] textarea, [data-list="_kunci"] input')).map(i => i.value.trim()).filter(Boolean);
             if (kk.length < 2) { ket.textContent = 'Isi kata kunci dulu (minimal 2 istilah).'; return; }
-            ta.value = susunDeskripsi(m, kk, (dr.querySelector('[name="penerapan"]').value || '').trim());
+            ta.value = susunDeskripsi(m, kk);
             ta.dispatchEvent(new Event('input', { bubbles: true })); ket.textContent = 'Draf dibuat. Sunting agar sesuai mata kuliah.';
           };
         },
         onSave: async (o) => {
           const kk = (o._kunci || []).map(x => String(x).trim()).filter(Boolean), pu3 = (o._pusU || []).map(x => String(x).trim()).filter(Boolean);
           const r2 = { ...(rpsOf(S, m.id) || blankRps(m)) };
-          r2.deskripsi = o.deskripsi || ''; r2.kataKunci = kk; r2.penerapan = o.penerapan || '';
+          r2.deskripsi = o.deskripsi || ''; r2.kataKunci = kk;
           r2.pustaka = gabungUtama(pu3); r2.pustakaPendukung = gabungPend((o._pusP || []).filter(x => String(x).trim()));
           r2.syaratIds = o._syarat || []; if (r2.syaratIds.length) r2.syarat = r2.syaratIds.map(id => (kandidat.find(x => x.id === id) || {}).nama).filter(Boolean).join('; '); else if (!lamaSyarat) r2.syarat = '';
           turunkanDok(r2); await save('rps', r2, `Deskripsi singkat ${m.nama}`); draw();

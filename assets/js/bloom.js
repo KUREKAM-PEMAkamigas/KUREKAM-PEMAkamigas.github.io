@@ -64,6 +64,15 @@ export function detect(text, hint = 'C') {
   }
   return null;
 }
+/** Bagian rumusan setelah kata kerja operasional: dipakai sebagai bahan narasi awal CPMK dan Sub-CPMK. */
+export function objekDari(text) {
+  const toks = String(text || '').trim().split(/\s+/).filter(Boolean), bersih = (t) => t.toLowerCase().replace(/[^a-z-]/g, '');
+  let i = 0;
+  while (i < toks.length && ABAI.has(bersih(toks[i]))) i++;
+  if (i < toks.length && INDEX[bersih(toks[i])]) i++;
+  const rest = toks.slice(i).join(' ').replace(/[.\s]+$/, '');
+  return rest.charAt(0).toLowerCase() + rest.slice(1);
+}
 export const lvNum = (code) => code && LEVELS[code] ? LEVELS[code].n : 0;
 export const badge = (code) => code && LEVELS[code]
   ? `<span class="tag bloom" style="--c:${LEVELS[code].c}" title="${DOMAIN[LEVELS[code].d]}: ${LEVELS[code].nama}">${code} ${LEVELS[code].nama}</span>`

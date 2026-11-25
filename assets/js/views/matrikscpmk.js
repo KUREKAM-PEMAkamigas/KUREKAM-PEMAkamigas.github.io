@@ -5,6 +5,7 @@ import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, toast, r
 import { imporObe } from '../obeimpor.js';
 import { RANAH_CPL, byProdi, cpmkProdi, rencanaCpmk, param, bokStandarProdi } from '../rules.js';
 import { detect, badge } from '../bloom.js';
+import { penyusun } from '../rumusan.js';
 import { head, formDrawer, ro, tanya, short, pratinjau, loadXLSX } from './ui.js';
 
 const WARNA = { S: '#10b981', P: '#0ea5e9', KU: '#8b5cf6', KK: '#f5a524' };
@@ -83,8 +84,9 @@ export function cpmkMatriksView(el) {
   const form = (g, c) => {
     const opsiMk = mkAll.filter(m => (m.cpl || []).includes(c.id) || (g && g.rec.some(r => r.mk === m.id))).sort((a, b) => a.smt - b.smt || a.nama.localeCompare(b.nama));
     const x = g ? { kode: g.kode, teks: g.teks, cpl: c.id, mk: g.rec.map(r => r.mk) } : { cpl: c.id, mk: [] };
-    formDrawer({ title: g ? 'Ubah ' + g.kode : 'CPMK baru untuk ' + c.kode, sub: short(c.teks, 120), obj: x,
-      fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: g ? g.kode : 'otomatis menurut urutan CPL' }, { k: 'teks', label: 'Rumusan CPMK (turunan dari ' + c.kode + ')', type: 'textarea', rows: 3, live: (v) => { const b = detect(v, 'C'); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional.'); } },
+    const py = penyusun({ jenis: 'cpmk', ranah: c.ranah, prak: false, smt: 0, konteks: [], basis: () => c.teks });
+    formDrawer({ onOpen: (dr) => py.pasang(dr), title: g ? 'Ubah ' + g.kode : 'CPMK baru untuk ' + c.kode, sub: short(c.teks, 120), obj: x,
+      fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: g ? g.kode : 'otomatis menurut urutan CPL' }, py.field, { k: 'teks', label: 'Rumusan CPMK (turunan dari ' + c.kode + ')', type: 'textarea', rows: 3, live: (v) => { const b = detect(v, 'C'); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional.'); } },
         { k: 'mk', label: 'Mata kuliah yang memuat CPMK ini (hanya MK yang dibebani ' + c.kode + ')', type: 'multi', opts: opsiMk.map(m => ({ v: m.id, t: `${m.kode} · ${short(m.nama, 34)} (S${m.smt})`, title: m.nama })), help: opsiMk.length ? 'Satu CPMK boleh dipakai banyak mata kuliah.' : 'Belum ada mata kuliah yang dibebani ' + c.kode + '. Bebankan dulu di menu Mata Kuliah & SKS.' }],
       onSave: async (o) => {
         if (!o.teks) return 'Rumusan wajib diisi.'; if (!(o.mk || []).length) return 'Pilih minimal satu mata kuliah. Bebankan ' + c.kode + ' pada mata kuliah dulu bila daftar kosong.';

@@ -7,6 +7,7 @@ import { badanRps, berkasDocxRps, namaBerkasRps } from '../rpsdok.js';
 import { badanSap, berkasDocxSap, namaBerkasSap } from '../sapdok.js';
 import { badanAcp, berkasDocxAcp, namaBerkasAcp } from '../acpdok.js';
 import { urutkanCpmk } from './matrikscpmk.js';
+import { penyusun } from '../rumusan.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
 import { kartuVerif, ikatVerif, formVerif, verifOf } from './verifrps.js';
@@ -20,6 +21,7 @@ import { rapikanEntri, normRiset, opsiRiset, riset, ringkasIntegrasi, teksRiset,
 
 const akad = (m) => !/magang|tugas akhir/i.test(m.kel);
 const hintOf = (m) => (+m.P > +m.T ? 'P' : 'C');
+const namaBahan = (m) => { const r = rpsOf(S, m.id); if (!r) return []; const l = (r.bahanList && r.bahanList.length ? r.bahanList : pecahBahan(r.bahan)).map(b => (b.t || '').trim()).filter(Boolean); return l; };
 const mine = (m) => ctx.role !== 'dosen' || S.tugas.some(t => t.mk === m.id && t.dosen === ctx.dosen);
 const live = (m) => (v) => { const b = detect(v, hintOf(m)); return b ? `${badge(b.code)} kata kerja "<b>${esc(b.verb)}</b>"${b.kabur ? ' <span class="st near">tidak terukur, ganti KKO</span>' : ''}` : (v.trim() ? badge(null) : 'Awali dengan kata kerja operasional.'); };
 const liveCpmk = (m) => (v) => {
@@ -63,10 +65,14 @@ export function cpmkView(el) {
       <div class="filters" style="margin-top:12px"><span class="st ${Math.abs(tot - 100) < 0.5 ? 'ok' : tot ? 'near' : 'na'}">Total bobot Sub-CPMK: ${fmt(tot)}%</span><span class="note">Level Sub-CPMK tidak boleh melampaui CPMK induknya, dan CPMK tidak melampaui CPL.</span></div></div>`;
     /* CPMK dipilih dari bank prodi (turunan CPL pada MK ini); dosen dapat mengusulkan CPMK baru di bawah salah satu CPL MK-nya */
     const bank = cpmkProdi(S, m.prodi).filter(g => (m.cpl || []).includes(g.cpl) && !cp.some(k => g.rec.some(r => r.id === k.id)));
+    const cplTeks = (id) => (S.cpl.find(c => c.id === id) || {}).teks || '';
+    const penyCpmk = penyusun({ jenis: 'cpmk', ranah: (cplMk[0] || {}).ranah, prak: +m.P > +m.T, smt: m.smt, konteks: namaBahan(m), basis: () => { const sel = document.querySelector('.drawer [name="cplBaru"]'); return cplTeks(sel ? sel.value : (cplMk[0] || {}).id); } });
     const cForm = () => formDrawer({ title: 'Tambah CPMK pada ' + m.nama, sub: 'Pilih CPMK yang sesuai dari daftar prodi, atau usulkan yang baru', obj: { pilih: [], cplBaru: cplMk[0] && cplMk[0].id },
       fields: [{ k: 'pilih', label: 'CPMK prodi yang dimuat MK ini (turunan dari CPL MK ini, boleh lebih dari satu)', type: 'multi', opts: bank.map(g => ({ v: g.kunci, t: `${g.kode} · ${short(g.teks, 70)}`, title: g.teks })), help: bank.length ? 'Kode CPMK sama di semua mata kuliah yang memuatnya.' : 'Belum ada CPMK prodi yang tersisa untuk CPL mata kuliah ini. Usulkan CPMK baru di bawah.' },
         { k: 'cplBaru', label: 'Usulan CPMK baru: diturunkan dari CPL', type: 'select', opts: cplMk.map(c => ({ v: c.id, t: `${c.kode} · ${short(c.teks, 60)}` })) },
+        penyCpmk.field,
         { k: 'teks', label: 'Usulan CPMK baru: rumusan (kosongkan bila hanya memilih)', type: 'textarea', rows: 3, live: liveCpmk(m) }],
+      onOpen: (dr) => penyCpmk.pasang(dr),
       onSave: async (o) => {
         if (!(o.pilih || []).length && !o.teks) return 'Pilih CPMK dari daftar atau tulis usulan CPMK baru.';
         const baru = [];
@@ -74,11 +80,14 @@ export function cpmkView(el) {
         if (o.teks) baru.push({ id: uid(m.id + '-CPMK'), mk: m.id, prodi: m.prodi, kode: kodeBerikut(S, 'cpmk', m.prodi, { pakai: [] }), teks: o.teks, cpl: [o.cplBaru], ...(can('susun', m) ? {} : { usul: true }) });
         await saveMany('cpmk', baru, `Tambah CPMK pada ${m.nama}`); if (can('susun', m)) await urutkanCpmk(m.prodi); draw();
       } });
-    const cEdit = (x) => formDrawer({ title: 'Ubah ' + x.kode, sub: m.nama, obj: x,
-      fields: [...(x.usul || can('susun', m) && !S.cpmk.some(k => k.id !== x.id && k.kode === x.kode) ? [{ k: 'teks', label: 'Rumusan CPMK', type: 'textarea', live: liveCpmk(m) }] : []), { k: 'alasanLevel', label: 'Alasan bila level di luar rentang semester (hanya bila perlu)', type: 'textarea', rows: 2, ph: 'Kosongkan bila level sudah sesuai', help: `Rentang anjuran semester ${m.smt}: ${ANJURAN_SMT[m.smt] ? 'C' + ANJURAN_SMT[m.smt][0] + '–C' + ANJURAN_SMT[m.smt][1] : '–'}. Selisih 2 level atau lebih dari rentang wajib diberi alasan agar RPS dapat diajukan. Rumusan CPMK yang dipakai banyak mata kuliah diubah oleh prodi di menu Matriks CPL–CPMK.` }],
-      onSave: async (o) => { await save('cpmk', o, `Simpan ${o.kode} ${m.nama}`); draw(); } });
+    const penyEdit = (x) => { const cl = S.cpl.find(c => c.id === (x.cpl || [])[0]) || {}; return penyusun({ jenis: 'cpmk', ranah: cl.ranah, prak: +m.P > +m.T, smt: m.smt, konteks: namaBahan(m), basis: () => cl.teks }); };
+    const cEdit = (x) => { const py = penyEdit(x); return formDrawer({ title: 'Ubah ' + x.kode, sub: m.nama, obj: x, onOpen: (dr) => { if (dr.querySelector('#rm-lv')) py.pasang(dr); },
+      fields: [...(x.usul || can('susun', m) && !S.cpmk.some(k => k.id !== x.id && k.kode === x.kode) ? [penyEdit(x).field, { k: 'teks', label: 'Rumusan CPMK', type: 'textarea', live: liveCpmk(m) }] : []), { k: 'alasanLevel', label: 'Alasan bila level di luar rentang semester (hanya bila perlu)', type: 'textarea', rows: 2, ph: 'Kosongkan bila level sudah sesuai', help: `Rentang anjuran semester ${m.smt}: ${ANJURAN_SMT[m.smt] ? 'C' + ANJURAN_SMT[m.smt][0] + '–C' + ANJURAN_SMT[m.smt][1] : '–'}. Selisih 2 level atau lebih dari rentang wajib diberi alasan agar RPS dapat diajukan. Rumusan CPMK yang dipakai banyak mata kuliah diubah oleh prodi di menu Matriks CPL–CPMK.` }],
+      onSave: async (o) => { await save('cpmk', o, `Simpan ${o.kode} ${m.nama}`); draw(); } }); };
+    const penyS = (x) => { const par = S.cpmk.find(c => c.id === x.cpmk) || {}, b = detect(par.teks || '', 'C'); return penyusun({ jenis: 'sub', ranah: 'K', prak: +m.P > +m.T, smt: m.smt, topik: namaBahan(m), basis: () => par.teks, batas: b ? b.code : null }); };
     const sForm = (x) => formDrawer({ title: x.id ? 'Ubah ' + x.kode : 'Sub-CPMK baru', sub: m.nama, obj: x,
-      fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode }, { k: 'bobot', label: 'Bobot penilaian (%)', type: 'number' }, { k: 'teks', label: 'Rumusan Sub-CPMK (kemampuan akhir tahap belajar)', type: 'textarea', live: live({ T: 1, P: 0 }) }],
+      fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode }, { k: 'bobot', label: 'Bobot penilaian (%)', type: 'number' }, penyS(x).field, { k: 'teks', label: 'Rumusan Sub-CPMK (kemampuan akhir tahap belajar)', type: 'textarea', live: live({ T: 1, P: 0 }) }],
+      onOpen: (dr) => penyS(x).pasang(dr),
       onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'sub', m.prodi, { cpmk: S.cpmk.find(c => c.id === x.cpmk) }); o.id = o.id || uid(x.cpmk + '-S'); o.mk = m.id; o.prodi = m.prodi; o.bobot = +o.bobot || 0; await save('sub', o, `Simpan ${o.kode} ${m.nama}`); draw(); },
       onDelete: x.id ? async () => { await remove('sub', x.id, `Hapus ${x.kode}`); draw(); } : null });
     const ac = R.querySelector('#add-c'); if (ac) ac.onclick = () => cForm();

@@ -55,6 +55,11 @@ export function cpmkView(el) {
     if (!m) { R.innerHTML = '<div class="card empty">Pilih mata kuliah.</div>'; return; }
     if (mkTanpaCpl(m)) { R.innerHTML = `<div class="card">${head(esc(m.nama), `Semester ${m.smt} · ${m.T}T + ${m.P}P · CPL dibebankan: belum ada`, 'spark', '#0ea5e9', ro())}<div class="ribbon bad">${icon('alert')} <b>Belum dapat diisi.</b> ${PESAN_KUNCI_CPL}</div></div>`; return; }
     const edS = can('rps', { prodi: m.prodi, mk: m.id }), edC = can('susun', m) || edS;
+    const rr = rpsOf(S, m.id), bkl = rr ? (rr.bahanList && rr.bahanList.length ? rr.bahanList : pecahBahan(rr.bahan)) : [];
+    const kodeS = (id) => ((S.sub.find(x => x.id === id) || {}).kode || '').replace(/^sub-cpmk/i, 'S');
+    const bkHtml = `<h3 style="margin:22px 0 6px">Bahan kajian</h3><div class="small muted" style="margin-bottom:8px">Diisi setelah Sub-CPMK. Kata kunci dan pustaka diisi di menu Deskripsi Singkat MK dan dipakai generator di sini.${rr && (rr.kataKunci || []).length ? '' : ' <b>Kata kunci belum diisi</b>, sehingga generator belum dapat mengusulkan.'}</div>
+      ${bkl.length ? bkl.map((b, i) => `<div class="sub"><span class="small muted">${i + 1}.</span><span>${esc(b.t)}</span><span>${(b.sub || []).map(id => `<span class="st ok">${esc(kodeS(id))}</span>`).join(' ') || '<span class="st near">belum dipetakan</span>'}</span></div>`).join('') : '<div class="empty">Belum ada bahan kajian.</div>'}
+      ${edS ? `<div class="filters" style="margin-top:8px"><button class="btn sm pri" id="ed-bk">${icon('edit')} ${bkl.length ? 'Ubah' : 'Isi'} bahan kajian</button></div>` : ''}`;
     const cp = S.cpmk.filter(c => c.mk === m.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })), cplMk = (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean);
     const tot = S.sub.filter(s => s.mk === m.id).reduce((a, s) => a + (+s.bobot || 0), 0);
     R.innerHTML = `<div class="card">${head(esc(m.nama), `${m.inti ? 'Mata kuliah inti · ' : ''}Semester ${m.smt} · ${m.T}T + ${m.P}P · CPL dibebankan: ${cplMk.map(c => c.kode).join(', ') || 'belum ada'}`, 'spark', '#0ea5e9', edC ? `<button class="btn pri sm" id="add-c">${icon('plus')} CPMK</button>` : ro())}
@@ -62,7 +67,7 @@ export function cpmkView(el) {
       ${cp.map(c => { const b = detect(c.teks, hintOf(m)); const ss = S.sub.filter(s => s.cpmk === c.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })); return `<div class="cpmk"><div class="cpmk-h" data-c="${c.id}"><span class="orbsm">${c.kode.replace('CPMK', 'C')}</span><div><b>${esc(c.teks)}</b><div class="small muted">Mendukung ${(c.cpl || []).map(id => (S.cpl.find(x => x.id === id) || {}).kode).join(', ') || '–'} · PI: ${(S.pi || []).filter(p => (p.cpmk || []).includes(c.id)).map(p => p.kode).join(', ') || (m.inti ? '<span class="st bad">belum ada</span>' : '–')}</div></div>${b ? badge(b.code) : badge(null)} ${b ? tagRentang(m, b) : ''}${edC ? `<span class="aksi"><button class="btn sm btn-ic" data-ec="${c.id}">${icon('edit')} Alasan${c.usul ? ' / rumusan' : ''}</button><button class="btn sm btn-ic danger" data-dc="${c.id}">${icon('trash')} Lepas dari MK</button></span>` : ''}</div>
         <div class="subs">${ss.map(s => { const sb = detect(s.teks, 'C'); return `<div class="sub" data-s="${s.id}"><span class="small muted">${s.kode}</span><span>${esc(s.teks)}</span>${sb ? badge(sb.code) : badge(null)}<b>${fmt(s.bobot)}%</b>${edC ? `<span class="aksi"><button class="btn sm btn-ic" data-es="${s.id}">${icon('edit')} Ubah</button><button class="btn sm btn-ic danger" data-ds="${s.id}">${icon('trash')} Hapus</button></span>` : ''}</div>`; }).join('')}
         ${edC ? `<button class="btn ghost sm" data-adds="${c.id}">${icon('plus')} Sub-CPMK</button>` : ''}</div></div>`; }).join('') || '<div class="empty">Belum ada CPMK.</div>'}
-      <div class="filters" style="margin-top:12px"><span class="st ${Math.abs(tot - 100) < 0.5 ? 'ok' : tot ? 'near' : 'na'}">Total bobot Sub-CPMK: ${fmt(tot)}%</span><span class="note">Level Sub-CPMK tidak boleh melampaui CPMK induknya, dan CPMK tidak melampaui CPL.</span></div></div>`;
+      <div class="filters" style="margin-top:12px"><span class="st ${Math.abs(tot - 100) < 0.5 ? 'ok' : tot ? 'near' : 'na'}">Total bobot Sub-CPMK: ${fmt(tot)}%</span><span class="note">Level Sub-CPMK tidak boleh melampaui CPMK induknya, dan CPMK tidak melampaui CPL.</span></div>${bkHtml}</div>`;
     /* CPMK dipilih dari bank prodi (turunan CPL pada MK ini); dosen dapat mengusulkan CPMK baru di bawah salah satu CPL MK-nya */
     const bank = cpmkProdi(S, m.prodi).filter(g => (m.cpl || []).includes(g.cpl) && !cp.some(k => g.rec.some(r => r.id === k.id)));
     const cplTeks = (id) => (S.cpl.find(c => c.id === id) || {}).teks || '';
@@ -90,6 +95,18 @@ export function cpmkView(el) {
       onOpen: (dr) => penyS(x).pasang(dr),
       onSave: async (o) => { if (!o.teks) return 'Rumusan wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'sub', m.prodi, { cpmk: S.cpmk.find(c => c.id === x.cpmk) }); o.id = o.id || uid(x.cpmk + '-S'); o.mk = m.id; o.prodi = m.prodi; o.bobot = +o.bobot || 0; const baruSub = !x.id; await save('sub', o, `Simpan ${o.kode} ${m.nama}`); if (baruSub) { const rr = rpsOf(S, m.id); if (rr) { let ubah = false; rr.pertemuan.forEach(p => { if (p.ujian && !(p.sub || []).includes(o.id)) { p.sub = [...(p.sub || []), o.id]; ubah = true; } }); if (ubah) await save('rps', rr, `Sub-CPMK baru masuk UTS dan UAS ${m.nama}`); } } draw(); },
       onDelete: x.id ? async () => { await remove('sub', x.id, `Hapus ${x.kode}`); draw(); } : null });
+    const bkBtn = R.querySelector('#ed-bk');
+    if (bkBtn) bkBtn.onclick = () => {
+      const subs = S.sub.filter(x => x.mk === m.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
+      const subOpt = subs.map(x => ({ v: x.id, t: x.kode.replace(/^sub-cpmk/i, 'S'), title: x.teks }));
+      const base = rpsOf(S, m.id) || blankRps(m), usul = usulBahan(m, base, subs);
+      formDrawer({ title: 'Bahan kajian', sub: `${m.nama} · semester ${m.smt}`, obj: { _bahan: (base.bahanList && base.bahanList.length ? base.bahanList : pecahBahan(base.bahan)) }, full: true,
+        fields: [{ k: '_bahan', label: 'Bahan kajian (satu kotak per nomor; boleh ditambah, diubah, atau dihapus)', type: 'listsub', tambah: 'Tambah bahan kajian', sub: subOpt, ph: 'Tulis satu bahan kajian', paket: usul, paketLabel: 'Usulkan dari kata kunci', help: usul.length ? 'Tombol Usulkan mengelompokkan kata kunci dan pustaka dari menu Deskripsi Singkat MK menurut Sub-CPMK. Sunting hasilnya. Klik Sub-CPMK di bawah tiap kotak untuk memetakan.' : 'Isi kata kunci (dan pastikan Sub-CPMK ada) agar tombol usulan tersedia. Klik Sub-CPMK di bawah tiap kotak untuk memetakan.' }],
+        onSave: async (o) => {
+          const r2 = { ...(rpsOf(S, m.id) || blankRps(m)) }; r2.bahanList = (o._bahan || []).filter(b => String(b.t || '').trim()); r2.bahan = gabungBahan(r2.bahanList);
+          turunkanDok(r2); await save('rps', r2, `Bahan kajian ${m.nama}`); draw();
+        } });
+    };
     const ac = R.querySelector('#add-c'); if (ac) ac.onclick = () => cForm();
     if (edC) {
       R.querySelectorAll('[data-ec]').forEach(b => b.onclick = () => cEdit({ ...S.cpmk.find(c => c.id === b.dataset.ec) }));
@@ -129,7 +146,7 @@ export function rpsView(el) {
       ${alasanRps(m, r) ? `<div style="margin-top:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px"><b>Validasi usulan.</b> RPS belum dapat diajukan atau disahkan: ${esc(alasanRps(m, r))}.${r && r.usulTinjau && ed ? ` Baca seluruh pertemuan, sunting bila perlu, lalu <button class="btn sm pri" id="tinjau">Saya sudah membaca dan menyetujui isi RPS</button>` : ''}${usulanMk(m.id).length ? ' Usulan CPMK dan Sub-CPMK disetujui Prodi di Asisten Kurikulum.' : ''}</div>` : ''}
       ${kartuVerif(m)}
       <div class="filters" style="margin-top:12px">
-        ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Bahan kajian & jam tugas</button>` : ''}
+        ${ed ? `<button class="btn sm" id="ed-info">${icon('edit')} Jam tugas</button>` : ''}
         <button class="btn sm vio" id="asis">${icon('spark')} Asisten RPS${(() => { const k = periksaRps(m, r).filter(c => c.k !== 'ok').length; return k ? ` · ${k} saran` : ''; })()}</button>
         <button class="btn sm" id="print">${icon('download')} Cetak / Unduh RPS</button>
         <button class="btn sm vio" id="gen-dok">${icon('spark')} Generator SAP & ACP${(r.sapStatus === 'disahkan' ? '' : ' · SAP ' + (r.sapStatus || 'draf')) + (r.acpStatus === 'disahkan' ? '' : ' · ACP ' + (r.acpStatus || 'draf'))}</button>
@@ -147,12 +164,9 @@ export function rpsView(el) {
     if (ed) {
       q('#ed-info').onclick = () => {
         const tmPert = (+m.T || 0) * P.menitTeori + (+m.P || 0) * durasi(m, P), jd = jamDefault(m, tmPert);
-        const subOpt = subs.map(s => ({ v: s.id, t: s.kode.replace(/^sub-cpmk/i, 'S'), title: s.teks }));
-        const bahan = (r.bahanList && r.bahanList.length ? r.bahanList : pecahBahan(r.bahan));
-        const obj = { ...r, _bahan: bahan, jamTerstruktur: r.jamTerstruktur == null ? jd.terstruktur : r.jamTerstruktur, jamMandiri: r.jamMandiri == null ? jd.mandiri : r.jamMandiri };
-        formDrawer({ title: 'Bahan kajian dan jam tugas', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
-          fields: [{ k: '_bahan', label: 'Bahan kajian (satu kotak per nomor; boleh ditambah, diubah, atau dihapus)', type: 'listsub', tambah: 'Tambah bahan kajian', sub: subOpt, ph: 'Tulis satu bahan kajian', help: 'Klik Sub-CPMK di bawah tiap bahan kajian untuk memetakan bahan kajian terhadap Sub-CPMK.' },
-            { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester) · wajib', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester) · wajib', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' },
+        const obj = { ...r, jamTerstruktur: r.jamTerstruktur == null ? jd.terstruktur : r.jamTerstruktur, jamMandiri: r.jamMandiri == null ? jd.mandiri : r.jamMandiri };
+        formDrawer({ title: 'Jam tugas mahasiswa', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
+          fields: [{ k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester) · wajib', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester) · wajib', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' },
             { k: '_jam', type: 'html', html: `<div class="jamtot" id="jam-tot"></div><button type="button" class="btn sm" id="jam-auto" style="margin-top:8px">${icon('spark')} Isi ulang otomatis (170 menit × 16 per SKS)</button>` }],
           onOpen: (dr) => {
             const g = (n) => +dr.querySelector(`[name="${n}"]`).value || 0, el = dr.querySelector('#jam-tot');
@@ -163,8 +177,7 @@ export function rpsView(el) {
           },
           onSave: async (o) => {
             if (o.jamTerstruktur == null || o.jamMandiri == null) return 'Tugas terstruktur dan tugas mandiri wajib diisi (menit per semester).';
-            o.bahanList = o._bahan; o.bahan = gabungBahan(o._bahan);
-            ['_bahan', '_jam'].forEach(k => delete o[k]);
+            ['_jam'].forEach(k => delete o[k]);
             turunkanDok(o); await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw();
           } });
       };
@@ -250,6 +263,21 @@ function cetakRps(m, r) {
   void closeDrawer;
 }
 
+
+
+/** Usulan bahan kajian: kata kunci dikelompokkan menurut Sub-CPMK (kemiripan kata, sisanya bergilir). Hanya usulan. */
+export function usulBahan(m, r, subs) {
+  const kunci = ((r && r.kataKunci) || []).map(x => String(x).trim()).filter(Boolean);
+  if (!kunci.length || !subs.length) return [];
+  const tok = (t) => String(t).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+  const grup = subs.map(() => []);
+  const sisa = [];
+  kunci.forEach(k => { const tk = tok(k); let best = -1, bi = -1; subs.forEach((x, i) => { const ts = tok(x.teks); const sc = tk.filter(w => ts.some(y => y.startsWith(w.slice(0, 5)) || w.startsWith(y.slice(0, 5)))).length; if (sc > best) { best = sc; bi = i; } }); if (best > 0) grup[bi].push(k); else sisa.push(k); });
+  let g = 0; sisa.forEach(k => { const i = grup.findIndex(a => !a.length); if (i >= 0) grup[i].push(k); else { grup[g % grup.length].push(k); g++; } });
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const pustaka = pecahPustaka(r.pustaka, r.pustakaPendukung).utama.filter(Boolean);
+  return grup.map((a, i) => a.length ? { t: `${cap(a.join(', '))}: konsep, karakteristik, dan penerapannya${(r.penerapan || '').trim() ? ' pada ' + r.penerapan.trim().replace(/[.\s]+$/, '').replace(/^./, c => c.toLowerCase()) : ''}${pustaka.length ? ` (acuan: pustaka (1))` : ''}`, sub: [subs[i].id] } : null).filter(Boolean);
+}
 
 /* ================= Deskripsi Singkat Mata Kuliah (sumber isian untuk generator) ================= */
 const bagianDesk = (r) => {

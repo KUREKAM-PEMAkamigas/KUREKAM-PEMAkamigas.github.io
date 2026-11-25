@@ -3,6 +3,7 @@
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, openDrawer, addLog } from './app.js';
 import { prodiTag } from './views/ui.js';
 import { mkTanpaCpl } from './rules.js';
+import { pecahPustaka, gabungUtama, gabungPend, pecahBahan, gabungBahan } from './rpsisi.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const rapi = (s) => String(s == null ? '' : s).replace(/ /g, ' ').replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
@@ -118,7 +119,8 @@ function susun(o, mk) {
   const bobotTot = per.reduce((a, p) => a + (+p.bobot || 0), 0); if (per.length && Math.abs(bobotTot - 100) > 0.5) pes.push(`Total bobot penilaian ${bobotTot}% (seharusnya 100%).`);
   if (o.T != null && (+o.T !== +mk.T || +o.P !== +mk.P)) pes.push(`Bobot SKS pada RPS ${o.T}T+${o.P}P berbeda dengan MK rancangan ${mk.T}T+${mk.P}P.`);
   sub.forEach(s => delete s._n);
-  const rps = { id: mk.id, mk: mk.id, prodi: mk.prodi, deskripsi: o.deskripsi, bahan: o.bahan, pustaka: o.pustaka, penelitian: '', pkm: '', pengampuRps: o.pengampu, syarat: o.syarat, pertemuan: per, status: 'draf', oleh: 'Impor RPS Word', tgl: new Date().toISOString().slice(0, 10), sumber: o.file };
+  const pu = pecahPustaka(o.pustaka), bl = pecahBahan(o.bahan);
+  const rps = { id: mk.id, mk: mk.id, prodi: mk.prodi, deskripsi: o.deskripsi, bahan: bl.length ? gabungBahan(bl) : o.bahan, bahanList: bl, pustaka: gabungUtama(pu.utama), pustakaPendukung: gabungPend(pu.pend), penelitian: '', pkm: '', pengampuRps: o.pengampu, syarat: o.syarat, pertemuan: per, status: 'draf', oleh: 'Impor RPS Word', tgl: new Date().toISOString().slice(0, 10), sumber: o.file };
   return { cpmk, sub, rps, cplIds, pes };
 }
 

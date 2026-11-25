@@ -720,3 +720,24 @@ details.dtl { border-top: 1px solid rgba(24,35,58,.08); padding: 8px 0; } detail
 .btn:disabled { opacity: .6; cursor: progress; }
 .savebar { position: sticky; bottom: 0; z-index: 30; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 18px; padding: 12px 16px; border-radius: 14px; background: var(--card-solid, #fff); box-shadow: 0 -6px 24px rgba(15, 23, 42, .14); }
 .savebar .sp { flex: 1; }
+
+/* ---- Editor RPS layar penuh dan daftar kotak isian ---- */
+.drawer.full { width: 100%; max-width: none; padding: 22px max(16px, 5vw) 28px; font-size: 15px; }
+.drawer.full > * { max-width: 1120px; margin-left: auto; margin-right: auto; }
+.drawer.full .field label { font-size: 13px; }
+.drawer.full .inp, .drawer.full textarea.inp { font-size: 15px; line-height: 1.5; }
+.lbox { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--card-solid); }
+.lrows { display: flex; flex-direction: column; gap: 8px; }
+.lrow { display: flex; gap: 8px; align-items: flex-start; }
+.lrow .lno { min-width: 38px; padding-top: 9px; font-weight: 800; color: var(--muted); text-align: right; font-size: 13px; }
+.lrow .lcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.lrow textarea.lt { resize: vertical; overflow: hidden; min-height: 38px; }
+.lrow .lp { flex: 3; } .lrow .lb { flex: 2; }
+.lrow .ld { flex: none; margin-top: 2px; }
+.lsub { gap: 4px; } .lsub .cp { padding: 2px 9px; font-size: 11.5px; }
+.lact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.lact .cp { font-weight: 600; background: var(--card-solid); }
+.subinfo { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.subinfo .si { border-left: 4px solid var(--sky); background: rgba(14, 165, 233, .08); border-radius: 8px; padding: 8px 12px; font-size: 14px; line-height: 1.5; }
+.jamtot { border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+@media (max-width: 640px) { .lrow .lno { min-width: 26px; } .lrow { flex-wrap: wrap; } .lrow .lp, .lrow .lb { flex: 1 1 100%; } }

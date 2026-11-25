@@ -185,7 +185,7 @@ function load(d) {
 export function openDrawer(html, onMount, wide) {
   closeDrawer();
   const bg = document.createElement('div'); bg.className = 'drawer-bg'; bg.id = 'drawer';
-  bg.innerHTML = `<div class="drawer ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div>`;
+  bg.innerHTML = `<div class="drawer ${wide === 'full' ? 'full' : wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div>`;
   bg.addEventListener('click', e => { if (e.target === bg) closeDrawer(); });
   document.body.appendChild(bg);
   bg.querySelectorAll('[data-close]').forEach(x => { x.onclick = closeDrawer; });

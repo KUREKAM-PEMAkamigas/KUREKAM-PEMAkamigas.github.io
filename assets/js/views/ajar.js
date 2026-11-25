@@ -13,6 +13,7 @@ import { kartuVerif, ikatVerif, formVerif, verifOf } from './verifrps.js';
 import { bukaGeneratorDok, turunkanDok } from './dokgen.js';
 import { detect, badge, ANJURAN_SMT, selisihRentang, kkoSemester } from '../bloom.js';
 import { kodeBerikut, cpmkProdi, mkTanpaCpl, PESAN_KUNCI_CPL, INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
+import { pecahBahan, gabungBahan, pecahPustaka, gabungUtama, gabungPend, opsiPustaka, pecahMateri, gabungMateri, pecahBaris, pecahIndikator, pecahMetode, METODE_DEF, DARING_DEF, tatapDef, jamDefault, kenaliSyarat } from '../rpsisi.js';
 import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, stTag, bar, pctColor, opts } from './ui.js';
 import { rapikanEntri, normRiset, opsiRiset, riset, ringkasIntegrasi, teksRiset, jenisInteg, kecocokan, labelRiset, BENTUK } from '../riset.js';
 
@@ -134,11 +135,55 @@ export function rpsView(el) {
       </tbody></table></div></div></div>`;
     const q = (s) => R.querySelector(s);
     if (ed) {
-      q('#ed-info').onclick = () => formDrawer({ title: 'Deskripsi dan pustaka', sub: m.nama, obj: r, fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 4 }, { k: 'bahan', label: 'Bahan kajian', type: 'textarea', rows: 3 }, { k: 'syarat', label: 'Mata kuliah syarat', type: 'textarea', rows: 1 }, { k: 'pustaka', label: 'Pustaka utama (bila tidak dipisah, tulis utama dan pendukung di sini)', type: 'textarea', rows: 5 }, { k: 'pustakaPendukung', label: 'Pustaka pendukung (boleh kosong)', type: 'textarea', rows: 3 }, { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester)', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester)', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' }], onSave: async (o) => { turunkanDok(o); await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw(); } });
+      q('#ed-info').onclick = () => {
+        const tmPert = (+m.T || 0) * P.menitTeori + (+m.P || 0) * durasi(m, P), jd = jamDefault(m, tmPert);
+        const subOpt = subs.map(s => ({ v: s.id, t: s.kode.replace(/^sub-cpmk/i, 'S'), title: s.teks }));
+        const bahan = (r.bahanList && r.bahanList.length ? r.bahanList : pecahBahan(r.bahan));
+        const kandidat = S.mk.filter(x => x.id !== m.id && +x.smt <= +m.smt && x.prodi === m.prodi).sort((x, y) => (+x.smt - +y.smt) || String(x.nama).localeCompare(y.nama));
+        const idSyarat = (r.syaratIds && r.syaratIds.length ? r.syaratIds : kenaliSyarat(r.syarat, kandidat)).filter(id => kandidat.some(x => x.id === id));
+        const pu = pecahPustaka(r.pustaka, r.pustakaPendukung);
+        const obj = { ...r, _bahan: bahan, _syarat: idSyarat, _pusU: pu.utama, _pusP: pu.pend, jamTerstruktur: r.jamTerstruktur == null ? jd.terstruktur : r.jamTerstruktur, jamMandiri: r.jamMandiri == null ? jd.mandiri : r.jamMandiri };
+        const lamaSyarat = String(r.syarat || '').trim() && !idSyarat.length;
+        formDrawer({ title: 'Deskripsi dan pustaka', sub: `${m.nama} · semester ${m.smt} · ${m.T}T + ${m.P}P`, obj, full: true,
+          fields: [{ k: 'deskripsi', label: 'Deskripsi mata kuliah', type: 'textarea', rows: 9 },
+            { k: '_bahan', label: 'Bahan kajian (satu kotak per nomor; boleh ditambah, diubah, atau dihapus)', type: 'listsub', tambah: 'Tambah bahan kajian', sub: subOpt, ph: 'Tulis satu bahan kajian', help: 'Klik Sub-CPMK di bawah tiap bahan kajian untuk memetakan bahan kajian terhadap Sub-CPMK.' },
+            { k: '_syarat', label: 'Mata kuliah syarat (opsional; klik untuk memilih, semester di bawahnya atau semester berjalan)', type: 'multi', opts: kandidat.map(x => ({ v: x.id, t: `${x.nama} (smt ${x.smt})`, title: `${x.kode} · ${x.nama}` })), help: lamaSyarat ? `Isian lama: “${esc(r.syarat)}”. Pilih ulang dari daftar; bila tidak memilih, isian lama dipertahankan.` : 'Kosongkan bila tidak ada mata kuliah syarat.' },
+            { k: '_pusU', label: 'Pustaka utama (satu kotak per pustaka; nomor otomatis)', type: 'list', tambah: 'Tambah pustaka utama', nomor: (i) => `(${i + 1})`, ph: 'Penulis, tahun, judul, edisi, penerbit' },
+            { k: '_pusP', label: 'Pustaka pendukung (boleh kosong)', type: 'list', tambah: 'Tambah pustaka pendukung', nomor: (i) => `(S${i + 1})`, ph: 'Penulis, tahun, judul, penerbit atau tautan' },
+            { k: 'jamTerstruktur', label: 'Tugas terstruktur (menit per semester) · wajib', type: 'number' }, { k: 'jamMandiri', label: 'Tugas mandiri (menit per semester) · wajib', type: 'number' }, { k: 'jamTerbimbing', label: 'Tugas terbimbing (menit per semester, boleh kosong)', type: 'number' },
+            { k: '_jam', type: 'html', html: `<div class="jamtot" id="jam-tot"></div><button type="button" class="btn sm" id="jam-auto" style="margin-top:8px">${icon('spark')} Isi ulang otomatis (45 jam per SKS)</button>` }],
+          onOpen: (dr) => {
+            const g = (n) => +dr.querySelector(`[name="${n}"]`).value || 0, el = dr.querySelector('#jam-tot');
+            const up = () => { const tot = jd.tm + g('jamTerstruktur') + g('jamMandiri') + g('jamTerbimbing'), sel = tot - jd.target; el.innerHTML = `Tatap muka 16 pertemuan <b>${fmt(jd.tm)}</b> menit + tugas = <b>${fmt(tot)} menit (${fmt(tot / 60, 1)} jam)</b>. Target ${jd.sks} SKS × 45 jam = ${fmt(jd.target)} menit (${fmt(jd.target / 60, 1)} jam). ${Math.abs(sel) <= 30 ? '<span class="st ok">Sesuai</span>' : `<span class="st near">${sel > 0 ? 'Lebih' : 'Kurang'} ${fmt(Math.abs(sel))} menit</span>`}`; };
+            dr.querySelectorAll('[name^="jam"]').forEach(i => i.addEventListener('input', up));
+            dr.querySelector('#jam-auto').onclick = () => { dr.querySelector('[name="jamTerstruktur"]').value = jd.terstruktur; dr.querySelector('[name="jamMandiri"]').value = jd.mandiri; up(); };
+            up();
+          },
+          onSave: async (o) => {
+            if (o.jamTerstruktur == null || o.jamMandiri == null) return 'Tugas terstruktur dan tugas mandiri wajib diisi (menit per semester).';
+            o.bahanList = o._bahan; o.bahan = gabungBahan(o._bahan);
+            o.syaratIds = o._syarat; if (o._syarat.length) o.syarat = o._syarat.map(id => (kandidat.find(x => x.id === id) || {}).nama).filter(Boolean).join('; '); else if (!lamaSyarat) o.syarat = '';
+            o.pustaka = gabungUtama(o._pusU); o.pustakaPendukung = gabungPend(o._pusP);
+            ['_bahan', '_syarat', '_pusU', '_pusP', '_jam'].forEach(k => delete o[k]);
+            turunkanDok(o); await save('rps', o, `Ubah deskripsi RPS ${m.nama}`); draw();
+          } });
+      };
       R.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => {
-        const i = +tr.dataset.i, p = r.pertemuan[i]; const flat = { ...p, ...Object.fromEntries(Object.entries(p.sap || {}).map(([k, v]) => ['sap_' + k, v])) };
-        formDrawer({ title: `Pertemuan ${p.m}${p.ujian ? ' · ' + p.ujian : ''}`, sub: `${m.nama} · durasi tatap muka ${m.T ? m.T * P.menitTeori + ' menit teori' : ''}${m.T && m.P ? ' + ' : ''}${m.P ? m.P * durasi(m, P) + ' menit praktik' : ''}`, obj: flat, wide: true,
-          fields: [{ k: 'sub', label: 'Sub-CPMK yang dicapai', type: 'multi', opts: subs.map(s => ({ v: s.id, t: s.kode.replace(/^sub-cpmk/i, 'S'), title: s.teks })) }, { k: 'materi', label: 'Bahan kajian / materi', type: 'textarea', rows: 2 }, { k: 'metode', label: 'Metode dan bentuk pembelajaran', full: true }, { k: 'judul', label: 'Judul topik untuk SAP (boleh kosong, terisi dari poin pertama materi)', full: true }, { k: 'indikator', label: 'Indikator penilaian (satu per baris; tiga per Sub-CPMK, nomor otomatis)', type: 'textarea', rows: 4 }, { k: 'asesmen', label: 'Kriteria dan teknik asesmen', type: 'textarea', rows: 2 }, { k: 'tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'textarea', rows: 2 }, { k: 'daring', label: 'Daring (bila ada)', type: 'textarea', rows: 2 }, { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
+        const i = +tr.dataset.i, p = r.pertemuan[i];
+        const tmP = (+m.T || 0) * P.menitTeori + (+m.P || 0) * durasi(m, P), pm = pecahMateri(p.materi), opsPus = opsiPustaka(r);
+        const infoSub = (ids) => ids.length ? ids.map(id => { const s = S.sub.find(x => x.id === id); if (!s) return ''; const c = S.cpmk.find(x => x.id === s.cpmk); return `<div class="si"><b>${esc(s.kode.replace(/^sub-cpmk/i, 'S'))}</b>${c ? ' · ' + esc(c.kode) : ''}${s.bobot != null ? ` · bobot ${fmt(s.bobot, 1)}%` : ''}<br>${esc(s.teks)}</div>`; }).join('') + `<div class="small muted">Pastikan materi, metode, dan indikator di bawah sesuai dengan rumusan Sub-CPMK ini.</div>` : '<div class="small muted">Klik Sub-CPMK untuk melihat isinya.</div>';
+        const flat = { ...p, ...Object.fromEntries(Object.entries(p.sap || {}).map(([k, v]) => ['sap_' + k, v])), _isi: pm.isi, _pus: pm.pus, _metode: pecahMetode(p.metode), _indikator: pecahIndikator(p.indikator), _tatap: pecahBaris(p.tatap), _daring: pecahBaris(p.daring) };
+        formDrawer({ title: `Pertemuan ${p.m}${p.ujian ? ' · ' + p.ujian : ''}`, sub: `${m.nama} · durasi tatap muka ${m.T ? m.T * P.menitTeori + ' menit teori' : ''}${m.T && m.P ? ' + ' : ''}${m.P ? m.P * durasi(m, P) + ' menit praktik' : ''}`, obj: flat, full: true,
+          fields: [{ k: 'sub', label: 'Sub-CPMK yang dicapai', type: 'multi', opts: subs.map(s => ({ v: s.id, t: s.kode.replace(/^sub-cpmk/i, 'S'), title: s.teks })), info: infoSub },
+            { k: '_isi', label: 'Materi Pembelajaran', type: 'textarea', rows: 8, help: 'Ketik, atau tempel dari RPS lama. Pustaka dipilih di kotak berikutnya, tidak perlu diketik di sini.' },
+            { k: '_pus', label: 'Pustaka untuk pertemuan ini (pilih dari daftar pustaka, lalu tulis babnya)', type: 'listpus', opts: opsPus, tambah: 'Tambah pustaka', nomor: false, help: opsPus.length ? '' : 'Daftar pustaka belum ada. Isi dulu di tombol Deskripsi & pustaka.' },
+            { k: '_metode', label: 'Metode dan bentuk pembelajaran (pilih cepat atau tulis sendiri)', type: 'list', quick: METODE_DEF, nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Kuliah Offline' },
+            { k: 'judul', label: 'Judul topik untuk SAP (boleh kosong, terisi dari poin pertama materi)', full: true },
+            { k: '_indikator', label: 'Indikator penilaian (satu kotak per indikator; tiga per Sub-CPMK, nomor otomatis)', type: 'list', nomor: (i) => `${p.m}.${i + 1}`, tambah: 'Tambah indikator', ph: 'Misalnya: Ketepatan menjelaskan struktur dan cara kerja JFET' },
+            { k: 'asesmen', label: 'Kriteria dan teknik asesmen', type: 'textarea', rows: 2 },
+            { k: '_tatap', label: 'Tatap muka (bentuk, metode, alokasi waktu, penugasan)', type: 'list', quick: tatapDef(tmP), nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Bentuk: Kuliah Offline' },
+            { k: '_daring', label: 'Daring (bila ada)', type: 'list', quick: DARING_DEF, nomor: false, tambah: 'Tambah isian sendiri', ph: 'Misalnya: Bentuk: Kuliah Tatap Maya' },
+            { k: 'bobot', label: 'Bobot (%)', type: 'number', step: '0.1' },
             ...(p.ujian ? [] : [{ k: 'riset', label: 'Penelitian atau PKM yang diintegrasikan (pilih dari daftar pengampu)', type: 'multi', opts: opsiRiset(S, m).map(e => ({ v: e.id, t: `${e.jenis}: ${short(e.judul, 60)}${e.tahun ? ' (' + e.tahun + ')' : ''}`, title: labelRiset(S, e) })) },
               { k: 'bentuk', label: 'Dipakai sebagai', type: 'select', opts: [{ v: '', t: 'Pilih bentuk' }, ...BENTUK.map(v => ({ v, t: v })), { v: 'Lainnya', t: 'Lainnya (tulis sendiri)' }] }, { k: 'bentukLain', label: 'Bila memilih Lainnya, tulis bentuknya', ph: 'Contoh: Materi pengayaan, tugas proyek akhir' },
               ...(p.integ && !(p.riset || []).length ? [{ k: 'integ', label: 'Penandaan lama tanpa judul (ganti dengan pilihan dari daftar, atau kosongkan)', type: 'select', opts: INTEG.map(v => ({ v, t: v || 'Tidak ada' })) }] : []),
@@ -146,7 +191,7 @@ export function rpsView(el) {
             ...(p.ujian ? [{ k: 'sap_soal', label: 'SAP · Butir soal ujian atau ringkasan kisi-kisi (satu per baris)', type: 'textarea', rows: 4 }] : [{ k: 'sap_pendahuluan', label: 'SAP · Pendahuluan', type: 'textarea', rows: 2 }, { k: 'sap_inti', label: 'SAP · Kegiatan inti', type: 'textarea', rows: 3 }, { k: 'sap_penutup', label: 'SAP · Penutup', type: 'textarea', rows: 2 }, { k: 'sap_media', label: 'SAP · Media dan alat (satu per baris)', type: 'textarea', rows: 3 }, { k: 'sap_soal', label: 'SAP · Butir soal atau penugasan non tes (satu per baris)', type: 'textarea', rows: 3 }])],
           onDelete: nPert > 16 ? async () => { r.pertemuan.splice(i, 1); r.pertemuan.forEach((x, k) => { x.m = k + 1; }); if (r.status === 'disahkan') r.status = 'draf'; turunkanDok(r); await save('rps', r, `Hapus pertemuan ${p.m} dari RPS ${m.nama}`); draw(); } : null,
           extra: p.ujian || opsiRiset(S, m).length ? '' : `<div class="ribbon info" style="margin-top:10px">${icon('info')} Daftar penelitian atau PKM pengampu masih kosong. Isi dulu di menu <a href="#riset"><b>Penelitian & PKM Dosen</b></a> (bisa unggah Excel), lalu kembali ke sini.</div>`,
-          onSave: async (o) => { const sap = {}; Object.keys(o).filter(k => k.startsWith('sap_')).forEach(k => { sap[k.slice(4)] = o[k]; delete o[k]; }); if ((o.riset || []).length) { o.integ = jenisInteg(S, o.riset); if (!String(o.integUraian || '').trim()) { const e0 = riset(S, o.riset[0]); o.integUraian = `${(o.bentuk === 'Lainnya' ? (o.bentukLain || 'Lainnya') : o.bentuk) || 'Bahan ajar'}: ${e0 ? e0.judul : ''}${o.riset.length > 1 ? ` dan ${o.riset.length - 1} lainnya` : ''}.`; } } else if (p.riset && p.riset.length && !('integ' in o && o.integ)) o.integ = '';
+          onSave: async (o) => { o.materi = gabungMateri(o._isi, o._pus); o.metode = (o._metode || []).join('; '); o.indikator = (o._indikator || []).join('\n'); o.tatap = (o._tatap || []).join('\n'); o.daring = (o._daring || []).join('\n'); ['_isi', '_pus', '_metode', '_indikator', '_tatap', '_daring'].forEach(k => delete o[k]); const sap = {}; Object.keys(o).filter(k => k.startsWith('sap_')).forEach(k => { sap[k.slice(4)] = o[k]; delete o[k]; }); if ((o.riset || []).length) { o.integ = jenisInteg(S, o.riset); if (!String(o.integUraian || '').trim()) { const e0 = riset(S, o.riset[0]); o.integUraian = `${(o.bentuk === 'Lainnya' ? (o.bentukLain || 'Lainnya') : o.bentuk) || 'Bahan ajar'}: ${e0 ? e0.judul : ''}${o.riset.length > 1 ? ` dan ${o.riset.length - 1} lainnya` : ''}.`; } } else if (p.riset && p.riset.length && !('integ' in o && o.integ)) o.integ = '';
             r.pertemuan[i] = { ...o, sap, m: p.m, ujian: p.ujian }; { const r2 = ringkasIntegrasi(S, m, r); if (r2.entri.length) { r.penelitian = teksRiset(S, r2.entri, 'Penelitian'); r.pkm = teksRiset(S, r2.entri, 'PKM'); } } if (r.status === 'disahkan') r.status = 'draf'; turunkanDok(r); await save('rps', r, `Ubah RPS ${m.nama} pertemuan ${p.m}`); draw(); } });
       });
     }

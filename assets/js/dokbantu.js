@@ -70,7 +70,7 @@ export const statusDok = (st, tgl, oleh) => (st === 'disahkan' ? `Disahkan${tgl 
 /** Daftar pustaka bernomor dari RPS: { 1: 'teks', ... }. */
 export function daftarPustaka(r) {
   const peta = {};
-  `${(r && r.pustaka) || ''}\n${(r && r.pustakaPendukung) || ''}`.split(/\n+/).forEach(b => { const x = b.trim().match(/^(\d+)[.)]\s*(.+)$/); if (x) peta[+x[1]] = x[2]; });
+  `${(r && r.pustaka) || ''}\n${(r && r.pustakaPendukung) || ''}`.split(/\n+/).forEach(b => { const x = b.trim().match(/^\(?(\d+)[.)]\s*(.+)$/); if (x) peta[+x[1]] = x[2]; });
   return peta;
 }
 const kutipanSingkat = (t) => { const x = String(t).match(/^(.*?\((?:19|20)\d{2}\))/); return x ? x[1] : String(t).replace(/\s+/g, ' ').trim(); };

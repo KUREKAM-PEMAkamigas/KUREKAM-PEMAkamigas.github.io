@@ -22,20 +22,37 @@ export const prodiName = () => { const p = S.prodi.find(x => x.id === ctx.prodi)
 
 /** Drawer formulir generik.
  *  fields: [{k, label, type: text|textarea|number|select|multi, opts:[{v,t}], help, full, step}] */
-export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete, wide, extra = '', onOpen }) {
+const DAFTAR = ['list', 'listsub', 'listpus'];
+/** Satu baris isian pada daftar kotak (list, listsub, listpus). */
+function barisDaftar(x, it, i) {
+  const no = x.nomor === false ? '' : `<span class="lno">${esc(x.nomor ? x.nomor(i) : (i + 1) + '.')}</span>`;
+  const hapus = `<button type="button" class="btn ghost sm ld" title="Hapus baris" aria-label="Hapus baris">${icon('close')}</button>`;
+  if (x.type === 'listpus') {
+    const v = (it && it.n) || '';
+    return `<div class="lrow">${no}<select class="inp lp"><option value="">Pilih pustaka…</option>${(x.opts || []).map(o => `<option value="${esc(o.v)}" ${o.v === v ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select><input class="inp lb" placeholder="Bab atau halaman, misalnya Bab 3" value="${esc((it && it.bab) || '')}">${hapus}</div>`;
+  }
+  const teks = typeof it === 'string' ? it : (it && it.t) || '', pilih = new Set((it && typeof it === 'object' && Array.isArray(it.sub)) ? it.sub : []);
+  const chips = x.type === 'listsub' ? `<div class="chips-pick lsub" title="Sub-CPMK yang dicakup butir ini">${(x.sub || []).length ? x.sub.map(o => `<label class="cp ${pilih.has(o.v) ? 'on' : ''}" data-v="${esc(o.v)}" title="${esc(o.title || o.t)}"><input type="checkbox" value="${esc(o.v)}" ${pilih.has(o.v) ? 'checked' : ''}>${esc(o.t)}</label>`).join('') : '<span class="muted small">Belum ada Sub-CPMK untuk dipetakan.</span>'}</div>` : '';
+  return `<div class="lrow">${no}<div class="lcol"><textarea class="inp lt" rows="1" placeholder="${esc(x.ph || '')}">${esc(teks)}</textarea>${chips}</div>${hapus}</div>`;
+}
+export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete, wide, full, extra = '', onOpen }) {
   const f = fields.map(x => {
     const v = obj[x.k];
     /* isian satu baris yang ternyata berisi baris baru dibuka sebagai kotak teks agar baris tidak menyatu */
     if (!x.type && typeof v === 'string' && v.includes('\n')) x = { ...x, type: 'textarea', rows: Math.min(6, v.split('\n').length + 1) };
     let inp;
-    if (x.type === 'kode') inp = `<div class="kode-lock" data-kode="${x.k}"><span class="tag" style="--c:#0ea5e9">${esc(v || x.ph || '–')}</span><span class="small muted">dibuat otomatis sesuai pedoman, tidak diketik</span></div>`;
+    if (x.type === 'html') inp = x.html;
+    else if (DAFTAR.includes(x.type)) {
+      const arr = Array.isArray(v) ? v : [];
+      inp = `<div class="lbox" data-list="${x.k}"><div class="lrows">${arr.map((it, i) => barisDaftar(x, it, i)).join('')}</div><div class="lact"><button type="button" class="btn sm pri" data-ladd>${icon('plus')} ${esc(x.tambah || 'Tambah isian')}</button>${(x.quick || []).length ? `<span class="muted small">atau pilih cepat:</span>${x.quick.map(q => `<button type="button" class="cp" data-q="${esc(q)}">+ ${esc(q.length > 48 ? q.slice(0, 47) + '…' : q)}</button>`).join('')}` : ''}</div></div>`;
+    } else if (x.type === 'kode') inp = `<div class="kode-lock" data-kode="${x.k}"><span class="tag" style="--c:#0ea5e9">${esc(v || x.ph || '–')}</span><span class="small muted">dibuat otomatis sesuai pedoman, tidak diketik</span></div>`;
     else if (x.type === 'textarea') inp = `<textarea class="inp" name="${x.k}" rows="${x.rows || 3}" placeholder="${esc(x.ph || '')}">${esc(v || '')}</textarea>`;
     else if (x.type === 'select') inp = `<select class="inp" name="${x.k}" ${x.lock ? 'disabled' : ''}>${x.opts.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;
     else if (x.type === 'multi') {
       const sel = new Set(v || []);
-      inp = `<div class="chips-pick" data-multi="${x.k}">${x.opts.length ? x.opts.map(o => `<label class="cp ${sel.has(o.v) ? 'on' : ''} ${o.dim ? 'dim' : ''}" data-v="${esc(o.v)}" title="${esc(o.title || o.t)}"><input type="checkbox" value="${esc(o.v)}" ${sel.has(o.v) ? 'checked' : ''}>${esc(o.t)}</label>`).join('') : '<span class="muted small">Belum ada pilihan.</span>'}</div>`;
+      inp = `<div class="chips-pick" data-multi="${x.k}">${x.opts.length ? x.opts.map(o => `<label class="cp ${sel.has(o.v) ? 'on' : ''} ${o.dim ? 'dim' : ''}" data-v="${esc(o.v)}" title="${esc(o.title || o.t)}"><input type="checkbox" value="${esc(o.v)}" ${sel.has(o.v) ? 'checked' : ''}>${esc(o.t)}</label>`).join('') : '<span class="muted small">Belum ada pilihan.</span>'}</div>${x.info ? `<div class="subinfo" data-info="${x.k}"></div>` : ''}`;
     } else inp = `<input class="inp" name="${x.k}" type="${x.type || 'text'}" value="${esc(v == null ? '' : v)}" ${x.step ? `step="${x.step}"` : ''} placeholder="${esc(x.ph || '')}">`;
-    return `<div class="field ${x.full || x.type === 'textarea' || x.type === 'multi' ? 'full' : ''}"><label>${x.label}</label>${inp}${x.help ? `<div class="hint" data-help="${x.k}">${x.help}</div>` : `<div class="hint" data-help="${x.k}"></div>`}</div>`;
+    return `<div class="field ${x.full || x.type === 'textarea' || x.type === 'multi' || x.type === 'html' || DAFTAR.includes(x.type) ? 'full' : ''}"><label>${x.label || ''}</label>${inp}${x.help ? `<div class="hint" data-help="${x.k}">${x.help}</div>` : `<div class="hint" data-help="${x.k}"></div>`}</div>`;
   }).join('');
   openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#10b981">${icon('edit')}</span><div><h3>${title}</h3><div class="sub">${sub}</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
     <form class="form-grid" id="fd">${f}</form>${extra}
@@ -46,8 +63,11 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     dr.querySelector('#fd-save').onclick = async () => {
       const btn = dr.querySelector('#fd-save'), out = { ...obj };
       fields.forEach(x => {
-        if (x.type === 'kode') return;
-        if (x.type === 'multi') out[x.k] = Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value);
+        if (x.type === 'kode' || x.type === 'html') return;
+        if (DAFTAR.includes(x.type)) {
+          const baris = Array.from(dr.querySelectorAll(`[data-list="${x.k}"] .lrow`));
+          out[x.k] = baris.map(r => x.type === 'listpus' ? { n: r.querySelector('.lp').value, bab: r.querySelector('.lb').value.trim() } : x.type === 'listsub' ? { t: r.querySelector('.lt').value.trim(), sub: Array.from(r.querySelectorAll('.cp input:checked')).map(i => i.value) } : r.querySelector('.lt').value.trim()).filter(b => x.type === 'listpus' ? b.n : x.type === 'listsub' ? b.t : b);
+        } else if (x.type === 'multi') out[x.k] = Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value);
         else { const el = dr.querySelector(`[name="${x.k}"]`); out[x.k] = x.type === 'number' ? (el.value === '' ? null : +el.value) : el.value.trim(); }
       });
       sibuk(btn, true, 'Menyimpan…');
@@ -61,9 +81,22 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
       try { await onDelete(obj); } catch (e) { console.error(e); sibuk(del, false); galat('Gagal menghapus: ' + e.message); return; }
       closeDrawer(); rerender();
     };
+    /* daftar kotak: tambah, hapus, pilihan cepat, tinggi kotak mengikuti isi */
+    dr.querySelectorAll('[data-list]').forEach(box => {
+      const x = fields.find(f => f.k === box.dataset.list), rows = box.querySelector('.lrows');
+      const auto = (t) => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
+      const nomori = () => rows.querySelectorAll('.lrow').forEach((r, i) => { const n = r.querySelector('.lno'); if (n) n.textContent = x.nomor ? x.nomor(i) : (i + 1) + '.'; });
+      const ikat = (r) => { r.querySelector('.ld').onclick = () => { r.remove(); nomori(); }; const t = r.querySelector('textarea'); if (t) { t.addEventListener('input', () => auto(t)); auto(t); } r.querySelectorAll('.cp input').forEach(i => { i.onchange = () => i.parentElement.classList.toggle('on', i.checked); }); };
+      const tambah = (it) => { rows.insertAdjacentHTML('beforeend', barisDaftar(x, it, rows.children.length)); const r = rows.lastElementChild; ikat(r); nomori(); const f = r.querySelector('textarea,select'); if (f) f.focus(); };
+      rows.querySelectorAll('.lrow').forEach(ikat);
+      box.querySelector('[data-ladd]').onclick = () => tambah(x.type === 'listpus' ? {} : '');
+      box.querySelectorAll('[data-q]').forEach(b => { b.onclick = () => tambah(b.dataset.q); });
+    });
+    /* keterangan di bawah pilihan (misalnya isi Sub-CPMK yang dipilih) */
+    fields.filter(x => x.info).forEach(x => { const el = dr.querySelector(`[data-info="${x.k}"]`), pil = () => Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value); const up = () => { el.innerHTML = x.info(pil()); }; dr.querySelectorAll(`[data-multi="${x.k}"] input`).forEach(i => i.addEventListener('change', up)); up(); });
     fields.filter(x => x.live && x.type !== 'kode').forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); up(); });
     if (onOpen) onOpen(dr);
-  }, wide);
+  }, full ? 'full' : wide);
 }
 
 /** Animasi angka KPI. */

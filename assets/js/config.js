@@ -146,8 +146,8 @@ export const MENU_PERAN = {
   dosen: ['beranda', 'kinerja', 'jadwal', 'rambu', 'peta', 'cpmkprodi', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bloom'],
   prodi: ['beranda', 'kinerja', 'jadwal', 'rambu', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
   pimpinan: ['beranda', 'jadwal', 'pimpinan', 'mutu', 'akademik', 'iabee', 'capaian', 'lulusan', 'laporan'],
-  wadir: ['beranda', 'pantau', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk'],
-  spm: ['beranda', 'jadwal', 'rambu', 'mutu', 'visi', 'cpl', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk'],
+  wadir: ['beranda', 'pantau', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk', 'cadangan'],
+  spm: ['beranda', 'jadwal', 'rambu', 'mutu', 'visi', 'cpl', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk', 'cadangan'],
   akademik: ['beranda', 'jadwal', 'rambu', 'akademik', 'mk', 'peta', 'obe', 'rps', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,
   developer: null

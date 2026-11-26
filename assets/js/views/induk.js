@@ -1,6 +1,7 @@
 /* KUREKAM · Data induk dan pengaturan: prodi dan kelas, dosen, parameter, impor/ekspor, basis data, log */
 import { muatUlangAkun, S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, uid, saveSettings, addLog, resetData, replaceData } from '../app.js';
 import { labelKel, labelGrup } from '../kode.js';
+import { titikOtomatis } from '../pulih.js';
 import { DB, getFirebaseConfig, saveFirebaseConfig, buatTautanFirebase } from '../db.js';
 import { PARAM_DEFAULT, KELOMPOK, KAT_IABEE, GRUP, APP, PERAN, MENU_PERAN } from '../config.js';
 import { param, fmt, KMAP, kelasOf, RANAH_CPL, HURUF_IABEE } from '../rules.js';
@@ -231,7 +232,7 @@ function tImpor(el, ed, adm) {
   el.querySelector('#i-ttpl').onclick = () => tpl(TUGAS_HEAD, [['TP', 'Contoh Dosen, S.T., M.T.', 'TP3101', 'Contoh mata kuliah (hapus baris ini)', 3, 1, 0.5, 'ya']], [10, 34, 12, 40, 8, 8, 8, 12], 'PENUGASAN', 'Template_Penugasan_Dosen.xlsx');
   el.querySelector('#i-tpl').onclick = async () => { const X = await loadXLSX(); const wb = X.utils.book_new(); const ws = X.utils.aoa_to_sheet([DATA_HEAD, ['TP', 1, 'CONTOH01', 'Contoh mata kuliah (hapus baris ini)', 'MBE', 1, 1, 'A, B, C']]); ws['!cols'] = [14, 10, 12, 48, 12, 10, 12, 16].map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, 'DATA'); unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), 'Template_Data_Kurikulum_Berjalan.xlsx'); };
   el.querySelector('#i-bak').onclick = () => { const o = {}; Object.keys(S).forEach(k => { o[k] = k === 'settings' ? [S.settings] : S[k]; }); unduh(new Blob([JSON.stringify(o)], { type: 'application/json' }), `kurekam-cadangan-${new Date().toISOString().slice(0, 10)}.json`); };
-  el.querySelector('#i-res').onclick = () => pilih('.json', async f => { const d = JSON.parse(await f.text()); if (!Array.isArray(d.mk) || !Array.isArray(d.prodi)) throw new Error('Berkas bukan cadangan KUREKAM.'); if (!(await tanya(`Seluruh data akan diganti dengan isi cadangan (${d.mk.length} MK). Lanjutkan?`))) { hasil = ''; return; } await replaceData(d); await addLog('Pulihkan data dari cadangan'); hasil = '<b>Data dipulihkan dari cadangan.</b>'; });
+  el.querySelector('#i-res').onclick = () => pilih('.json', async f => { const d = JSON.parse(await f.text()); if (!Array.isArray(d.mk) || !Array.isArray(d.prodi)) throw new Error('Berkas bukan cadangan KUREKAM.'); if (!(await tanya(`Seluruh data akan diganti dengan isi cadangan (${d.mk.length} MK). Lanjutkan?`))) { hasil = ''; return; } await titikOtomatis('Sebelum memulihkan dari berkas cadangan'); await replaceData(d); await addLog('Pulihkan data dari cadangan'); hasil = '<b>Data dipulihkan dari cadangan.</b>'; });
 }
 
 function cariHeader(X, ws, wajib) {
@@ -278,6 +279,7 @@ async function imporMatriks(X, wb) {
     const keep = (arr) => arr.filter(x => !ganti.includes(x.prodi));
     const d = {}; Object.keys(S).forEach(k => { d[k] = k === 'settings' ? [{ ...S.settings, demo: S.settings.demo }] : S[k]; });
     d.mk = keep(S.mk).concat(mkBaru); d.cpmk = keep(S.cpmk); d.sub = keep(S.sub); d.rps = keep(S.rps); d.tugas = keep(S.tugas);
+    await titikOtomatis('Sebelum impor Excel MK');
     await replaceData(d);
   }
   await addLog(`Impor matriks kurikulum: ${ganti.join(', ') || 'tanpa MK'}${cplBaru ? `, ${cplBaru} CPL` : ''}`);
@@ -293,6 +295,7 @@ async function imporObeUI(X, wb) {
   ['pl', 'cpl', 'bk', 'mk', 'cpmk', 'sub', 'rps'].forEach(k => { d[k] = keep(S[k]).concat(k === 'rps' ? h.rps : h.data[k]); });
   d.tugas = keep(S.tugas); d.pi = keep(S.pi);
   if (!(S.bok || []).some(b => b.prodi === pid)) d.bok = (S.bok || []).concat(bokStandarProdi(pid));
+  await titikOtomatis('Sebelum impor Excel OBE ' + pid);
   await replaceData(d);
   await addLog(`Impor Tabel OBE prodi ${pid}: ${r.cpl} CPL, ${r.mk} MK, ${r.cpmk} CPMK`);
   return `<b>Impor Tabel OBE ${esc(pid)} selesai.</b> ${r.cpl} CPL, ${r.bk} BK, ${r.mk} MK (${r.sks} SKS), ${r.cpmk} CPMK, ${r.sub} Sub-CPMK, ${r.rps} kerangka RPS.<br>${h.laporan.length ? `<b>${h.laporan.length} catatan pada berkas:</b><br>` + h.laporan.slice(0, 15).map(esc).join('<br>') + (h.laporan.length > 15 ? `<br>… dan ${h.laporan.length - 15} lainnya` : '') + '<br>' : ''}Lanjutkan di menu <b>Tabel OBE</b> dan <b>Pemeriksa Kurikulum</b> untuk melihat bagian yang masih perlu dilengkapi.`;
@@ -456,7 +459,7 @@ function tDb(el, ed, adm) {
   </div>`;
   if (!adm) return;
   el.querySelector('#b-demo').onchange = async e => { S.settings.demo = e.target.checked; await saveSettings(); rerender(); };
-  el.querySelector('#b-reset').onclick = async () => { if (!(await tanya('Seluruh data diganti dengan data contoh awal. Perubahan yang sudah dibuat akan hilang. Lanjutkan?', 'Muat ulang'))) return; await resetData(); toast('Data contoh dimuat ulang'); rerender(); };
+  el.querySelector('#b-reset').onclick = async () => { if (!(await tanya('Seluruh data diganti dengan data contoh awal. Perubahan yang sudah dibuat akan hilang. Lanjutkan?', 'Muat ulang'))) return; await titikOtomatis('Sebelum memuat ulang data contoh'); await resetData(); toast('Data contoh dimuat ulang'); rerender(); };
   el.querySelector('#b-on').onclick = () => {
     let o; try { const raw = el.querySelector('#b-cfg').value.trim().replace(/^[^{]*/, '').replace(/;?\s*$/, ''); o = JSON.parse(raw.replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*}/g, '}')); } catch (e) { toast('Konfigurasi tidak terbaca sebagai JSON'); return; }
     if (!o.projectId || !o.apiKey || /tersimpan/.test(o.apiKey)) { toast('apiKey dan projectId wajib diisi'); return; }

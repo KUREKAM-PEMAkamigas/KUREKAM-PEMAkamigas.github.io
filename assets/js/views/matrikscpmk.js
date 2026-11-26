@@ -2,6 +2,7 @@
    Prodi merumuskan CPMK sebagai turunan CPL (urut Sikap sampai Keterampilan khusus), lalu memetakan MK ke CPMK.
    Satu CPMK boleh dipakai banyak MK, dan satu MK boleh memuat banyak CPMK. */
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, toast, replaceData, addLog } from '../app.js';
+import { titikOtomatis } from '../pulih.js';
 import { templatCpmk, imporCpmk } from '../mkexcel.js';
 import { RANAH_CPL, byProdi, cpmkProdi, rencanaCpmk, param, bokStandarProdi } from '../rules.js';
 import { detect, badge } from '../bloom.js';
@@ -26,6 +27,7 @@ async function bangunContoh(pid) {
   const resmi = lama.rps.filter(r => r.status && r.status !== 'draf').length;
   if (!cpl.length) { toast('Belum ada CPL.'); return; }
   if (!(await tanya(`Isian CPMK, Sub-CPMK, dan RPS lama prodi ini (${lama.cpmk.length} CPMK, ${lama.sub.length} Sub-CPMK, ${lama.rps.length} RPS${resmi ? `, termasuk ${resmi} RPS yang sudah diajukan atau disahkan` : ''}) dihapus, lalu matriks CPL-CPMK-MK disusun ulang sebagai contoh dari CPL dan mata kuliah yang ada. Lanjutkan?`, 'Susun ulang'))) return;
+  await titikOtomatis('Sebelum menyusun contoh CPMK ' + pid);
   for (const x of lama.sub) await remove('sub', x.id);
   for (const x of lama.cpmk) await remove('cpmk', x.id);
   for (const x of lama.rps) await remove('rps', x.id);

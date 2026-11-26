@@ -135,5 +135,27 @@ export const DB = {
   /** Mendengarkan dokumen baru sejak waktu tertentu (tanpa membaca ulang semuanya). Mengembalikan fungsi berhenti. */
   dengar(col, sejak, cb) { if (mode !== 'firebase') return () => {}; return fs.collection(PFX + col).where('t', '>=', sejak).onSnapshot(s => cb(s.docChanges().filter(c => c.type !== 'removed').map(c => c.doc.data())), e => console.warn('Pantau ' + col + ':', e.message)); },
   async hapusSebelum(col, sebelum, batas = 400) { if (mode !== 'firebase') return 0; const s = await fs.collection(PFX + col).where('t', '<', sebelum).limit(batas).get(); if (!s.size) return 0; const b = fs.batch(); s.docs.forEach(d => b.delete(d.ref)); await b.commit(); return s.size; },
+  /* Dokumen umum untuk koleksi di luar data kurikulum (titik pulih, status cadangan). Mode lokal memakai localStorage. */
+  dok: {
+    async tulis(col, doc) {
+      if (mode === 'firebase') { await fs.collection(PFX + col).doc(String(doc.id)).set(JSON.parse(JSON.stringify(doc))); return; }
+      let m = {}; try { m = JSON.parse(lsGet(LS + 'x_' + col) || '{}'); } catch (e) { m = {}; }
+      m[doc.id] = doc;
+      if (!lsSet(LS + 'x_' + col, JSON.stringify(m))) throw new Error(lastError);
+    },
+    async baca(col, id) {
+      if (mode === 'firebase') { const d = await fs.collection(PFX + col).doc(String(id)).get(); return d.exists ? d.data() : null; }
+      try { return (JSON.parse(lsGet(LS + 'x_' + col) || '{}'))[id] || null; } catch (e) { return null; }
+    },
+    async daftar(col) {
+      if (mode === 'firebase') { const s = await fs.collection(PFX + col).get(); return s.docs.map(d => d.data()); }
+      try { return Object.values(JSON.parse(lsGet(LS + 'x_' + col) || '{}')); } catch (e) { return []; }
+    },
+    async hapus(col, id) {
+      if (mode === 'firebase') { await fs.collection(PFX + col).doc(String(id)).delete(); return; }
+      let m = {}; try { m = JSON.parse(lsGet(LS + 'x_' + col) || '{}'); } catch (e) { m = {}; }
+      delete m[id]; lsSet(LS + 'x_' + col, JSON.stringify(m));
+    }
+  },
   clearLocal() { COLLECTIONS.forEach(c => { try { localStorage.removeItem(LS + c); } catch (e) { /* abaikan */ } }); }
 };

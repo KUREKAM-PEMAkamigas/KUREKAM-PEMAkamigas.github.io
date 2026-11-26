@@ -2,6 +2,7 @@
    Mode ganti semua hanya menghapus data prodi yang kodenya tidak ada di Excel dan tidak dipakai data hilir yang berisi pekerjaan
    (misalnya CPL yang sudah dipakai CPMK, MK yang sudah punya CPMK, penugasan dosen, atau RPS yang diajukan). Data seperti itu dipertahankan dan dilaporkan. */
 import { S, remove, saveMany, esc } from './app.js';
+import { titikOtomatis } from './pulih.js';
 
 export const awalCadangan = () => 'Cadangan_' + new Date().toISOString().slice(0, 10);
 const NAMA = { nama: 'nama', teks: 'rumusan', sn: 'unsur SN Dikti', pl: 'profil', iabee: 'butir IABEE', ranah: 'ranah', sumber: 'sumber', bok: 'BoK induk', kedalaman: 'kedalaman', cpl: 'CPL', smt: 'semester', kel: 'kelompok', T: 'SKS teori', P: 'SKS praktik', lokasi: 'lokasi', inti: 'MK inti', bk: 'bahan kajian', prasyarat: 'prasyarat', kompetensi: 'kompetensi', alasanCpl: 'alasan pengecualian' };
@@ -43,7 +44,7 @@ export function pratinjauImpor({ jenis, baru = [], ubah = [], tetap = 0, lewat =
       y.disabled = g && inp.value.trim() !== 'GANTI';
     };
     bg.querySelectorAll('input[name=md]').forEach(i => { i.onchange = baris; }); inp.oninput = baris; baris();
-    y.onclick = () => done(mode());
+    y.onclick = async () => { const m = mode(); if (m === 'ganti') { y.disabled = true; y.textContent = 'Menyimpan titik pulih…'; await titikOtomatis('Sebelum impor Ganti semua ' + jenis); } done(m); };
     bg.querySelector('[data-n]').onclick = () => done(null);
     document.body.appendChild(bg); y.focus();
   });

@@ -19,6 +19,7 @@ import { cpmkView, rpsView, deskView } from './views/ajar.js';
 import bebanView from './views/beban.js';
 import { periksaView, bloomView, revisiView, laporanView } from './views/evaluasi.js';
 import indukView from './views/induk.js';
+import cadanganView from './views/cadangan.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
 import { piView, kesiapanView } from './views/iabee.js';
@@ -239,6 +240,7 @@ export const ROUTES = [
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },
+  { id: 'cadangan', t: 'Cadangan & Keamanan', sub: 'Titik pulih dan pemeriksaan keamanan', ic: 'db', c: '#0ea5e9', sec: 'Sistem', v: cadanganView },
   { id: 'induk', t: 'Data Induk & Pengaturan', ic: 'db', c: '#64748b', sec: 'Sistem', v: indukView }
 ];
 
@@ -270,7 +272,7 @@ const NAV = [
     { tabs: ['laporan'] }]],
   ['G · Akreditasi', [
     { tabs: ['iabee', 'bahanled', 'panduan'], t: 'Kesiapan IABEE', sub: '10 indikator, bahan LED, panduan', lbl: ['Kesiapan 10 indikator', 'Bahan LED', 'Panduan 10 indikator'] }]],
-  ['Sistem', [{ tabs: ['induk'] }]]
+  ['Sistem', [{ tabs: ['induk'] }, { tabs: ['cadangan'] }]]
 ];
 const entriNav = (e, grup) => { const r0 = ROUTES.find(x => x.id === e.tabs[0]) || {}; return { ...e, grup, t: e.t || r0.t, sub: e.sub !== undefined ? e.sub : r0.sub, ic: r0.ic, c: r0.c }; };
 const NAV_DATA = (() => {
@@ -487,6 +489,7 @@ export async function start() {
   }
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
   mulaiJejak();
+  import('./pulih.js').then(m => m.titikHarian()).catch(() => { });
   if (!pantau) { pantau = true; window.addEventListener('hashchange', route_); }
   route_();
 }

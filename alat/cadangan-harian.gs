@@ -50,7 +50,19 @@ function cadanganHarian() {
   folder.createFile(zip);
   bersihkan_(folder, +P.SIMPAN_HARI || 0);
   if (!hasil.kurekam.mk.length) kabari_('Peringatan cadangan KUREKAM', 'Cadangan ' + nama + ' tersimpan, tetapi koleksi mata kuliah kosong. Periksa aplikasi.\n\n' + ring);
+  tulisStatus_(P, token, { ok: true, berkas: nama + '.zip' });
   Logger.log(ring);
+}
+
+/** Melapor ke aplikasi (koleksi kur_status, dokumen drive) agar menu Cadangan & Keamanan menampilkan status Drive. Gagal menulis tidak menggagalkan cadangan. */
+function tulisStatus_(P, token, s) {
+  try {
+    var f = { t: { stringValue: new Date().toISOString() }, ok: { booleanValue: s.ok !== false }, berkas: { stringValue: s.berkas || '' }, galat: { stringValue: s.galat || '' } };
+    UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/' + P.PROJECT_ID + '/databases/(default)/documents/kur_status/drive', {
+      method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true,
+      payload: JSON.stringify({ fields: Object.assign({ id: { stringValue: 'drive' } }, f) })
+    });
+  } catch (e) { Logger.log('Status tidak terkirim: ' + e); }
 }
 
 function masuk_(P) {
@@ -108,5 +120,9 @@ function pasangJadwal() {
 }
 /** Dipanggil jadwal: bila gagal, pemilik skrip dikirimi email. */
 function cadanganAman() {
-  try { cadanganHarian(); } catch (e) { kabari_('Cadangan KUREKAM gagal', String(e && e.stack || e)); throw e; }
+  try { cadanganHarian(); } catch (e) {
+    kabari_('Cadangan KUREKAM gagal', String(e && e.stack || e));
+    try { var P = PropertiesService.getScriptProperties().getProperties(); tulisStatus_(P, masuk_(P), { ok: false, galat: String(e && e.message || e).slice(0, 200) }); } catch (x) { /* abaikan */ }
+    throw e;
+  }
 }

@@ -1,0 +1,39 @@
+// USULAN aturan Firestore untuk koleksi KUREKAM (awalan kur_). Bukan berkas yang diterapkan otomatis.
+// Proyek Firebase simantap-pem dipakai bersama SIMANTAP, jadi JANGAN menimpa seluruh aturan yang ada:
+// salin hanya blok "KUREKAM" di bawah ke dalam `match /databases/{database}/documents { ... }` pada aturan yang sudah ada.
+// Ujilah dulu di Firebase Console > Firestore > Rules > Rules Playground (masuk sebagai akun admin, dosen, dan tanpa login),
+// baru tekan Publish. Bila ada yang salah, aturan lama bisa dikembalikan dari riwayat aturan di halaman yang sama.
+//
+// Prinsip:
+//  1. Tanpa login: tidak boleh apa pun.
+//  2. Dosen murni (tidak terdaftar atau hanya berperan dosen) tidak boleh membaca basis data SIMANTAP; untuk KUREKAM dosen boleh membaca dan mengisi RPS.
+//  3. Peran di kur_pengguna menentukan hak tulis. ID dokumen pengguna = 'U-' + email huruf kecil dengan karakter selain a-z0-9 menjadi '_'.
+//  4. Titik pulih (kur_pulih, kur_pulihdata) dan status cadangan (kur_status) hanya admin, developer, dan Wadir I (peran wadir).
+
+// ---------- BLOK KUREKAM ----------
+function sudahMasuk() { return request.auth != null; }
+function idPengguna() { return 'U-' + request.auth.token.email.lower().replace('[^a-z0-9]', '_'); }
+function dataPengguna() { return get(/databases/$(database)/documents/kur_pengguna/$(idPengguna())).data; }
+function terdaftar() { return sudahMasuk() && exists(/databases/$(database)/documents/kur_pengguna/$(idPengguna())); }
+function punyaPeran(daftar) { return terdaftar() && dataPengguna().peran.hasAny(daftar); }
+function pengelola() { return punyaPeran(['admin', 'developer', 'wadir']); }
+
+match /kur_pengguna/{id} {
+  allow read: if sudahMasuk();                       // aplikasi membaca daftar untuk mengenali peran pemilik akun
+  allow write: if punyaPeran(['admin', 'developer']);
+}
+match /kur_pulih/{id}     { allow read, write: if pengelola(); }
+match /kur_pulihdata/{id} { allow read, write: if pengelola(); }
+match /kur_status/{id}    { allow read: if pengelola(); allow write: if punyaPeran(['admin', 'developer']); }
+
+// jejak dan sesi: setiap akun boleh menulis catatannya sendiri; membaca hanya pengelola dan pemantau
+match /kur_jejak/{id} { allow create: if sudahMasuk(); allow read: if pengelola() || punyaPeran(['spm', 'pimpinan']); allow update, delete: if pengelola(); }
+match /kur_sesi/{id}  { allow create, update: if sudahMasuk(); allow read: if pengelola() || punyaPeran(['spm', 'pimpinan']); allow delete: if pengelola(); }
+
+// data kurikulum (kur_prodi, kur_mk, kur_cpmk, kur_rps, dan seterusnya): terdaftar boleh membaca; menulis oleh peran yang bekerja di data tersebut.
+// Pembatasan per prodi dan per mata kuliah tetap ditegakkan aplikasi; aturan ini adalah lapis pertama agar akun tak terdaftar tidak bisa menulis.
+match /{koleksi}/{id} {
+  allow read: if koleksi.matches('kur_.*') && terdaftar();
+  allow write: if koleksi.matches('kur_.*') && punyaPeran(['admin', 'developer', 'wadir', 'prodi', 'dosen', 'spm', 'akademik']);
+}
+// ---------- AKHIR BLOK KUREKAM ----------

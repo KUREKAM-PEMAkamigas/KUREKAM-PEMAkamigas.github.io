@@ -6,8 +6,9 @@ import { S, ctx, can, save, saveMany, rerender, esc, icon, toast, saveSettings }
 import { DB } from '../db.js';
 import { fmt, byProdi } from '../rules.js';
 import { head, ro, kpi, animateCounts, stTag, tanya, unduh, loadXLSX, short } from './ui.js';
-import { DOMAIN, SKPI_DEF, pengaturan, predikat, susunTranskrip, padankan, hitungSkpi, rataAngkatan, agregatCapaian, angkatanDariNim, sidik, sidikKanonik, kodeBaru, kesiapanSkpi } from '../skpilogic.js';
+import { DOMAIN, SKPI_DEF, pengaturan, predikat, susunTranskrip, padankan, hitungSkpi, rataAngkatan, agregatCapaian, angkatanDariNim, bacaTranskripXlsx, sidik, sidikKanonik, kodeBaru, kesiapanSkpi } from '../skpilogic.js';
 import { radarSvg, bangunSkpi, perluVerifikasi, tglId, tglEn } from '../skpidoc.js';
+import { unduhSkpiWord } from '../skpidocx.js';
 import { draftCpl, draftMk, tambahMkEn, kunci } from '../terjemahan.js';
 
 const TABS = [['cetak', 'Cetak SKPI'], ['siap', 'Kesiapan & aturan'], ['terjemah', 'Terjemahan Inggris'], ['setelan', 'Pengaturan']];
@@ -29,6 +30,10 @@ function muatJs(kunciP, srcs, cek) {
 const muatPdf = () => muatJs('pdf', ['assets/vendor/pdf.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'], () => window.pdfjsLib).then(l => { l.GlobalWorkerOptions.workerSrc = new URL('assets/vendor/pdf.worker.min.js', document.baseURI).href; return l; });
 const muatQr = () => muatJs('qr', ['assets/vendor/qrcode.js'], () => window.qrcode);
 
+async function bacaBerkas(file) {
+  if (/\.xlsx?$/i.test(file.name)) { const X = await loadXLSX(), wb = X.read(await file.arrayBuffer(), { type: 'array' }); return bacaTranskripXlsx(wb.SheetNames.map(n => X.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }))); }
+  return bacaPdf(file);
+}
 async function bacaPdf(file) {
   const L = await muatPdf(), doc = await L.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise, hal = [];
   for (let i = 1; i <= doc.numPages; i++) { const tc = await (await doc.getPage(i)).getTextContent(); hal.push(tc.items.map(t => ({ s: t.str, x: t.transform[4], y: t.transform[5] }))); }
@@ -57,18 +62,18 @@ function tCetak(el, pid, p, ed) {
   const K = pengaturan(S, pid), R = daftar.length ? hitungSemua(pid, K) : null;
   const ks = kesiapanSkpi(S, pid);
   el.innerHTML = `
-  <div class="ribbon info">${icon('info')} <span>SKPI dicetak dari KUREKAM. Pemetaan nilai ke CPL memakai <b>CPMK → CPL</b> yang sudah disusun di KUREKAM. Transkrip PDF dari SIAKAD <b>dibaca di peramban ini saja</b>: tidak diunggah ke server dan tidak disimpan. Hanya agregat tanpa nama (Capaian CPL) dan sidik keaslian tanpa nama (QR) yang bisa disimpan.</span></div>
+  <div class="ribbon info">${icon('info')} <span>SKPI dicetak dari KUREKAM. Pemetaan nilai ke CPL memakai <b>CPMK → CPL</b> yang sudah disusun di KUREKAM. Transkrip (Excel atau PDF) dari SIAKAD <b>dibaca di peramban ini saja</b>: tidak diunggah ke server dan tidak disimpan. Hanya agregat tanpa nama (Capaian CPL) dan sidik keaslian tanpa nama (QR) yang bisa disimpan.</span></div>
   ${ks.ok < ks.syarat.length ? `<div class="ribbon warn">${icon('alert')} <span>Kesiapan struktur SKPI baru <b>${ks.ok} dari ${ks.syarat.length}</b>. SKPI tetap bisa dicoba, tetapi hasil resmi menunggu syarat terpenuhi. <a href="#" id="sk-ks">Lihat rinciannya</a>.</span></div>` : ''}
-  <div class="card">${head('1. Muat transkrip', 'Satu PDF boleh berisi banyak mahasiswa (satu halaman per mahasiswa).', 'upload', '#0ea5e9', daftar.length ? `<button class="btn sm" id="sk-reset">${icon('trash')} Bersihkan dari layar</button>` : '')}
-    <div class="filters"><button class="btn pri" id="sk-up" ${sedang ? 'disabled' : ''}>${icon('upload')} Pilih transkrip PDF (SIAKAD)</button><span class="small muted">${sedang ? '<span class="spin"></span> Membaca…' : esc(namaBerkas || 'Belum ada berkas.')}</span></div>
+  <div class="card">${head('1. Muat transkrip', 'Satu berkas boleh berisi banyak mahasiswa: Excel (satu lembar per mahasiswa, hasil konversi PDF) atau PDF SIAKAD.', 'upload', '#0ea5e9', daftar.length ? `<button class="btn sm" id="sk-reset">${icon('trash')} Bersihkan dari layar</button>` : '')}
+    <div class="filters"><button class="btn pri" id="sk-up" ${sedang ? 'disabled' : ''}>${icon('upload')} Pilih transkrip (Excel atau PDF)</button><span class="small muted">${sedang ? '<span class="spin"></span> Membaca…' : esc(namaBerkas || 'Belum ada berkas.')}</span></div>
     ${pesanBaca ? `<div class="ribbon bad" style="margin-top:8px">${esc(pesanBaca)}</div>` : ''}</div>
   ${R ? isiMuat(pid, p, K, R, ed) : ''}`;
   const lnk = el.querySelector('#sk-ks'); if (lnk) lnk.onclick = (e) => { e.preventDefault(); tab = 'siap'; rerender(); };
   el.querySelector('#sk-up').onclick = () => {
-    const f = document.createElement('input'); f.type = 'file'; f.accept = '.pdf,application/pdf';
+    const f = document.createElement('input'); f.type = 'file'; f.accept = '.xlsx,.xls,.pdf,application/pdf';
     f.onchange = async () => {
       if (!f.files[0]) return; sedang = true; pesanBaca = ''; rerender();
-      try { daftar = await bacaPdf(f.files[0]); namaBerkas = f.files[0].name; sel = 0; terbit = {}; if (!daftar.length) pesanBaca = 'Tidak ada transkrip terbaca. Pastikan berkas adalah transkrip SIAKAD berformat PDF teks (bukan hasil pindai).'; }
+      try { daftar = await bacaBerkas(f.files[0]); namaBerkas = f.files[0].name; sel = 0; terbit = {}; if (!daftar.length) pesanBaca = 'Tidak ada transkrip terbaca. Pastikan berkas adalah transkrip SIAKAD berformat Excel hasil konversi atau PDF teks (bukan hasil pindai).'; }
       catch (e) { console.error(e); pesanBaca = 'Gagal membaca PDF: ' + (e.message || e); daftar = []; }
       sedang = false; rerender();
     };
@@ -98,7 +103,7 @@ function isiMuat(pid, p, K, R, ed) {
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kode transkrip</th><th>Nama pada transkrip</th><th class="num">SKS</th><th>Padankan dengan mata kuliah KUREKAM</th></tr></thead><tbody>
     ${[...kosong.values()].map(t => `<tr><td><b>${esc(t.kode)}</b></td><td>${esc(t.nama)}<div class="small muted">${esc(t.namaEn)}</div></td><td class="num">${t.sks}</td><td><select class="inp sk-pad" data-k="${esc(t.kode)}"><option value="">— belum dipadankan —</option>${mks.map(m => `<option value="${esc(m.id)}" ${manual[t.kode] === m.id ? 'selected' : ''}>${esc(m.kode)} · ${esc(short(m.nama, 54))} · smt ${m.smt}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
     ${ed ? `<div class="filters" style="margin-top:8px"><button class="btn sm" id="sk-simpan-pad">${icon('check')} Simpan padanan terpilih ke mata kuliah</button><span class="small muted">Setelah disimpan, transkrip berikutnya langsung cocok.</span></div>` : '<div class="small muted" style="margin-top:6px">Menyimpan padanan permanen hanya untuk Kaprodi atau admin.</div>'}</div>` : ''}
-  <div class="card" style="margin-top:18px">${head('3. Mahasiswa', 'Klik baris untuk melihat profil CPL. Nama dan NIM hanya tampil di layar ini.', 'user', '#10b981', `<button class="btn sm" id="sk-semua" ${boleh() ? '' : 'disabled'}>${icon('download')} Terbitkan dan cetak semua (${daftar.length})</button>`)}
+  <div class="card" style="margin-top:18px">${head('3. Mahasiswa', 'Klik baris untuk melihat profil CPL. Nama dan NIM hanya tampil di layar ini.', 'user', '#10b981', `<button class="btn sm" id="sk-w-semua" ${boleh() ? '' : 'disabled'}>${icon('download')} Unduh Word semua (ZIP)</button><button class="btn sm" id="sk-semua" ${boleh() ? '' : 'disabled'}>${icon('download')} Terbitkan dan cetak semua (${daftar.length})</button>`)}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>NIM</th><th>Nama</th><th class="num">IPK</th><th class="num">SKS</th><th>Transkrip</th><th class="num">Cakupan CPL</th><th>Terjemahan</th><th>Status</th></tr></thead><tbody>
     ${R.hasil.map(({ m, h }, i) => { const pv = perluVerifikasi(h); return `<tr class="click ${i === sel ? 'sel' : ''}" data-i="${i}"><td>${esc(nim(m))}</td><td>${esc(m.nama)}</td><td class="num">${m.ipk != null ? m.ipk.toFixed(2) : '–'}</td><td class="num">${m.sks}</td><td>${m.valid ? stTag('ok', 'Lolos') : stTag('bad', 'Periksa')}</td><td class="num">${fmt(h.cakupan, 0)}%</td><td>${pv.draf ? stTag('near', 'Draf') : stTag('ok', 'Terverifikasi')}</td><td>${terbit[nim(m)] ? stTag('ok', 'Terbit') : stTag('na', 'Pratinjau')}</td></tr>`; }).join('')}</tbody></table></div></div>
   ${cur ? profil(pid, K, R, cur, ed) : ''}
@@ -116,7 +121,7 @@ function profil(pid, K, R, cur, ed) {
   if (h.satuMk.length) peringatan.push(`CPL yang dibentuk hanya satu mata kuliah: ${h.satuMk.join(', ')} (kurang kuat sebagai bukti).`);
   if (h.cakupan < 90) peringatan.push(`Baru ${fmt(h.cakupan, 0)}% SKS transkrip yang terpetakan ke CPL; di bawah 90% skor kurang mewakili.`);
   if (pv.draf) peringatan.push(`Terjemahan belum diverifikasi Kaprodi: ${pv.cpl.length} CPL dan ${pv.mk.length} nama mata kuliah. Dokumen akan bertanda DRAF.`);
-  return `<div class="card" style="margin-top:18px">${head(`4. Profil CPL · ${esc(nim(m))}`, esc(m.nama), 'pulse', '#8b5cf6', `<button class="btn sm" id="sk-prev">${icon('eye')} Pratinjau dokumen</button><button class="btn pri sm" id="sk-terbit" ${boleh() ? '' : 'disabled'}>${icon('medal')} Terbitkan dan cetak</button>`)}
+  return `<div class="card" style="margin-top:18px">${head(`4. Profil CPL · ${esc(nim(m))}`, esc(m.nama), 'pulse', '#8b5cf6', `<button class="btn sm" id="sk-word" ${boleh() ? '' : 'disabled'}>${icon('download')} Unduh Word (Utama + Lampiran)</button><button class="btn sm" id="sk-prev">${icon('eye')} Pratinjau dokumen</button><button class="btn pri sm" id="sk-terbit" ${boleh() ? '' : 'disabled'}>${icon('medal')} Terbitkan dan cetak</button>`)}
     <div class="ind-list">${m.cek.map(x => `<div class="ind ${x.ok ? 'ok' : 'bad'}"><span class="ind-no">${x.ok ? '✓' : '!'}</span><div class="small">${esc(x.t)}</div></div>`).join('')}</div>
     ${peringatan.length ? `<div class="ribbon warn" style="margin-top:10px">${icon('alert')} <span>${peringatan.map(esc).join('<br>')}</span></div>` : ''}
     <div class="grid g4" style="margin-top:12px">${h.domain.filter(x => x.n).map(x => kpi(`${x.id} / ${x.en}`, x.skor == null ? 0 : +x.skor.toFixed(2), x.pred ? `${x.pred[0]} · ${x.terisi}/${x.n} CPL` : 'belum ada data', x.pred ? ({ sk: '#10b981', k: '#0ea5e9', ck: '#f5a524' })[x.pred[2]] : '#94a3b8', 'target', 2)).join('')}</div>
@@ -149,11 +154,14 @@ function pasang(el, pid, p, K, R, ed) {
     manual = {}; toast(`${pilih.length} padanan tersimpan.`); rerender();
   };
   const cur = R.hasil[Math.min(sel, R.hasil.length - 1)];
+  const kerjaWord = async (btn, arr) => { btn.disabled = true; try { const n = await unduhSkpiWord(arr, { K, prodiNama: p.nama, rata: R.rata }); toast(`${n} berkas Word dibuat.`); } catch (e) { console.error(e); toast('Gagal membuat Word: ' + (e.message || e)); } btn.disabled = false; };
+  const sw = el.querySelector('#sk-w-semua'); if (sw) sw.onclick = () => kerjaWord(sw, R.hasil);
   const sm = el.querySelector('#sk-semua'); if (sm) sm.onclick = () => terbitkan(pid, p, K, R, R.hasil, true);
   if (cur) {
     const c = cat[nim(cur.m)];
     const bind = (id, k) => { const e = el.querySelector(id); if (e) e.oninput = () => { c[k] = e.value; }; };
     bind('#sk-ij', 'noIjazah'); bind('#sk-na', 'nonAkademik'); bind('#sk-nae', 'nonAkademikEn');
+    const wd = el.querySelector('#sk-word'); if (wd) wd.onclick = () => kerjaWord(wd, [cur]);
     el.querySelector('#sk-prev').onclick = () => tampil(pid, p, K, R, [cur], false);
     el.querySelector('#sk-terbit').onclick = () => terbitkan(pid, p, K, R, [cur], false);
   }

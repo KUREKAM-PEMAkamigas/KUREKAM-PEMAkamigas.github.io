@@ -106,6 +106,51 @@ export function susunTranskrip(halaman) {
   return hasil;
 }
 
+/** Baca transkrip hasil konversi PDF ke Excel. sheets = daftar lembar, tiap lembar daftar baris (daftar sel).
+   Semua lembar digabung berurutan lalu dipecah per mahasiswa pada baris "Nama Mahasiswa" (header mahasiswa berikutnya
+   biasanya ada di dasar lembar sebelumnya). Letak kolom boleh bergeser: nilai huruf dicari, mutu = angka setelahnya. */
+export function bacaTranskripXlsx(sheets) {
+  const out = []; let m = null, smt = 0, terakhir = null, nl = 0;
+  const kosong = () => ({ mk: [], masalah: [], halaman: [] });
+  sheets.forEach((sh, si) => (sh || []).forEach((r) => {
+    const c = (r || []).map(x => x == null ? '' : String(x).trim());
+    if (!c.some(Boolean)) return;
+    const gabung = c.filter(Boolean).join(' ');
+    if (/Nama Mahasiswa/i.test(gabung) && /Name of Student/i.test(gabung)) {
+      m = kosong(); out.push(m); smt = 0; terakhir = null; nl = 0; m.halaman.push(si + 1);
+      const t = c.find(x => /Name of Student/i.test(x)) || gabung;
+      const nm = t.match(/Name of Student\s*:\s*(.+?)\s{2,}Nomor Induk/i) || t.match(/Name of Student\s*:\s*(.+?)\s*Nomor Induk/i); if (nm) m.nama = nm[1].trim();
+      const ni = t.match(/Student ID Number\s*:\s*(\d+)/i); if (ni) m.nim = ni[1];
+      const tl = t.match(/Tempat dan Tanggal Lahir[^:]*:\s*(.+?)\s*\/?\s{2,}Program Studi/i); if (tl) m.ttl = tl[1].replace(/\s*\/\s*$/, '').trim();
+      const ps = t.match(/Study Program\s*:\s*(.+)$/im); if (ps) [m.prodi, m.prodiEn] = dwi(ps[1].replace(/\s+/g, ' '));
+      return;
+    }
+    if (!m) return;
+    if (nl < 4) {
+      const te = (c.find(x => /Place, Date of Birth/i.test(x)) || '').match(/Place, Date of Birth\s*:\s*([^\n]+?)\s*$/im); if (te && !m.ttlEn) { m.ttlEn = te[1].trim(); nl++; }
+      const pg = (c.find(x => /Program\s*\/\s*Program\s*:/i.test(x)) || '').match(/^([^\n]*)\n\s*Program\s*\/\s*Program\s*:\s*(.+)$/i);
+      if (pg) { m.prodiEn = (m.prodiEn || '') + ' ' + pg[1].trim(); m.prodiEn = m.prodiEn.trim(); [m.program, m.programEn] = dwi(pg[2]); nl++; }
+    }
+    const sm = (c[0] || '').match(/^Semester\s+([IVX]+)$/i);
+    if (sm) { smt = ROMAWI[sm[1].toUpperCase()] || smt; terakhir = null; return; }
+    if (/^[A-Z]{2}\d{4}$/.test(c[0])) {
+      const rest = c.slice(2), iN = rest.findIndex(x => GRADE.has(x)), nums = rest.map(num);
+      const sks = nums.slice(0, iN < 0 ? rest.length : iN).find(Number.isFinite), mutu = iN < 0 ? NaN : nums.slice(iN + 1).find(Number.isFinite);
+      if (iN < 0 || !(sks >= 0) || !Number.isFinite(mutu)) { m.masalah.push(`Baris tidak terbaca: ${c[0]}`); terakhir = null; return; }
+      const nilai = rest[iN];
+      terakhir = { kode: c[0], nama: c[1], namaEn: '', sks, nilai, mutu, smt, am: sks > 0 ? mutu / sks : SKALA[nilai] };
+      m.mk.push(terakhir); return;
+    }
+    if (/^Jumlah\s*\/\s*Total/i.test(c[0])) { const n = c.slice(1).map(num).filter(Number.isFinite); m.totalSks = n[0]; m.totalMutu = n[1]; terakhir = null; return; }
+    if (!c[0] && c[1] && terakhir && !terakhir.namaEn && !c.slice(2).some(Boolean)) { terakhir.namaEn = c[1]; return; }
+    const ipk = gabung.match(/GPA\s*:\s*([\d.,]+)/i); if (ipk) m.ipk = num(ipk[1]);
+    const pr = gabung.match(/Predicate\s*:\s*(.+?)\s*(?:Tanggal Yudisium|$)/i); if (pr) [m.predikatLulus, m.predikatLulusEn] = dwi(pr[1]);
+    const yd = gabung.match(/Date of Judicium\s*:\s*(.+)$/i); if (yd) [m.yudisium, m.yudisiumEn] = dwi(yd[1]);
+  }));
+  out.forEach(periksaTranskrip);
+  return out;
+}
+
 /** Pemeriksaan keutuhan transkrip. Hasil: m.cek = [{ok, t}], m.valid = semua lolos. */
 export function periksaTranskrip(m) {
   const sks = m.mk.reduce((a, x) => a + x.sks, 0), mutu = m.mk.reduce((a, x) => a + x.mutu, 0), cek = [];

@@ -6,6 +6,8 @@ import { DB } from '../db.js';
 import { param, fmt } from '../rules.js';
 import { head, stTag, tanya, short, loadXLSX, unduh } from './ui.js';
 import { chart } from '../charts.js';
+import { predikat, rataSkor, narasi, lintasMk, htmlRapor, BATAS_KUAT } from '../rapor.js';
+import { SKPI_DEF } from '../skpilogic.js';
 import { bacaTempel, kenaliTabel, tebakPeta, hitungCpl, statusCapaian } from '../nilaicpl.js';
 
 const st = { mk: '', smt: '', kelas: '', teks: '', tabel: null, peta: {}, hasil: null, galat: '', membaca: false, kelasLihat: '' };
@@ -93,8 +95,9 @@ export default function nilaiView(el) {
     const h = st.hasil; if (!h) { hasilEl.innerHTML = ''; return; }
     if (!h.ringkas.length) { hasilEl.innerHTML = `<div class="ribbon bad" style="margin-top:14px">${icon('alert')} Belum ada kolom yang dipetakan ke CPMK yang memuat CPL. Petakan minimal satu kolom ke CPMK yang punya CPL.</div>`; return; }
     const angk = h.angkatan.filter(a => a !== '?'), asing = h.angkatan.includes('?'), banyakKelas = h.kelas.length > 1;
-    const lihat = h.mahasiswa.filter(m => !st.kelasLihat || m.kelas === st.kelasLihat);
-    const sel = (v) => v == null ? '<td class="num muted">-</td>' : `<td class="num" style="font-weight:700;color:${v >= ambang ? '#0f8a5f' : '#b42335'}">${fmt(v, 1)}</td>`;
+    const lihat = h.mahasiswa.map((m, i) => [m, i]).filter(([m]) => !st.kelasLihat || m.kelas === st.kelasLihat);
+    const cplAll = Array.from(new Set(cpmkMk().flatMap(c => c.cpl || []))).sort((a, b) => kodeCpl(a).localeCompare(kodeCpl(b), 'id', { numeric: true }));
+    const sel = (v) => v == null ? '<td class="kosong" title="Belum diisi">–</td>' : `<td class="num" style="font-weight:700;color:${v >= ambang ? '#0f8a5f' : '#b42335'}">${fmt(v, 1)}</td>`;
     hasilEl.innerHTML = `<div class="card" style="margin-top:14px">${head('3 · Hasil capaian CPL', `${esc((mk() || {}).nama || '')} · ${esc(st.smt)} · ${h.mhs} mahasiswa${banyakKelas ? ' · ' + h.kelas.length + ' kelas' : ''} · ambang ${fmt(ambang)}, target ${fmt(target)}%`, 'target', '#10b981', `<button class="btn sm" id="n-xlsx">${icon('download')} Unduh Excel</button>${can('rps', { mk: st.mk, prodi: (mk() || {}).prodi }) ? `<button class="btn pri sm" id="n-simpan">${icon('check')} Simpan hasil</button>` : ''}`)}
       ${asing ? `<div class="ribbon" style="background:#fef3c7;border-color:#f59e0b;margin:8px 0">${icon('alert')} Sebagian NIM tidak cocok dengan aturan angkatan (digit ke-${P.nimPos}, ${P.nimLen} digit). Baris itu masuk angkatan "?" dan tidak ikut rekap. Periksa aturan di Data Induk, Parameter.</div>` : ''}
       ${h.takTerpetakan.length ? `<div class="small muted" style="margin:6px 0">Kolom diabaikan: ${esc(h.takTerpetakan.join(', '))}</div>` : ''}
@@ -108,13 +111,15 @@ export default function nilaiView(el) {
       ${h.ringkas.map(r => `<tr><td><b>${esc(kodeCpl(r.cpl))}</b></td>${h.kelas.map(k => { const x = h.kelasHasil.find(b => b.kelas === k && b.cpl === r.cpl); return x ? `<td class="num" style="color:${x.persen >= target ? '#0f8a5f' : '#b42335'}"><b>${fmt(x.persen, 1)}%</b> <span class="small muted">(${x.lulus}/${x.n})</span></td>` : '<td class="num muted">-</td>'; }).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
       ${angk.length > 1 ? `<h4 style="margin:14px 0 6px">Per angkatan</h4><div class="tbl-wrap"><table class="tbl"><thead><tr><th>CPL</th>${angk.map(a => `<th class="num">Angkatan ${esc(a)}</th>`).join('')}</tr></thead><tbody>
       ${h.ringkas.map(r => `<tr><td><b>${esc(kodeCpl(r.cpl))}</b></td>${angk.map(a => { const x = h.baris.filter(b => b.angkatan === a && b.cpl === r.cpl), n = x.reduce((s, b) => s + b.n, 0), l = x.reduce((s, b) => s + b.lulus, 0); return n ? `<td class="num">${fmt(l / n * 100, 1)}% <span class="small muted">(${l}/${n})</span></td>` : '<td class="num muted">-</td>'; }).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
-      <h4 style="margin:14px 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">Per mahasiswa <span class="small muted" style="font-weight:400">${lihat.length} mahasiswa · merah bila skor di bawah ${fmt(ambang)}</span>${banyakKelas ? `<select class="inp" id="n-kl" style="width:auto"><option value="">Semua kelas</option>${h.kelas.map(k => `<option value="${esc(k)}" ${k === st.kelasLihat ? 'selected' : ''}>Kelas ${esc(k || '-')}</option>`).join('')}</select>` : ''}</h4>
-      <div class="tbl-wrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr style="position:sticky;top:0;background:var(--card,#fff);z-index:1"><th>No</th><th>NIM</th><th>Nama</th>${banyakKelas ? '<th>Kelas</th>' : ''}<th>Angk.</th>${h.cplIds.map(id => `<th class="num">${esc(kodeCpl(id))}</th>`).join('')}<th class="num">Belum tercapai</th></tr></thead><tbody>
-      ${lihat.map((m, i) => { const gagal = h.cplIds.filter(id => m.cpl[id] != null && m.cpl[id] < ambang).length; return `<tr><td class="small">${i + 1}</td><td class="small">${esc(m.nim)}</td><td>${esc(m.nama)}</td>${banyakKelas ? `<td class="small">${esc(m.kelas)}</td>` : ''}<td class="small">${esc(m.angkatan)}</td>${h.cplIds.map(id => sel(m.cpl[id])).join('')}<td class="num">${gagal ? `<b style="color:#b42335">${gagal}</b>` : '<span class="muted">0</span>'}</td></tr>`; }).join('')}
+      <style>.n-rp th,.n-rp td{padding:3px 7px!important;font-size:12px!important;white-space:nowrap}.n-rp tbody tr{cursor:pointer}.n-rp tbody tr:hover{background:rgba(14,165,233,.08)}.n-rp .kosong{background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 4px,#f1f5f9 4px,#f1f5f9 8px);color:#94a3b8;text-align:center}.n-rp .nm{max-width:210px;overflow:hidden;text-overflow:ellipsis}</style>
+      <h4 style="margin:14px 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">Per mahasiswa <span class="small muted" style="font-weight:400">${lihat.length} mahasiswa · hijau ≥ ${fmt(ambang)} · merah di bawah · <span style="display:inline-block;width:26px;height:10px;vertical-align:middle;background:repeating-linear-gradient(45deg,#cbd5e1,#cbd5e1 3px,#f1f5f9 3px,#f1f5f9 6px)"></span> belum diisi · klik nama untuk rapor</span>${banyakKelas ? `<select class="inp" id="n-kl" style="width:auto"><option value="">Semua kelas</option>${h.kelas.map(k => `<option value="${esc(k)}" ${k === st.kelasLihat ? 'selected' : ''}>Kelas ${esc(k || '-')}</option>`).join('')}</select>` : ''}</h4>
+      <div class="tbl-wrap" style="max-height:460px;overflow:auto"><table class="tbl n-rp"><thead><tr style="position:sticky;top:0;background:var(--card,#fff);z-index:1"><th>No</th><th>NIM</th><th>Nama</th>${banyakKelas ? '<th>Kls</th>' : ''}<th>Angk.</th>${cplAll.map(id => `<th class="num">${esc(kodeCpl(id))}</th>`).join('')}<th class="num">Rata-rata CPL</th><th class="num">Belum</th><th>Predikat</th></tr></thead><tbody>
+      ${lihat.map(([m, ix], i) => { const ada = cplAll.filter(id => m.cpl[id] != null), gagal = ada.filter(id => m.cpl[id] < ambang).length, rt = rataSkor(m.cpl, ada), pr = predikat(rt, ambang); return `<tr data-rp="${ix}"><td>${i + 1}</td><td>${esc(m.nim)}</td><td class="nm" title="${esc(m.nama)}"><b>${esc(m.nama)}</b></td>${banyakKelas ? `<td>${esc(m.kelas)}</td>` : ''}<td>${esc(m.angkatan)}</td>${cplAll.map(id => sel(m.cpl[id])).join('')}<td class="num"><b>${rt == null ? '–' : fmt(rt, 1)}</b></td><td class="num">${gagal ? `<b style="color:#b42335">${gagal}</b>` : '<span class="muted">0</span>'}</td><td><b style="color:${pr.w}">${pr.t}</b></td></tr>`; }).join('')}
       </tbody></table></div>
     </div>`;
     const bs = hasilEl.querySelector('#n-simpan'); if (bs) bs.onclick = simpan;
     hasilEl.querySelector('#n-xlsx').onclick = () => unduhExcel(h);
+    hasilEl.querySelectorAll('[data-rp]').forEach(tr => tr.onclick = () => bukaRapor(+tr.dataset.rp));
     const kl = hasilEl.querySelector('#n-kl'); if (kl) kl.onchange = () => { st.kelasLihat = kl.value; gambarHasil(); };
     const rad = hasilEl.querySelector('#n-rad');
     if (rad) chart(rad, { tooltip: {}, legend: { bottom: 0, data: ['Capaian (% mahasiswa ≥ ambang)', 'Target'] },
@@ -122,6 +127,64 @@ export default function nilaiView(el) {
       series: [{ type: 'radar', symbolSize: 5, data: [
         { name: 'Capaian (% mahasiswa ≥ ambang)', value: h.ringkas.map(r => +(r.persen || 0).toFixed(1)), areaStyle: { opacity: .18 }, lineStyle: { width: 2, color: '#0ea5e9' }, itemStyle: { color: '#0ea5e9' } },
         { name: 'Target', value: h.ringkas.map(() => target), lineStyle: { type: 'dashed', color: '#6366f1' }, itemStyle: { color: '#6366f1' }, symbol: 'none' }] }] });
+  }
+
+  /* ---------- rapor mahasiswa: level 2 (mata kuliah ini) dan level 3 (lintas mata kuliah) ---------- */
+  const lintasBoleh = () => ['admin', 'developer'].includes(ctx.role) || (ctx.role === 'prodi' && ctx.prodi === (mk() || {}).prodi);
+  const rata = (arr) => { const a = arr.filter(v => v != null); return a.length ? a.reduce((s, v) => s + v, 0) / a.length : null; };
+  function cetakHtml(html, judul) {
+    const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(15,23,42,.7);display:flex;flex-direction:column';
+    ov.innerHTML = `<div style="display:flex;gap:8px;padding:8px 12px;background:#0f172a;align-items:center;flex-wrap:wrap"><b style="color:#fff">${esc(judul)}</b><div style="flex:1"></div><span class="small" style="color:#cbd5e1">Di jendela cetak pilih “Simpan sebagai PDF”, ukuran A4.</span><button class="btn pri sm" id="rp-print">Cetak atau simpan PDF</button><button class="btn sm" id="rp-tutup">Tutup</button></div><iframe style="flex:1;border:0;background:#fff"></iframe>`;
+    document.body.appendChild(ov); ov.querySelector('iframe').srcdoc = html;
+    ov.querySelector('#rp-tutup').onclick = () => ov.remove();
+    ov.querySelector('#rp-print').onclick = () => { const w = ov.querySelector('iframe').contentWindow; w.focus(); w.print(); };
+  }
+  async function bukaRapor(ix) {
+    const h = st.hasil, m = h.mahasiswa[ix], rec = mk(); if (!m || !rec) return;
+    const sekelas = h.mahasiswa.filter(x => x.kelas === m.kelas);
+    const cplAll = Array.from(new Set(cpmkMk().flatMap(c => c.cpl || []))).sort((a, b) => kodeCpl(a).localeCompare(kodeCpl(b), 'id', { numeric: true }));
+    const cplRows = cplAll.map(id => ({ id, kode: kodeCpl(id), teks: short((S.cpl.find(c => c.id === id) || {}).teks || '', 120), skor: m.cpl[id] == null ? null : m.cpl[id], rataKelas: rata(sekelas.map(x => x.cpl[id])) }));
+    const cpmkRows = cpmkMk().map(c => ({ id: c.id, kode: c.kode || c.id, teks: short(c.teks || '', 110), skor: m.cpmk[c.id] == null ? null : m.cpmk[c.id], rataKelas: rata(sekelas.map(x => x.cpmk[c.id])), cpl: (c.cpl || []).map(kodeCpl) }));
+    const kal = narasi({ nama: m.nama, cplRows, cpmkRows, ambang });
+    const bar = (v) => { const p = predikat(v, ambang); return v == null ? '<span class="muted">belum diisi</span>' : `<span style="display:inline-block;width:120px;height:8px;background:#e2e8f0;border-radius:4px;vertical-align:middle"><i style="display:block;height:8px;width:${Math.min(100, v)}%;background:${p.w};border-radius:4px"></i></span> <b>${fmt(v, 1)}</b>`; };
+    const tag = (v) => { const p = predikat(v, ambang); return `<b style="color:${p.w}">${p.t}</b>`; };
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    const meta = { institusi: SKPI_DEF.institusi || 'Politeknik Energi dan Mineral Akamigas', prodiNama: (S.prodi.find(x => x.id === rec.prodi) || {}).nama || rec.prodi, logo: new URL('assets/img/logo-pem-akamigas.png', document.baseURI).href, mhs: { nim: m.nim, nama: m.nama, kelas: m.kelas, angkatan: m.angkatan }, mk: { kode: rec.kode || rec.id, nama: rec.nama }, smt: st.smt, ambang };
+    let lintas = null;
+    const tutup = () => bg.remove();
+    function tampil2() {
+      const rt = rata(cplRows.map(r => r.skor)), pr = predikat(rt, ambang);
+      bg.innerHTML = `<div class="modal card wide" role="dialog" aria-modal="true" style="max-width:920px;width:96vw"><div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:220px"><h3 style="margin:0">${esc(m.nama || m.nim)}</h3><div class="small muted">NIM ${esc(m.nim)} · ${m.kelas ? 'Kelas ' + esc(m.kelas) + ' · ' : ''}Angkatan ${esc(m.angkatan)} · ${esc(rec.kode || '')} ${esc(rec.nama)}</div></div><div style="text-align:right"><div class="small muted">Rata-rata CPL</div><div style="font-size:22px;font-weight:800;color:${pr.w}">${fmt(rt, 1)}</div>${tag(rt)}</div></div>
+        <div class="modal-isi" style="max-height:70vh;overflow:auto"><p class="small" style="background:rgba(14,165,233,.08);border-left:3px solid #0ea5e9;padding:8px 10px;margin:10px 0">${esc(kal)}</p>
+        <h4 style="margin:10px 0 4px">CPL</h4><div class="tbl-wrap"><table class="tbl n-rp"><thead><tr><th>CPL</th><th>Skor</th><th class="num">Rata-rata kelas</th><th>Predikat</th></tr></thead><tbody>${cplRows.map(r => `<tr style="cursor:default"><td><b>${esc(r.kode)}</b> <span class="small muted" style="white-space:normal">${esc(r.teks)}</span></td><td>${bar(r.skor)}</td><td class="num">${fmt(r.rataKelas, 1)}</td><td>${tag(r.skor)}</td></tr>`).join('')}</tbody></table></div>
+        <h4 style="margin:12px 0 4px">CPMK</h4><div class="tbl-wrap"><table class="tbl n-rp"><thead><tr><th>CPMK</th><th>Skor</th><th class="num">Rata-rata kelas</th><th>Predikat</th></tr></thead><tbody>${cpmkRows.map(r => `<tr style="cursor:default"><td><b>${esc(r.kode)}</b> <span class="small muted" style="white-space:normal">${esc(r.teks)} (${esc(r.cpl.join(', '))})</span></td><td>${bar(r.skor)}</td><td class="num">${fmt(r.rataKelas, 1)}</td><td>${tag(r.skor)}</td></tr>`).join('')}</tbody></table></div></div>
+        <div class="drawer-act" style="margin-top:10px;flex-wrap:wrap">${lintasBoleh() ? '<button class="btn sm" id="rp-lintas">Lihat lintas mata kuliah →</button>' : ''}<button class="btn sm" id="rp-cetak">${icon('download')} Cetak rapor</button><button class="btn pri sm" id="rp-x">Tutup</button></div></div>`;
+      bg.querySelector('#rp-x').onclick = tutup;
+      bg.querySelector('#rp-cetak').onclick = () => cetakHtml(htmlRapor({ ...meta, cplRows, cpmkRows, narasi: kal, lintas }), 'Rapor kompetensi · ' + (m.nama || m.nim));
+      const bl = bg.querySelector('#rp-lintas'); if (bl) bl.onclick = tampil3;
+    }
+    async function tampil3() {
+      bg.querySelector('#rp-lintas').disabled = true;
+      let docs = []; try { docs = (await DB.dok.daftar('nilai')).filter(d => d.prodi === rec.prodi); } catch (e) { toast('Data MK lain tidak terbaca: ' + (e.message || e)); }
+      const cur = { id: idDok(st.mk, st.smt, m.kelas), mk: st.mk, prodi: rec.prodi, smt: st.smt, kelas: m.kelas, kolom: st.tabel.kolom.map(c => c.nama), peta: st.peta, mhs: st.tabel.mhs };
+      docs = docs.filter(d => d.id !== cur.id).concat([cur]);
+      const L = lintasMk(S, m.nim, docs, ambang, P.nimPos, P.nimLen);
+      const cplP = S.cpl.filter(c => c.prodi === rec.prodi).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
+      const rows3 = cplP.map(c => ({ id: c.id, kode: c.kode, teks: short(c.teks || '', 120), skor: L.cpl[c.id] ? L.cpl[c.id].skor : null, n: L.cpl[c.id] ? L.cpl[c.id].dari.length : 0 }));
+      const mkR = L.mkRows.slice().sort((a, b) => (b.rata || 0) - (a.rata || 0));
+      const menguatkan = mkR.filter(r => r.rata != null && r.rata >= BATAS_KUAT).slice(0, 3).map(r => r.mk.nama), melemahkan = mkR.filter(r => r.rata != null && r.rata < ambang).map(r => r.mk.nama);
+      const kal3 = narasi({ nama: m.nama, cplRows: rows3, cpmkRows: [], ambang, lintas: { menguatkan, melemahkan } });
+      lintas = { narasi: kal3, cplRows: rows3.filter(r => r.skor != null), mkRows: mkR.map(r => ({ kode: r.mk.kode || r.mk.id, nama: r.mk.nama, smt: r.smt, rata: r.rata, cpl: Object.keys(r.cpl).map(id => ({ kode: kodeCpl(id), skor: r.cpl[id] })) })) };
+      bg.innerHTML = `<div class="modal card wide" role="dialog" aria-modal="true" style="max-width:980px;width:96vw"><h3 style="margin:0">${esc(m.nama || m.nim)} · lintas mata kuliah</h3><div class="small muted">NIM ${esc(m.nim)} · ${mkR.length} mata kuliah sudah dinilai. Hanya mata kuliah yang datanya sudah tersimpan ikut dihitung.</div>
+        <div class="modal-isi" style="max-height:72vh;overflow:auto"><p class="small" style="background:rgba(14,165,233,.08);border-left:3px solid #0ea5e9;padding:8px 10px;margin:10px 0">${esc(kal3)}</p>
+        <h4 style="margin:10px 0 4px">CPL gabungan (berbobot SKS)</h4><div class="tbl-wrap"><table class="tbl n-rp"><thead><tr><th>CPL</th><th>Skor</th><th class="num">Jumlah MK</th><th>Predikat</th></tr></thead><tbody>${rows3.map(r => `<tr style="cursor:default"><td><b>${esc(r.kode)}</b> <span class="small muted" style="white-space:normal">${esc(r.teks)}</span></td><td>${bar(r.skor)}</td><td class="num">${r.n || '–'}</td><td>${tag(r.skor)}</td></tr>`).join('')}</tbody></table></div>
+        <h4 style="margin:12px 0 4px">Mata kuliah: menguatkan dan melemahkan</h4><div class="tbl-wrap"><table class="tbl n-rp"><thead><tr><th>Mata kuliah</th><th>Semester</th><th class="num">Rata-rata CPL</th><th>Skor per CPL</th></tr></thead><tbody>${mkR.map(r => `<tr style="cursor:default"><td><b>${esc(r.mk.kode || r.mk.id)}</b> ${esc(r.mk.nama)}</td><td>${esc(r.smt)}</td><td class="num">${tag(r.rata)} <b>${fmt(r.rata, 1)}</b></td><td style="white-space:normal">${Object.keys(r.cpl).map(id => `${esc(kodeCpl(id))} <b style="color:${predikat(r.cpl[id], ambang).w}">${fmt(r.cpl[id], 1)}</b>`).join(' · ')}</td></tr>`).join('')}</tbody></table></div></div>
+        <div class="drawer-act" style="margin-top:10px;flex-wrap:wrap"><button class="btn sm" id="rp-kembali">← Kembali ke mata kuliah ini</button><button class="btn sm" id="rp-cetak">${icon('download')} Cetak rapor lengkap</button><button class="btn pri sm" id="rp-x">Tutup</button></div></div>`;
+      bg.querySelector('#rp-x').onclick = tutup; bg.querySelector('#rp-kembali').onclick = tampil2;
+      bg.querySelector('#rp-cetak').onclick = () => cetakHtml(htmlRapor({ ...meta, cplRows, cpmkRows, narasi: kal, lintas }), 'Rapor kompetensi lengkap · ' + (m.nama || m.nim));
+    }
+    bg.onclick = (e) => { if (e.target === bg) tutup(); };
+    tampil2(); document.body.appendChild(bg);
   }
 
   async function simpan() {

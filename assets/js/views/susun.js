@@ -1,5 +1,6 @@
 /* KUREKAM · Penyusunan: Visi & PL, CPL, BoK & BK, Mata Kuliah */
 import { templatCpl, imporCpl } from '../cplexcel.js';
+import { templatBok, imporBok, templatBk, imporBk } from '../bokexcel.js';
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, addLog, toast } from '../app.js';
 import { labelKel, labelGrup, kodeBaruMk, usulKodeProdi, KODE_USULAN, awalPraktik } from '../kode.js';
 import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
@@ -124,12 +125,12 @@ export function bkView(el) {
   ${ed && bkTanpaKed.length ? `<div class="ribbon info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>${bkTanpaKed.length} bahan kajian belum diberi kedalaman (level Bloom). Kedalaman = level tertinggi yang harus dicapai pada bahan kajian itu, diturunkan dari CPL yang dibentuknya.</span><button class="btn pri sm" id="ked-fix">${icon('spark')} Isi kedalaman otomatis</button></div>` : ''}
   ${ed && (bkTanpa.length || !bok.length) ? `<div class="ribbon bad" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>${!bok.length ? 'Prodi ini belum memiliki BoK.' : `${bkTanpa.length} bahan kajian belum dikaitkan ke BoK.`}</span><button class="btn pri sm" id="bok-fix">${icon('spark')} Kaitkan otomatis</button></div>` : ''}
   <div class="grid g-12">
-    <div class="card">${head('Body of Knowledge', 'Peta keilmuan bidang (asosiasi, SKKNI, IABEE)', 'globe', '#6366f1', ed ? `<button class="btn sm" id="add-bok">${icon('plus')} BoK</button>` : '')}
+    <div class="card">${head('Body of Knowledge', 'Peta keilmuan bidang (asosiasi, SKKNI, IABEE)', 'globe', '#6366f1', ed ? `<button class="btn sm" id="bok-tpl">${icon('download')} Templat</button> <button class="btn sm" id="bok-imp">${icon('upload')} Impor</button><input type="file" id="bok-file" accept=".xlsx,.xls" hidden> <button class="btn sm" id="add-bok">${icon('plus')} BoK</button>` : '')}
       ${bok.map((b, i) => `<div class="bok ${ed ? 'click' : ''}" data-id="${b.id}" style="--c:${PAL[i % PAL.length]}"><b>${b.kode} · ${esc(b.nama)}</b><div class="small muted">${esc(b.sumber || '')}</div><div class="small">${bk.filter(x => x.bok === b.id).length} bahan kajian · ${fmt(bk.filter(x => x.bok === b.id).reduce((a, x) => a + sksBk(x), 0), 1)} SKS</div></div>`).join('')}
     </div>
     <div class="card">${head('Peta BoK → bahan kajian', 'Luas kotak = SKS mata kuliah yang memuat bahan kajian tersebut', 'grid4', '#8b5cf6')}<div class="chart lg" id="c-tree"></div></div>
   </div>
-  <div class="card" style="margin-top:18px">${head('Bahan kajian', 'Bagian BoK yang dipilih prodi beserta kedalamannya', 'layers', '#8b5cf6', ed ? `<button class="btn pri sm" id="add-bk">${icon('plus')} Bahan kajian</button>` : ro())}
+  <div class="card" style="margin-top:18px">${head('Bahan kajian', 'Bagian BoK yang dipilih prodi beserta kedalamannya', 'layers', '#8b5cf6', ed ? `<button class="btn sm" id="bk-tpl">${icon('download')} Templat Excel</button> <button class="btn sm" id="bk-imp">${icon('upload')} Impor Excel</button><input type="file" id="bk-file" accept=".xlsx,.xls" hidden> <button class="btn pri sm" id="add-bk">${icon('plus')} Bahan kajian</button>` : ro())}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kode</th><th>Bahan kajian</th><th>BoK</th><th>Kedalaman</th><th>CPL</th><th class="num">MK</th><th class="num">SKS</th></tr></thead><tbody>
     ${bk.map(b => `<tr class="${ed ? 'click' : ''}" data-id="${b.id}"><td><b>${b.kode}</b></td><td>${esc(b.nama)}</td><td class="small">${(bok.find(x => x.id === b.bok) || {}).kode || '–'}</td><td>${badge(b.kedalaman)}</td><td class="small">${(b.cpl || []).map(id => (S.cpl.find(c => c.id === id) || {}).kode).join(', ')}</td><td class="num">${mk.filter(m => (m.bk || []).includes(b.id)).length}</td><td class="num">${fmt(sksBk(b), 1)}</td></tr>`).join('')}
     </tbody></table></div></div>`;
@@ -144,6 +145,8 @@ export function bkView(el) {
   const bokForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah BoK' : 'BoK baru', sub: prodiName(), obj: x, fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'bok', ctx.prodi) }, { k: 'nama', label: 'Nama' }, { k: 'sumber', label: 'Sumber rujukan' }],
     onSave: async (o) => { if (!o.nama) return 'Nama wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'bok', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('bok', o, `Simpan BoK ${o.kode}`); rerender(); },
     onDelete: x.id ? async () => { await remove('bok', x.id, `Hapus BoK ${x.kode}`); rerender(); } : null });
+  const pasangXl = (pre, tpl, imp) => { const bt = el.querySelector('#' + pre + '-tpl'), bi = el.querySelector('#' + pre + '-imp'), fi = el.querySelector('#' + pre + '-file'); if (!bt) return; bt.onclick = () => tpl(ctx.prodi).catch(e => toast('Templat gagal: ' + e.message)); bi.onclick = () => { fi.value = ''; fi.click(); }; fi.onchange = () => { const f = fi.files[0]; if (f) imp(f, ctx.prodi).catch(e => toast('Impor gagal: ' + e.message)); }; };
+  pasangXl('bok', templatBok, imporBok); pasangXl('bk', templatBk, imporBk);
   if (ed) {
     const kf = el.querySelector('#ked-fix'); if (kf) kf.onclick = async () => {
       const ub = bkTanpaKed.map(b => ({ ...b, kedalaman: kedalamanBk(S, b) })).filter(b => b.kedalaman);

@@ -53,13 +53,16 @@ export function tebakPeta(kolom, cpmk) {
 
 /** Hitung. cpmk: daftar CPMK MK ({id, cpl:[id]}), bobotCpmk: {id: bobot}, peta: {namaKolom: {cpmk, bobot}}.
     Hasil: baris agregat per angkatan dan CPL, ringkasan per CPL untuk seluruh angkatan, dan jumlah mahasiswa. */
-export function hitungCpl({ tabel, cpmk, bobotCpmk, peta, ambang, nimPos, nimLen }) {
-  const kol = tabel.kolom, per = {}, semua = {}, angk = new Set();
+export function hitungCpl({ tabel, cpmk, bobotCpmk, peta: petaAsli, ambang, nimPos, nimLen, subKeCpmk = {} }) {
+  /* kolom boleh dipetakan ke CPMK (id biasa) atau ke Sub-CPMK (awalan S:). Sub-CPMK diubah menjadi CPMK induknya untuk perhitungan CPL. */
+  const kol = tabel.kolom, per = {}, semua = {}, angk = new Set(), sk = {}, subAda = new Set();
+  const peta = {}; kol.forEach(k => { const p = petaAsli[k.nama] || {}; if (String(p.cpmk).startsWith('S:')) { const s = p.cpmk.slice(2); peta[k.nama] = { ...p, cpmk: subKeCpmk[s] || '', sub: s }; subAda.add(s); } else peta[k.nama] = p; });
   const cpmkAda = cpmk.filter(c => kol.some(k => (peta[k.nama] || {}).cpmk === c.id));
   const cplIds = Array.from(new Set(cpmkAda.flatMap(c => c.cpl || [])));
   tabel.mhs.forEach(m => {
     const a = angkatanNim(m.nim, nimPos, nimLen); angk.add(a);
     const skorC = {};
+    subAda.forEach(s => { let t = 0, b = 0; kol.forEach((k, j) => { const p = peta[k.nama]; if (!p || p.sub !== s || m.v[j] == null) return; const w = +p.bobot > 0 ? +p.bobot : 1; t += w * m.v[j]; b += w; }); if (b) { const x = sk[s] || (sk[s] = { n: 0, lulus: 0, jum: 0 }); x.n++; x.jum += t / b; if (t / b >= ambang) x.lulus++; } });
     cpmkAda.forEach(c => {
       let s = 0, b = 0;
       kol.forEach((k, j) => { const p = peta[k.nama]; if (!p || p.cpmk !== c.id || m.v[j] == null) return; const w = +p.bobot > 0 ? +p.bobot : 1; s += w * m.v[j]; b += w; });
@@ -75,7 +78,8 @@ export function hitungCpl({ tabel, cpmk, bobotCpmk, peta, ambang, nimPos, nimLen
   });
   const baris = Object.keys(per).map(key => { const [angkatan, cpl] = key.split('|'), x = per[key]; return { angkatan, cpl, n: x.n, lulus: x.lulus, rata: x.jum / x.n }; });
   const ringkas = cplIds.map(id => { const x = semua[id] || { n: 0, lulus: 0, jum: 0 }; return { cpl: id, n: x.n, lulus: x.lulus, persen: x.n ? x.lulus / x.n * 100 : null, rata: x.n ? x.jum / x.n : null }; });
-  return { baris, ringkas, mhs: tabel.mhs.length, angkatan: Array.from(angk).sort(), takTerpetakan: kol.filter(k => !(peta[k.nama] || {}).cpmk).map(k => k.nama) };
+  const subHasil = Object.keys(sk).map(s => ({ sub: s, n: sk[s].n, lulus: sk[s].lulus, persen: sk[s].lulus / sk[s].n * 100, rata: sk[s].jum / sk[s].n }));
+  return { baris, ringkas, subHasil, mhs: tabel.mhs.length, angkatan: Array.from(angk).sort(), takTerpetakan: kol.filter(k => !(peta[k.nama] || {}).cpmk).map(k => k.nama) };
 }
 
 /** Status per CPL: 'ok' bila persen ≥ target, 'near' bila selisih ≤ 10 poin, selain itu 'bad'. */

@@ -7,6 +7,7 @@ import { byProdi, kodeBerikut, rencanaSelaras, iabeeOf } from './rules.js';
 import { BUTIR_IABEE } from './config.js';
 import { detect } from './bloom.js';
 import { unduh, loadXLSX } from './views/ui.js';
+import { tebakRanah } from './obeimpor.js';
 import { pratinjauImpor, bedaRingkas, rencanaHapus, awalCadangan } from './impor.js';
 
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
@@ -43,30 +44,35 @@ export async function templatCpl(pid, awal = 'Template') {
 export async function imporCpl(file, pid) {
   const X = await loadXLSX(), wb = X.read(await file.arrayBuffer(), { type: 'array' });
   let rows = null, h = null, mulai = 0;
-  for (const nm of wb.SheetNames) { const r = X.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: '' }); const i = r.findIndex(x => x.some(c => /^ranah/.test(norm(c))) && x.some(c => /rumusan/.test(norm(c)))); if (i >= 0) { rows = r; h = r[i].map(norm); mulai = i + 1; break; } }
-  if (!rows) throw new Error('Kolom Ranah dan Rumusan CPL tidak ditemukan. Gunakan templat dari tombol Templat Excel.');
+  for (const nm of wb.SheetNames) { const r = X.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: '' }); const i = r.findIndex(x => x.some(c => /rumusan|deskripsi|capaianpembelajaran|uraian|pernyataan/.test(norm(c))) && x.some(c => /^(kode|no|cpl|ranah|aspek|unsur)/.test(norm(c)))); if (i >= 0) { rows = r; h = r[i].map(norm); mulai = i + 1; break; } }
+  if (!rows) throw new Error('Kolom rumusan CPL tidak ditemukan. Baris judul harus memuat kolom Rumusan (atau Deskripsi) dan Kode atau Ranah. Gunakan templat dari tombol Templat / Ekspor.');
   const kol = (...p) => { for (const q of p) { const i = h.findIndex(x => q.test(x)); if (i >= 0) return i; } return -1; };
-  const c = { kode: kol(/^kodecpl/, /^kode/), ranah: kol(/^ranah/), sn: kol(/^unsur/, /sndikti/), teks: kol(/^rumusan/), pl: kol(/^profil/), ib: kol(/^butiriabee/, /^iabee/) };
+  const c = { kode: kol(/^kodecpl/, /^kode/, /^nocpl/, /^no$/, /^cpl$/), ranah: kol(/^ranah/, /^aspek/, /^domain/), sn: kol(/^unsur/, /sndikti/), teks: kol(/^rumusan/, /rumusan/, /deskripsi/, /capaianpembelajaran/, /uraian/, /pernyataan/), pl: kol(/^profil/, /^pl$/), ib: kol(/^butiriabee/, /^iabee/) };
   const cpl = byProdi(S.cpl, pid), pl = byProdi(S.pl, pid), kodeIb = new Set(BUTIR_IABEE.map(b => b.k));
   const baru = [], ubah = [], lewat = [], catatan = [], disebut = new Set(); let bloomTanpa = 0, tetap = 0;
   for (let r = mulai; r < rows.length; r++) {
     const row = rows[r]; if (!row.some(v => nz(v))) continue; if (row.some(v => /hapus baris ini/i.test(nz(v)))) continue;
     if (c.kode >= 0 && nz(row[c.kode])) disebut.add(norm(row[c.kode]));
-    const no = r + 1, ranah = ranahDari(row[c.ranah]), teks = nz(row[c.teks]).replace(/\s+/g, ' ');
-    if (!ranah) { lewat.push(`baris ${no}: ranah "${nz(row[c.ranah])}" tidak dikenal`); continue; }
+    const no = r + 1, teks = nz(row[c.teks]).replace(/\s+/g, ' '), kd = c.kode >= 0 ? nz(row[c.kode]) : '';
+    const sandi = (kd + ' ' + (c.sn >= 0 ? nz(row[c.sn]) : '')).toUpperCase(), mRanah = /(?:^|[^A-Z])(KU|KK|S|P)-?\d{1,2}(?!\d)/.exec(sandi);
+    let ranah = c.ranah >= 0 ? ranahDari(row[c.ranah]) : '';
+    if (!ranah && mRanah) ranah = mRanah[1];
+    if (!ranah && teks) { ranah = tebakRanah(teks); if (ranah) catatan.push(`baris ${no}: ranah tidak tertulis, ditebak dari rumusan sebagai ${RANAH[ranah]}`); }
+    if (!ranah) { lewat.push(`baris ${no}: ranah tidak terbaca`); continue; }
     if (!teks) { lewat.push(`baris ${no}: rumusan kosong`); continue; }
-    const plKode = pecah(row[c.pl]).map(t => t.toUpperCase()), plId = [];
+    const plKode = c.pl >= 0 ? pecah(row[c.pl]).map(t => t.toUpperCase()) : [], plId = [];
     let plSalah = '';
     plKode.forEach(k => { const p = pl.find(x => String(x.kode).toUpperCase() === k); if (p) plId.push(p.id); else plSalah = k; });
     if (plSalah) { lewat.push(`baris ${no}: profil lulusan "${plSalah}" tidak ada`); continue; }
-    if (!plId.length) { lewat.push(`baris ${no}: profil lulusan wajib minimal satu`); continue; }
-    const ib = pecah(row[c.ib]).map(t => t.toLowerCase().replace(/[()]/g, '')); const ibSalah = ib.find(k => !kodeIb.has(k));
+    if (!plId.length) catatan.push(`baris ${no}: profil lulusan belum dipilih, lengkapi di menu CPL`);
+    const ib = (c.ib >= 0 ? pecah(row[c.ib]) : []).map(t => t.toLowerCase().replace(/[()]/g, '')); const ibSalah = ib.find(k => !kodeIb.has(k));
     if (ibSalah) { lewat.push(`baris ${no}: butir IABEE "${ibSalah}" bukan a sampai k`); continue; }
-    const sn = pecah(row[c.sn]).map(t => t.toUpperCase().replace(/^CPL-?/, '')); const snSalah = sn.find(k => !new RegExp(`^${ranah}\\d{2}$`).test(k));
-    if (snSalah) { lewat.push(`baris ${no}: unsur SN Dikti "${snSalah}" tidak sesuai ranah ${ranah} (contoh ${ranah}01)`); continue; }
+    const sn = (c.sn >= 0 ? pecah(row[c.sn]) : []).map(t => t.toUpperCase().replace(/^CPL-?\d*-?/, '').replace(/^([A-Z]+)(\d)$/, '$10$2')).filter(k => new RegExp(`^${ranah}\\d{2}$`).test(k));
     const b = detect(teks, HINT[ranah]); if (!b) { bloomTanpa++; catatan.push(`baris ${no}: tidak diawali kata kerja operasional Bloom`); } else if (b.kabur) catatan.push(`baris ${no}: kata kerja "${b.verb}" kurang terukur`);
-    const kd = c.kode >= 0 ? nz(row[c.kode]) : '', ada = kd ? cpl.find(x => String(x.kode).toUpperCase() === kd.toUpperCase()) : null;
-    if (kd && !ada) { lewat.push(`baris ${no}: kode "${kd}" tidak ada di prodi ${pid}. Kosongkan kolom kode untuk CPL baru`); continue; }
+    const sama0 = (x) => nz(x.teks).replace(/\s+/g, ' ').toLowerCase() === teks.toLowerCase();
+    let ada = kd ? cpl.find(x => String(x.kode).toUpperCase() === kd.toUpperCase()) : null;
+    if (!ada) ada = cpl.find(sama0) || null; if (ada) disebut.add(norm(ada.kode));
+    if (kd && !ada) catatan.push(`baris ${no}: kode "${kd}" belum ada di aplikasi, dibuat sebagai CPL baru dengan kode otomatis`);
     const d = { ranah, sn: sn.join(', '), teks, pl: plId, iabee: ib };
     if (ada) { const sama = ada.ranah === d.ranah && String(ada.sn || '') === d.sn && nz(ada.teks).replace(/\s+/g, ' ') === d.teks && JSON.stringify(ada.pl || []) === JSON.stringify(d.pl) && JSON.stringify(iabeeOf(ada)) === JSON.stringify(d.iabee); if (!sama) ubah.push({ ...ada, ...d }); else tetap++; } else baru.push({ ...d, prodi: pid });
   }

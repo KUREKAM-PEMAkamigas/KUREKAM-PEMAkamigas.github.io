@@ -23,7 +23,7 @@ const KOL18 = ['obs', 'part', 'unjuk', 'quiz', 'uts', 'uas', 'lisan']; /* kolom 
 
 const NAMA_RANAH = { S: 'sikap', P: 'pengetahuan', KU: 'keterampilan umum', KK: 'keterampilan khusus' };
 /** Menebak ranah CPL dari rumusannya bila lembar 2 tidak memuatnya. */
-function tebakRanah(t) {
+export function tebakRanah(t) {
   const x = s(t).toLowerCase();
   if (/^(bertakwa|beriman|menunjukkan sikap|menginternalisasi|menghargai|berperan|berkontribusi|menjunjung|taat|bersikap|memiliki (sikap|etos|integritas))|sikap|etika|integritas|kejuangan|kewirausahaan/.test(x)) return 'S';
   if (/^(menguasai|memahami|menjelaskan)\s+(konsep|teori|prinsip|dasar|pengetahuan)|konsep teoretis|pengetahuan/.test(x)) return 'P';

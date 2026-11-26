@@ -6,7 +6,8 @@ import { S, ctx, save, saveMany, rerender, toast } from './app.js';
 import { byProdi, kodeBerikut, rencanaSelaras, iabeeOf } from './rules.js';
 import { BUTIR_IABEE } from './config.js';
 import { detect } from './bloom.js';
-import { unduh, tanya, loadXLSX } from './views/ui.js';
+import { unduh, loadXLSX } from './views/ui.js';
+import { pilihMode, rencanaHapus, awalCadangan } from './impor.js';
 
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
 const HINT = { S: 'A', P: 'C', KU: 'C', KK: 'C' };
@@ -15,7 +16,7 @@ const norm = (v) => nz(v).toLowerCase().replace(/[^a-z0-9]/g, '');
 const pecah = (v) => nz(v).split(/[,;\n]+/).map(t => t.trim()).filter(Boolean);
 const ranahDari = (v) => { const t = norm(v); const k = Object.keys(RANAH).find(r => r.toLowerCase() === t); if (k) return k; return Object.keys(RANAH).find(r => norm(RANAH[r]) === t) || ''; };
 
-export async function templatCpl(pid) {
+export async function templatCpl(pid, awal = 'Template') {
   const X = await loadXLSX(), wb = X.utils.book_new();
   const cpl = byProdi(S.cpl, pid), pl = byProdi(S.pl, pid);
   const head = ['Kode CPL (kosongkan untuk CPL baru)', 'Ranah (S, P, KU, atau KK)', 'Unsur SN Dikti (mis. P03 atau KK02, KK03)', 'Rumusan CPL (diawali kata kerja operasional)', 'Profil lulusan yang didukung (mis. PL01, PL02)', 'Butir IABEE (a sampai k, mis. a, c)', 'Level Bloom (otomatis, jangan diisi)'];
@@ -36,7 +37,7 @@ export async function templatCpl(pid) {
   const wp = X.utils.aoa_to_sheet(ptk); wp['!cols'] = [{ wch: 130 }]; X.utils.book_append_sheet(wb, wp, 'PETUNJUK');
   const daf = [['DAFTAR RUJUKAN'], [], ['Ranah', 'Nama'], ...Object.entries(RANAH), [], ['Kode profil lulusan', 'Nama peran'], ...pl.map(p => [p.kode, p.nama || String(p.teks || '').slice(0, 80)]), [], ['Butir IABEE', 'Rumusan'], ...BUTIR_IABEE.map(b => [b.k, b.teks || b.ringkas])];
   const wd = X.utils.aoa_to_sheet(daf); wd['!cols'] = [{ wch: 22 }, { wch: 110 }]; X.utils.book_append_sheet(wb, wd, 'DAFTAR');
-  unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `Template_CPL_${pid}.xlsx`);
+  unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `${awal}_CPL_${pid}.xlsx`);
 }
 
 export async function imporCpl(file, pid) {
@@ -47,9 +48,10 @@ export async function imporCpl(file, pid) {
   const kol = (...p) => { for (const q of p) { const i = h.findIndex(x => q.test(x)); if (i >= 0) return i; } return -1; };
   const c = { kode: kol(/^kodecpl/, /^kode/), ranah: kol(/^ranah/), sn: kol(/^unsur/, /sndikti/), teks: kol(/^rumusan/), pl: kol(/^profil/), ib: kol(/^butiriabee/, /^iabee/) };
   const cpl = byProdi(S.cpl, pid), pl = byProdi(S.pl, pid), kodeIb = new Set(BUTIR_IABEE.map(b => b.k));
-  const baru = [], ubah = [], lewat = [], catatan = []; let bloomTanpa = 0, tetap = 0;
+  const baru = [], ubah = [], lewat = [], catatan = [], disebut = new Set(); let bloomTanpa = 0, tetap = 0;
   for (let r = mulai; r < rows.length; r++) {
     const row = rows[r]; if (!row.some(v => nz(v))) continue; if (row.some(v => /hapus baris ini/i.test(nz(v)))) continue;
+    if (c.kode >= 0 && nz(row[c.kode])) disebut.add(norm(row[c.kode]));
     const no = r + 1, ranah = ranahDari(row[c.ranah]), teks = nz(row[c.teks]).replace(/\s+/g, ' ');
     if (!ranah) { lewat.push(`baris ${no}: ranah "${nz(row[c.ranah])}" tidak dikenal`); continue; }
     if (!teks) { lewat.push(`baris ${no}: rumusan kosong`); continue; }
@@ -68,11 +70,13 @@ export async function imporCpl(file, pid) {
     const d = { ranah, sn: sn.join(', '), teks, pl: plId, iabee: ib };
     if (ada) { const sama = ada.ranah === d.ranah && String(ada.sn || '') === d.sn && nz(ada.teks).replace(/\s+/g, ' ') === d.teks && JSON.stringify(ada.pl || []) === JSON.stringify(d.pl) && JSON.stringify(iabeeOf(ada)) === JSON.stringify(d.iabee); if (!sama) ubah.push({ ...ada, ...d }); else tetap++; } else baru.push({ ...d, prodi: pid });
   }
-  if (!baru.length && !ubah.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
-  const msg = `${baru.length} CPL baru dan ${ubah.length} CPL diperbarui${tetap ? `, ${tetap} tidak berubah` : ''}.${lewat.length ? ` ${lewat.length} baris dilewati (${lewat.slice(0, 3).join('; ')}${lewat.length > 3 ? ', ...' : ''}).` : ''}${catatan.length ? ` Catatan Bloom: ${catatan.slice(0, 3).join('; ')}${catatan.length > 3 ? ', ...' : ''}.` : ''} Lanjutkan?`;
-  if (!(await tanya(msg, 'Simpan CPL'))) return;
+  const hp = rencanaHapus('cpl', cpl.filter(x => !disebut.has(norm(x.kode))));
+  if (!baru.length && !ubah.length && !hp.boleh.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
+  const msg = `${baru.length} CPL baru dan ${ubah.length} CPL diperbarui${tetap ? `, ${tetap} tidak berubah` : ''}.${lewat.length ? ` ${lewat.length} baris dilewati (${lewat.slice(0, 3).join('; ')}${lewat.length > 3 ? ', ...' : ''}).` : ''}${catatan.length ? ` Catatan Bloom: ${catatan.slice(0, 3).join('; ')}${catatan.length > 3 ? ', ...' : ''}.` : ''}`;
+  const mode = await pilihMode({ pesan: msg, jenis: 'CPL', boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
+  if (mode === 'ganti') { await templatCpl(pid, awalCadangan()); await hp.jalan(pid); }
   if (ubah.length) await saveMany('cpl', ubah, `Impor Excel: perbarui ${ubah.length} CPL (${pid})`);
   for (const d of baru) { d.kode = kodeBerikut(S, 'cpl', pid); d.id = `${pid}-${d.kode}`; await save('cpl', d, `Impor Excel: CPL baru ${d.kode} (${pid})`); }
   const r2 = rencanaSelaras(S, pid); if (r2.cpl.length) await saveMany('cpl', r2.cpl, `Urutkan kode CPL menurut ranah (${pid})`); if (r2.pi.length) await saveMany('pi', r2.pi);
-  toast(`CPL tersimpan: ${baru.length} baru, ${ubah.length} diperbarui${lewat.length ? `, ${lewat.length} dilewati` : ''}.`); rerender();
+  toast(`CPL tersimpan: ${baru.length} baru, ${ubah.length} diperbarui${lewat.length ? `, ${lewat.length} dilewati` : ''}${mode === 'ganti' ? `, ${hp.boleh.length} dihapus` : ''}.`); rerender();
 }

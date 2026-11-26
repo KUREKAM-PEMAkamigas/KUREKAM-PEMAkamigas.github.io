@@ -215,16 +215,16 @@ export const ROUTES = [
   { id: 'pi', t: 'Indikator Kinerja (PI)', sub: 'Pemecah CPL untuk asesmen', ic: 'pulse', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: piView },
   { id: 'bk', t: 'BoK & Bahan Kajian', ic: 'layers', c: '#8b5cf6', sec: 'Penyusunan Kurikulum', prodi: true, v: bkView },
   { id: 'mk', t: 'Mata Kuliah & SKS', ic: 'book', c: '#14b8a6', sec: 'Penyusunan Kurikulum', prodi: true, v: mkView },
-  { id: 'cpmkprodi', t: 'Matriks CPL–CPMK', sub: 'CPMK turunan CPL dan MK pemuatnya', ic: 'link', c: '#0ea5e9', sec: 'Penyusunan Kurikulum', prodi: true, v: cpmkMatriksView },
+  { id: 'cpmkprodi', t: 'CPMK Prodi', sub: 'CPMK turunan CPL dan MK pemuatnya', ic: 'link', c: '#0ea5e9', sec: 'Penyusunan Kurikulum', prodi: true, v: cpmkMatriksView },
   { id: 'peta', t: 'Peta Kurikulum', ic: 'grid4', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: petaView },
   { id: 'matriks', t: 'Matriks Keterlacakan', ic: 'link', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: matriksView },
   { id: 'obe', t: 'Tabel OBE', sub: 'Pemetaan sesuai templat + IABEE', ic: 'layers', c: '#f472b6', sec: 'Penyusunan Kurikulum', prodi: true, v: obeView },
   { id: 'deskmk', t: 'Deskripsi Singkat MK', sub: 'Substansi MK: kata kunci, pustaka', ic: 'book', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: deskView },
-  { id: 'cpmk', t: 'CPMK & Sub-CPMK', ic: 'spark', c: '#0ea5e9', sec: 'Pembelajaran', prodi: true, v: cpmkView },
+  { id: 'cpmk', t: 'CPMK & Sub-CPMK per MK', ic: 'spark', c: '#0ea5e9', sec: 'Pembelajaran', prodi: true, v: cpmkView },
   { id: 'realisasi', t: 'Realisasi Pembelajaran', sub: 'Hasil, bukti, dan tindak lanjut per MK', ic: 'check', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: realisasiView },
   { id: 'rps', t: 'RPS & SAP', ic: 'audit', c: '#10b981', sec: 'Pembelajaran', prodi: true, v: rpsView },
   { id: 'riset', t: 'Penelitian & PKM Dosen', sub: 'Daftar untuk integrasi di RPS', ic: 'book', c: '#14b8a6', sec: 'Pembelajaran', v: risetView },
-  { id: 'beban', t: 'Penugasan & Beban Dosen', ic: 'user', c: '#f5a524', sec: 'Beban Dosen & Prodi', v: bebanView },
+  { id: 'beban', t: 'Beban & Penugasan', ic: 'user', c: '#f5a524', sec: 'Beban Dosen & Prodi', v: bebanView },
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },
   { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
@@ -235,12 +235,50 @@ export const ROUTES = [
   { id: 'capaian', t: 'Capaian CPL & Tindak Lanjut', sub: 'Rekap agregat per angkatan', ic: 'target', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: capaianView },
   { id: 'lulusan', t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi', ic: 'medal', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: lulusanView },
   { id: 'skpi', t: 'SKPI Lulusan', sub: 'Surat pendamping ijazah dwibahasa', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: skpiView },
-  { id: 'advisory', t: 'Dewan Penasihat Industri', sub: 'Bukti pelibatan praktisi', ic: 'link', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: advisoryView },
+  { id: 'advisory', t: 'Masukan Industri', sub: 'Dewan penasihat dan bukti pelibatan praktisi', ic: 'link', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: advisoryView },
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },
   { id: 'induk', t: 'Data Induk & Pengaturan', ic: 'db', c: '#64748b', sec: 'Sistem', v: indukView }
 ];
+
+/* Susunan menu samping menurut alur kerja. Tiap butir memuat satu atau beberapa halaman (tab). Alamat lama tetap berfungsi:
+   halaman yang digabung tampil sebagai tab di bawah menu induknya. Nomor langkah hanya untuk alur penyusunan sampai capaian. */
+const NAV = [
+  ['Mulai', [
+    { tabs: ['beranda'] },
+    { tabs: ['rambu', 'bloom'], t: 'Rambu & Panduan', sub: 'Semester, level Bloom, kata kerja, RPS', lbl: ['Rambu pengisian', 'Taksonomi Bloom'] },
+    { tabs: ['asisten', 'generator'], sub: 'Pemandu, validasi, dan generator usulan', lbl: ['Pemandu dan validasi', 'Generator usulan'] }]],
+  ['Pantau', [
+    { tabs: ['pimpinan'] }, { tabs: ['mutu'] }, { tabs: ['akademik'] },
+    { tabs: ['jadwal', 'pantau'], t: 'Jadwal & Pemantauan', sub: 'Tahapan, progres, dan aktivitas', lbl: ['Jadwal dan progres', 'Aktivitas pengguna'] },
+    { tabs: ['kinerja'] }]],
+  ['A · Landasan', [
+    { tabs: ['visi'], step: 1 }, { tabs: ['cpl'], step: 2 }, { tabs: ['advisory'], step: 3 }]],
+  ['B · Rancangan kurikulum', [
+    { tabs: ['bk'], step: 4 }, { tabs: ['mk'], step: 5 }, { tabs: ['cpmkprodi'], step: 6 }, { tabs: ['pi'], step: 7 },
+    { tabs: ['beban', 'bebanprodi'], step: 8, t: 'Beban & Penugasan', sub: 'Dosen pengampu, beban, kapasitas JP', lbl: ['Penugasan dan beban dosen', 'Beban prodi dan kapasitas JP'] }]],
+  ['C · Penyusunan pembelajaran', [
+    { tabs: ['deskmk'], step: 9 }, { tabs: ['cpmk'], step: 10 }, { tabs: ['riset'], step: 11 }, { tabs: ['rps'], step: 12 }]],
+  ['D · Pengendalian mutu', [
+    { tabs: ['periksa'], step: 13 }, { tabs: ['revisi'], step: 14 }]],
+  ['E · Realisasi dan capaian', [
+    { tabs: ['realisasi'], step: 15 }, { tabs: ['capaian'], step: 16 },
+    { tabs: ['lulusan', 'skpi'], step: 17, t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi dan SKPI', lbl: ['Capstone, lulusan, tracer', 'SKPI lulusan'] }]],
+  ['F · Peta dan luaran', [
+    { tabs: ['peta', 'matriks', 'obe'], t: 'Peta Kurikulum', sub: 'Peta, keterlacakan, dan tabel OBE', lbl: ['Peta kurikulum', 'Matriks keterlacakan', 'Tabel OBE'] },
+    { tabs: ['laporan'] }]],
+  ['G · Akreditasi', [
+    { tabs: ['iabee', 'bahanled', 'panduan'], t: 'Kesiapan IABEE', sub: '10 indikator, bahan LED, panduan', lbl: ['Kesiapan 10 indikator', 'Bahan LED', 'Panduan 10 indikator'] }]],
+  ['Sistem', [{ tabs: ['induk'] }]]
+];
+const entriNav = (e, grup) => { const r0 = ROUTES.find(x => x.id === e.tabs[0]) || {}; return { ...e, grup, t: e.t || r0.t, sub: e.sub !== undefined ? e.sub : r0.sub, ic: r0.ic, c: r0.c }; };
+const NAV_DATA = (() => {
+  const d = NAV.map(([g, items]) => [g, items.map(e => entriNav(e, g))]), dipakai = new Set(d.flatMap(([, it]) => it.flatMap(e => e.tabs)));
+  const sisa = ROUTES.filter(r => !dipakai.has(r.id)).map(r => entriNav({ tabs: [r.id] }, 'Lainnya')); if (sisa.length) d.push(['Lainnya', sisa]);
+  return d;
+})();
+const navKe = (id) => { for (const [, it] of NAV_DATA) { const e = it.find(x => x.tabs.includes(id)); if (e) return e; } return null; };
 
 /* Menu samping lipat: otomatis pada halaman yang butuh ruang lebar, bisa diatur manual, dan mengintip saat disentuh atau didekati. */
 const PREF_SIDE = 'kurekam_side', HALAMAN_LEBAR = new Set(['rps', 'deskmk', 'cpmk', 'peta', 'matriks', 'bebanprodi']);
@@ -267,9 +305,13 @@ function pasangSide() {
 function renderSide(cur) {
   let sec = '', h = `<div class="brand-logos"><img src="assets/img/logo-pem-akamigas.png" alt="PEM Akamigas" class="lg-pem"><img src="assets/img/logo-esdm.png" alt="Kementerian ESDM" class="lg-esdm"></div>
     <div class="brand"><div class="brand-logo k">${icon('layers')}</div><div><b>${APP.nama}</b><small>${APP.panjang}</small></div></div><nav class="nav">`;
-  ROUTES.filter(r => bolehMenu(r.id)).forEach(r => {
-    if (r.sec !== sec) { sec = r.sec; h += `<div class="nav-sec">${sec}</div>`; }
-    h += `<a href="#${r.id}" class="${r.id === cur ? 'on' : ''}" style="--c:${r.c}"><span class="chip">${icon(r.ic)}</span><span>${r.t}${r.sub ? `<small class="nsub">${r.sub}</small>` : ''}</span></a>`;
+  NAV_DATA.forEach(([grup, items]) => {
+    const ada = items.filter(e => e.tabs.some(bolehMenu)); if (!ada.length) return;
+    h += `<div class="nav-sec">${grup}</div>`;
+    ada.forEach(e => {
+      const awal = e.tabs.find(bolehMenu);
+      h += `<a href="#${awal}" class="${e.tabs.includes(cur) ? 'on' : ''}" style="--c:${e.c}"><span class="chip">${icon(e.ic)}</span><span>${e.t}${e.sub ? `<small class="nsub">${e.sub}</small>` : ''}</span>${e.step ? `<i class="stp">${e.step}</i>` : ''}</a>`;
+    });
   });
   h += `<div class="nav-sec">Aplikasi lain</div><a href="${APP_LAIN.simantap.url}" target="_blank" rel="noopener" style="--c:#8b5cf6"><span class="chip">${icon('medal')}</span><span>SIMANTAP 2.0<small class="nsub">Pemantauan mutu dan akreditasi</small></span></a>`;
   h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
@@ -282,7 +324,7 @@ function renderTop(route) {
   const dosenOpts = S.dosen.map(d => `<option value="${d.id}" ${d.id === ctx.dosen ? 'selected' : ''}>${esc(d.nama)}</option>`).join('');
   $('#top').innerHTML = `
     <button class="btn ghost menu-btn" id="menuBtn" aria-label="Menu">${icon('menu')}</button>
-    <div><div class="crumb">${route.sec}</div><h1>${route.t}</h1></div>
+    <div><div class="crumb">${(navKe(route.id) || route).grup || route.sec}</div><h1>${(navKe(route.id) || route).t}</h1></div>
     <div class="sp"></div>
     ${ctx.kunci && ctx.role === 'prodi' && ctx.akun && ctx.akun.prodi ? `<span class="tag" style="--c:#10b981">Prodi ${esc(ctx.prodi)}</span>` : route.prodi || ctx.role === 'prodi' ? `<div class="role-box"><span class="rl muted small">Prodi</span><select class="inp" id="prodiSel" aria-label="Program studi">${prodiOpts}</select></div>` : ''}
     <div class="role-box">
@@ -316,6 +358,8 @@ export function route_() {
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
   if (r.id === 'beranda' || r.id === 'rps') view.insertAdjacentHTML('beforeend', bannerPengingat());
   const holder = document.createElement('div'); view.appendChild(holder);
+  { const e = navKe(r.id), ok = e ? e.tabs.filter(bolehMenu) : [];
+    if (e && ok.length > 1) { const bar = document.createElement('div'); bar.className = 'seg mtabs'; bar.setAttribute('role', 'tablist'); bar.innerHTML = ok.map(t => `<button role="tab" data-go="${t}" class="${t === r.id ? 'on' : ''}">${esc(e.lbl[e.tabs.indexOf(t)])}</button>`).join(''); bar.onclick = ev => { const b = ev.target.closest('button[data-go]'); if (b && b.dataset.go !== r.id) location.hash = '#' + b.dataset.go; }; view.insertBefore(bar, holder); } }
   try { r.v(holder); } catch (e) { console.error(e); holder.innerHTML = `<div class="card empty">Terjadi kesalahan saat memuat halaman: ${esc(e.message)}</div>`; }
   tilt(view);
   pasangTabel(view);

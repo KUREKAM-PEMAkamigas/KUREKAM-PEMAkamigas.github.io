@@ -8,6 +8,7 @@ import { head, stTag, tanya, short, loadXLSX, unduh } from './ui.js';
 import { chart } from '../charts.js';
 import { predikat, rataSkor, narasi, lintasMk, htmlRapor, BATAS_KUAT } from '../rapor.js';
 import { SKPI_DEF } from '../skpilogic.js';
+import { berkasDocxSkpiWord } from '../skpiword.js';
 import { bacaTempel, kenaliTabel, tebakPeta, hitungCpl, statusCapaian } from '../nilaicpl.js';
 
 const st = { mk: '', smt: '', kelas: '', teks: '', tabel: null, peta: {}, hasil: null, galat: '', membaca: false, kelasLihat: '' };
@@ -179,8 +180,9 @@ export default function nilaiView(el) {
         <div class="modal-isi" style="max-height:72vh;overflow:auto"><p class="small" style="background:rgba(14,165,233,.08);border-left:3px solid #0ea5e9;padding:8px 10px;margin:10px 0">${esc(kal3)}</p>
         <h4 style="margin:10px 0 4px">CPL gabungan (berbobot SKS)</h4><div class="tbl-wrap"><table class="tbl n-rp"><thead><tr><th>CPL</th><th>Skor</th><th class="num">Jumlah MK</th><th>Predikat</th></tr></thead><tbody>${rows3.map(r => `<tr style="cursor:default"><td><b>${esc(r.kode)}</b> <span class="small muted" style="white-space:normal">${esc(r.teks)}</span></td><td>${bar(r.skor)}</td><td class="num">${r.n || '–'}</td><td>${tag(r.skor)}</td></tr>`).join('')}</tbody></table></div>
         <h4 style="margin:12px 0 4px">Mata kuliah: menguatkan dan melemahkan</h4><div class="tbl-wrap"><table class="tbl n-rp"><thead><tr><th>Mata kuliah</th><th>Semester</th><th class="num">Rata-rata CPL</th><th>Skor per CPL</th></tr></thead><tbody>${mkR.map(r => `<tr style="cursor:default"><td><b>${esc(r.mk.kode || r.mk.id)}</b> ${esc(r.mk.nama)}</td><td>${esc(r.smt)}</td><td class="num">${tag(r.rata)} <b>${fmt(r.rata, 1)}</b></td><td style="white-space:normal">${Object.keys(r.cpl).map(id => `${esc(kodeCpl(id))} <b style="color:${predikat(r.cpl[id], ambang).w}">${fmt(r.cpl[id], 1)}</b>`).join(' · ')}</td></tr>`).join('')}</tbody></table></div></div>
-        <div class="drawer-act" style="margin-top:10px;flex-wrap:wrap"><button class="btn sm" id="rp-kembali">← Kembali ke mata kuliah ini</button><button class="btn sm" id="rp-cetak">${icon('download')} Cetak rapor lengkap</button><button class="btn pri sm" id="rp-x">Tutup</button></div></div>`;
+        <div class="drawer-act" style="margin-top:10px;flex-wrap:wrap"><button class="btn sm" id="rp-kembali">← Kembali ke mata kuliah ini</button><button class="btn sm" id="rp-cetak">${icon('download')} Cetak rapor lengkap</button><button class="btn sm" id="rp-word">${icon('download')} Unduh SKPI (Word)</button><button class="btn pri sm" id="rp-x">Tutup</button></div></div>`;
       bg.querySelector('#rp-x').onclick = tutup; bg.querySelector('#rp-kembali').onclick = tampil2;
+      bg.querySelector('#rp-word').onclick = async (ev) => { const bt = ev.currentTarget; bt.disabled = true; try { const pr = S.prodi.find(x => x.id === rec.prodi) || {}; unduh(await berkasDocxSkpiWord({ institusi: meta.institusi, prodiNama: meta.prodiNama, mhs: meta.mhs, ambang, rata: rata(rows3.map(r => r.skor)), narasi: kal3, kaprodi: pr.kaprodi || '', cplRows: rows3.map(r => ({ kode: r.kode, teks: ((S.cpl.find(c => c.id === r.id) || {}).teks) || '', skor: r.skor, n: r.n })), mkRows: lintas.mkRows }), `SKPI_${m.nim}.docx`); } catch (e) { toast('Gagal membuat Word: ' + (e.message || e)); } bt.disabled = false; };
       bg.querySelector('#rp-cetak').onclick = () => cetakHtml(htmlRapor({ ...meta, cplRows, cpmkRows, narasi: kal, lintas }), 'Rapor kompetensi lengkap · ' + (m.nama || m.nim));
     }
     bg.onclick = (e) => { if (e.target === bg) tutup(); };

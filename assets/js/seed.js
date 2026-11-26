@@ -100,7 +100,7 @@ export function buildSeed() {
 
   PRODI_DEF.forEach((pd, pi) => {
     const pid = pd.id;
-    D.prodi.push({ id: pid, nama: pd.nama, c: pd.c, kelas: { ...pd.kelas }, visi: 'Menjadi pusat pendidikan vokasi energi dan sumber daya mineral yang unggul dan berdaya saing global.',
+    D.prodi.push({ id: pid, nama: pd.nama, c: pd.c, kelas: { ...pd.kelas }, visi: 'Menjadi Politeknik Energi dan Mineral Terbaik di Indonesia serta Berstandar Internasional.',
       visiKeilmuan: `Menjadi program studi sarjana terapan yang unggul dalam ${pd.d}, berwawasan keselamatan dan transisi energi, serta diakui industri nasional dan internasional pada tahun 2035.`,
       status: pid === 'TP' ? 'diajukan' : 'draf', catatanSpm: pid === 'TO' ? [{ t: '2026-11-10', oleh: 'SPM', isi: 'Mohon lengkapi bukti pelibatan pemangku kepentingan untuk perumusan profil lulusan.' }] : [] });
     const dpool = [];

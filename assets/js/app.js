@@ -424,6 +424,9 @@ export async function start() {
   }
   if (st && !st.integ5) { st.integ5 = true; await DB.replaceAll('settings', [st]); }
   load(d);
+  /* Visi institusi resmi: teks bawaan lama diganti visi PEM Akamigas; visi yang sudah diubah pengguna dipertahankan. */
+  { const VISI_LAMA = 'Menjadi pusat pendidikan vokasi energi dan sumber daya mineral yang unggul dan berdaya saing global.', VISI = 'Menjadi Politeknik Energi dan Mineral Terbaik di Indonesia serta Berstandar Internasional.';
+    for (const p of S.prodi) if (p.visi === VISI_LAMA) { p.visi = VISI; try { await DB.put('prodi', p, S.prodi); } catch (e) { /* hanya di memori bila tidak berhak menulis */ } } }
   /* Pedoman 2027: nilai bawaan lama yang belum pernah diubah pengguna diganti nilai pedoman; nilai yang sudah diubah dipertahankan. */
   if (S.settings.pedoman !== 2027) {
     const u = S.settings.param || {}, KR = { 6: [16, 6, 7, 9, 10, 7, 10], 7: [20, null, null, null, null, null, null] };

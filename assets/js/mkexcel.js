@@ -32,15 +32,15 @@ export async function imporMk(file, pid) {
   const k = { kode: kolom(b.h, /^kodemk/, /^kode/), nama: kolom(b.h, /^namamatakuliah/, /^nama/), smt: kolom(b.h, /^semester/), kel: kolom(b.h, /^kelompok/), T: kolom(b.h, /^sksteori/), P: kolom(b.h, /^skspraktik/), lok: kolom(b.h, /^lokasi/), inti: kolom(b.h, /^mkinti/), pra: kolom(b.h, /^prasyarat/), bk: kolom(b.h, /^bahankajian/), cpl: kolom(b.h, /^cpl/), kom: kolom(b.h, /^kompetensi/), alasan: kolom(b.h, /^alasan/) };
   if (k.T < 0 || k.P < 0) throw new Error('Kolom SKS teori dan SKS praktik tidak ditemukan.');
   const mk = byProdi(S.mk, pid), bk = byProdi(S.bk, pid), cpl = byProdi(S.cpl, pid), P = param(S), admin = ['admin', 'developer'].includes(ctx.role);
-  const baru = [], ubah = [], lewat = [], pasca = [], disebut = new Set(); let tetap = 0, kunciN = 0;
+  const baru = [], ubah = [], lewat = [], pasca = [], disebut = new Set(); let tetap = 0, kunciN = 0; const kodeAsing = [];
   const tampung = mk.slice();
   for (let r = b.mulai; r < b.rows.length; r++) {
     const row = b.rows[r]; if (hapusContoh(row)) continue; const no = r + 1, nama = spasi(row[k.nama]), kd = k.kode >= 0 ? nz(row[k.kode]) : ''; if (kd) disebut.add(norm(kd));
     if (!nama) { lewat.push(`baris ${no}: nama MK kosong`); continue; }
     const smt = Number(row[k.smt]); if (!Number.isInteger(smt) || smt < 1 || smt > 8) { lewat.push(`baris ${no} (${nama}): semester harus 1 sampai 8`); continue; }
     const T = Number(row[k.T] === '' ? 0 : row[k.T]), Pr = Number(row[k.P] === '' ? 0 : row[k.P]); if (!Number.isFinite(T) || !Number.isFinite(Pr) || T < 0 || Pr < 0 || T + Pr <= 0) { lewat.push(`baris ${no} (${nama}): SKS teori dan praktik tidak valid`); continue; }
-    const sudah = kd ? mk.find(m => norm(m.kode) === norm(kd)) : mk.find(m => norm(m.nama) === norm(nama)); if (sudah) disebut.add(norm(sudah.kode));
-    if (kd && !sudah) { lewat.push(`baris ${no} (${nama}): kode "${kd}" tidak ada di prodi ${pid}. Kosongkan kolom kode untuk MK baru`); continue; }
+    const sudah = (kd ? mk.find(m => norm(m.kode) === norm(kd)) : null) || mk.find(m => norm(m.nama) === norm(nama)); if (sudah) disebut.add(norm(sudah.kode));
+    if (kd && !sudah) kodeAsing.push(`baris ${no}: kode "${kd}" belum ada, dibuat sebagai MK baru dengan kode otomatis`);
     if (sudah && sudah.kunci && !admin) { kunciN++; continue; }
     const kelRaw = k.kel >= 0 ? spasi(row[k.kel]) : '', kelMatch = KELOMPOK.find(x => norm(x.id) === norm(kelRaw));
     if (kelRaw && !kelMatch) { lewat.push(`baris ${no} (${nama}): kelompok "${kelRaw}" tidak dikenal (lihat lembar DAFTAR)`); continue; }
@@ -75,7 +75,7 @@ export async function imporMk(file, pid) {
   });
   const hp = rencanaHapus('mk', mk.filter(x => !disebut.has(norm(x.kode)) && (admin || !x.kunci)));
   if (!baru.length && !ubah.length && !hp.boleh.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
-  const mode = await pratinjauImpor({ jenis: 'mata kuliah', baru: baru.map(d => `${d.nama} (semester ${d.smt})`), ubah: ubah.map(d => ({ label: `${d.kode} ${d.nama}`, detail: bedaRingkas(mk.find(x => x.id === d.id), d) })), tetap, lewat, catatan: kunciN ? [`${kunciN} MK terkunci tidak diubah karena hanya admin yang boleh`] : [], boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
+  const mode = await pratinjauImpor({ jenis: 'mata kuliah', baru: baru.map(d => `${d.nama} (semester ${d.smt})`), ubah: ubah.map(d => ({ label: `${d.kode} ${d.nama}`, detail: bedaRingkas(mk.find(x => x.id === d.id), d) })), tetap, lewat, catatan: (kunciN ? [`${kunciN} MK terkunci tidak diubah karena hanya admin yang boleh`] : []).concat(kodeAsing), boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
   if (mode === 'ganti') { await templatMk(pid, awalCadangan()); await hp.jalan(pid); }
   const semua = [...ubah, ...baru]; if (semua.length) await saveMany('mk', semua, `Impor Excel: ${baru.length} MK baru, ${ubah.length} diperbarui (${pid})`);
   toast(`MK tersimpan: ${baru.length} baru, ${ubah.length} diperbarui${lewat.length ? `, ${lewat.length} dilewati` : ''}${mode === 'ganti' ? `, ${hp.boleh.length} dihapus` : ''}.`); rerender();
@@ -105,8 +105,8 @@ export async function imporCpmk(file, pid) {
     const cp = cpl.find(x => norm(x.kode) === norm(row[k.cpl])); if (!cp) { lewat.push(`baris ${no}: kode CPL "${nz(row[k.cpl])}" tidak ada`); continue; }
     const bc = detect(teks, 'C'), bl = detect(cp.teks, cp.ranah === 'S' ? 'A' : 'C');
     if (!bc) catatan.push(`baris ${no}: tidak diawali kata kerja Bloom`); else if (bc.kabur) catatan.push(`baris ${no}: kata kerja "${bc.verb}" kurang terukur`); else if (bl && bc.d === bl.d && bc.n > bl.n) { lewat.push(`baris ${no}: level ${bc.code} melampaui CPL ${cp.kode} (${bl.code})`); continue; }
-    const g = kd ? grup.find(x => norm(x.kode) === norm(kd)) : grup.find(x => kunci(x.teks, x.cpl) === kunci(teks, cp.id));
-    if (kd && !g) { lewat.push(`baris ${no}: kode "${kd}" tidak ada di prodi ${pid}. Kosongkan kolom kode untuk CPMK baru`); continue; }
+    const g = (kd ? grup.find(x => norm(x.kode) === norm(kd)) : null) || grup.find(x => kunci(x.teks, x.cpl) === kunci(teks, cp.id));
+    if (kd && !g) catatan.push(`baris ${no}: kode "${kd}" belum ada, dibuat sebagai CPMK baru dengan kode otomatis`);
     if (g) disebut.add(norm(g.kode));
     const idMk = []; let salahMk = '';
     (k.mk >= 0 ? pecah(row[k.mk]) : []).forEach(t => { const m = kodeMkDari(mk, t); if (!m) salahMk = `MK "${t}" tidak ada`; else if (!(m.cpl || []).includes(cp.id)) catatan.push(`baris ${no}: ${m.kode} belum dibebani ${cp.kode}, dilewati`); else idMk.push(m.id); });

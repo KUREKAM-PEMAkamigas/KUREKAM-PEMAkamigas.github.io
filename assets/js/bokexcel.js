@@ -47,18 +47,18 @@ export async function imporBok(file, pid) {
   const b = await bukaBuku(file, (h) => h.some(c => /^namabok|^nama/.test(c)) && h.some(c => /^kode/.test(c)));
   if (!b) throw new Error('Kolom Kode dan Nama BoK tidak ditemukan. Gunakan templat dari tombol Templat BoK.');
   const c = { kode: kolom(b.h, /^kodebok/, /^kode/), nama: kolom(b.h, /^namabok/, /^nama/), sumber: kolom(b.h, /^sumber/) };
-  const ada = byProdi(S.bok, pid), baru = [], ubah = [], lewat = [], disebut = new Set(); let tetap = 0;
+  const ada = byProdi(S.bok, pid), baru = [], ubah = [], lewat = [], catatan = [], disebut = new Set(); let tetap = 0;
   for (let r = b.mulai; r < b.rows.length; r++) {
     const row = b.rows[r]; if (hapusContoh(row)) continue; const no = r + 1, nama = spasi(row[c.nama]), kd = nz(row[c.kode]); if (kd) disebut.add(norm(kd));
     if (!nama) { lewat.push(`baris ${no}: nama BoK kosong`); continue; }
     const sumber = c.sumber >= 0 ? spasi(row[c.sumber]) : '';
-    const sudah = kd ? ada.find(x => norm(x.kode) === norm(kd)) : ada.find(x => norm(x.nama) === norm(nama)); if (sudah) disebut.add(norm(sudah.kode));
-    if (kd && !sudah) { lewat.push(`baris ${no}: kode "${kd}" tidak ada di prodi ${pid}. Kosongkan kolom kode untuk BoK baru`); continue; }
+    const sudah = (kd ? ada.find(x => norm(x.kode) === norm(kd)) : null) || ada.find(x => norm(x.nama) === norm(nama)); if (sudah) disebut.add(norm(sudah.kode));
+    if (kd && !sudah) catatan.push(`baris ${no}: kode "${kd}" belum ada di aplikasi, dibuat sebagai BoK baru dengan kode otomatis`);
     if (sudah) { if (sudah.nama === nama && nz(sudah.sumber) === sumber) tetap++; else ubah.push({ ...sudah, nama, sumber }); } else if (baru.some(x => norm(x.nama) === norm(nama))) lewat.push(`baris ${no}: nama "${nama}" ganda dalam berkas`); else baru.push({ nama, sumber, prodi: pid });
   }
   const hp = rencanaHapus('bok', ada.filter(x => !disebut.has(norm(x.kode))));
   if (!baru.length && !ubah.length && !hp.boleh.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
-  const mode = await pratinjauImpor({ jenis: 'BoK', baru: baru.map(d => d.nama), ubah: ubah.map(d => ({ label: `${d.kode} ${d.nama}`, detail: bedaRingkas(ada.find(x => x.id === d.id), d) })), tetap, lewat, boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
+  const mode = await pratinjauImpor({ jenis: 'BoK', baru: baru.map(d => d.nama), ubah: ubah.map(d => ({ label: `${d.kode} ${d.nama}`, detail: bedaRingkas(ada.find(x => x.id === d.id), d) })), tetap, lewat, catatan, boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
   if (mode === 'ganti') { await templatBok(pid, awalCadangan()); await hp.jalan(pid); }
   if (ubah.length) await saveMany('bok', ubah, `Impor Excel: perbarui ${ubah.length} BoK (${pid})`);
   for (const d of baru) { d.kode = kodeBerikut(S, 'bok', pid); d.id = `${pid}-${d.kode}`; await save('bok', d, `Impor Excel: BoK baru ${d.kode} (${pid})`); }
@@ -91,8 +91,8 @@ export async function imporBk(file, pid) {
     const idCpl = []; let salah = '';
     (c.cpl >= 0 ? pecah(row[c.cpl]) : []).forEach(k => { const p = cpl.find(x => norm(x.kode) === norm(k)); if (p) idCpl.push(p.id); else salah = k; });
     if (salah) { lewat.push(`baris ${no}: kode CPL "${salah}" tidak ada`); continue; }
-    const sudah = kd ? ada.find(x => norm(x.kode) === norm(kd)) : ada.find(x => norm(x.nama) === norm(nama)); if (sudah) disebut.add(norm(sudah.kode));
-    if (kd && !sudah) { lewat.push(`baris ${no}: kode "${kd}" tidak ada di prodi ${pid}. Kosongkan kolom kode untuk BK baru`); continue; }
+    const sudah = (kd ? ada.find(x => norm(x.kode) === norm(kd)) : null) || ada.find(x => norm(x.nama) === norm(nama)); if (sudah) disebut.add(norm(sudah.kode));
+    if (kd && !sudah) catatan.push(`baris ${no}: kode "${kd}" belum ada di aplikasi, dibuat sebagai bahan kajian baru dengan kode otomatis`);
     const d = { nama, bok: pb.id, kedalaman: ked, cpl: idCpl };
     if (sudah) { const sama = sudah.nama === nama && sudah.bok === d.bok && nz(sudah.kedalaman) === ked && JSON.stringify(sudah.cpl || []) === JSON.stringify(idCpl); if (sama) tetap++; else ubah.push({ ...sudah, ...d }); }
     else if (baru.some(x => norm(x.nama) === norm(nama))) lewat.push(`baris ${no}: nama "${nama}" ganda dalam berkas`); else baru.push({ ...d, prodi: pid });

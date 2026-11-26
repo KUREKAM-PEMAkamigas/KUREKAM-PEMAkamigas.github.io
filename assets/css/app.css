@@ -124,6 +124,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; padding: 9px 15px; border-radius: 13px; font-weight: 700; font-size: 13px;
   background: #fff; color: var(--ink); box-shadow: 0 1px 1px rgba(24, 35, 58, .06), 0 4px 12px -4px rgba(24, 35, 58, .18); transition: transform .18s, box-shadow .18s;
 }
+.btn { white-space: nowrap; }
 .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 2px rgba(24, 35, 58, .06), 0 10px 20px -8px rgba(24, 35, 58, .25); }
 .btn:active { transform: translateY(1px) scale(.98); }
 .btn .ic { width: 18px; height: 18px; }
@@ -490,7 +491,8 @@ details.sim[open] > summary .card-h { margin-bottom: 14px; }
   .view { padding-left: 16px; padding-right: 16px; }
 }
 @media print { .no-print, .modal-bg { display: none !important; } }
-.card-h > div:not(.sp):not(.seg) { flex: 1 1 0; min-width: 0; }
+.card-h { flex-wrap: wrap; row-gap: 8px; }
+.card-h > div:not(.sp):not(.seg) { flex: 1 1 240px; min-width: 0; }
 .card-h .sp { flex: 0 0 0; }
 .card-h h3 { text-wrap: balance; }
 @media (max-width: 760px) {

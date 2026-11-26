@@ -5,7 +5,7 @@ import { S, save, saveMany, rerender, toast } from './app.js';
 import { byProdi, kodeBerikut } from './rules.js';
 import { LEVELS } from './bloom.js';
 import { unduh, loadXLSX } from './views/ui.js';
-import { pilihMode, rencanaHapus, awalCadangan } from './impor.js';
+import { pratinjauImpor, bedaRingkas, rencanaHapus, awalCadangan } from './impor.js';
 
 export const nz = (v) => String(v == null ? '' : v).trim();
 export const norm = (v) => nz(v).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -58,8 +58,7 @@ export async function imporBok(file, pid) {
   }
   const hp = rencanaHapus('bok', ada.filter(x => !disebut.has(norm(x.kode))));
   if (!baru.length && !ubah.length && !hp.boleh.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
-  const msg = `${baru.length} BoK baru dan ${ubah.length} BoK diperbarui${tetap ? `, ${tetap} tidak berubah` : ''}.${lewat.length ? ` ${lewat.length} baris dilewati (${lewat.slice(0, 3).join('; ')}${lewat.length > 3 ? ', ...' : ''}).` : ''}`;
-  const mode = await pilihMode({ pesan: msg, jenis: 'BoK', boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
+  const mode = await pratinjauImpor({ jenis: 'BoK', baru: baru.map(d => d.nama), ubah: ubah.map(d => ({ label: `${d.kode} ${d.nama}`, detail: bedaRingkas(ada.find(x => x.id === d.id), d) })), tetap, lewat, boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
   if (mode === 'ganti') { await templatBok(pid, awalCadangan()); await hp.jalan(pid); }
   if (ubah.length) await saveMany('bok', ubah, `Impor Excel: perbarui ${ubah.length} BoK (${pid})`);
   for (const d of baru) { d.kode = kodeBerikut(S, 'bok', pid); d.id = `${pid}-${d.kode}`; await save('bok', d, `Impor Excel: BoK baru ${d.kode} (${pid})`); }
@@ -100,8 +99,7 @@ export async function imporBk(file, pid) {
   }
   const hp = rencanaHapus('bk', ada.filter(x => !disebut.has(norm(x.kode))));
   if (!baru.length && !ubah.length && !hp.boleh.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
-  const msg = `${baru.length} bahan kajian baru dan ${ubah.length} diperbarui${tetap ? `, ${tetap} tidak berubah` : ''}.${lewat.length ? ` ${lewat.length} baris dilewati (${lewat.slice(0, 3).join('; ')}${lewat.length > 3 ? ', ...' : ''}).` : ''}${catatan.length ? ` Catatan: ${catatan.length} baris tanpa kedalaman.` : ''}`;
-  const mode = await pilihMode({ pesan: msg, jenis: 'bahan kajian', boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
+  const mode = await pratinjauImpor({ jenis: 'bahan kajian', baru: baru.map(d => d.nama), ubah: ubah.map(d => ({ label: `${d.kode} ${d.nama}`, detail: bedaRingkas(ada.find(x => x.id === d.id), d) })), tetap, lewat, catatan, boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
   if (mode === 'ganti') { await templatBk(pid, awalCadangan()); await hp.jalan(pid); }
   if (ubah.length) await saveMany('bk', ubah, `Impor Excel: perbarui ${ubah.length} bahan kajian (${pid})`);
   for (const d of baru) { d.kode = kodeBerikut(S, 'bk', pid); d.id = `${pid}-${d.kode}-${Date.now().toString(36)}`; await save('bk', d, `Impor Excel: BK baru ${d.kode} (${pid})`); }

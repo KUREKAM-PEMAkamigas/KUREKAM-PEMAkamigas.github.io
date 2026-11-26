@@ -2,36 +2,51 @@
    Mode ganti semua hanya menghapus data prodi yang kodenya tidak ada di Excel dan tidak dipakai data hilir yang berisi pekerjaan
    (misalnya CPL yang sudah dipakai CPMK, MK yang sudah punya CPMK, penugasan dosen, atau RPS yang diajukan). Data seperti itu dipertahankan dan dilaporkan. */
 import { S, remove, saveMany, esc } from './app.js';
-import { tanya, tanya3 } from './views/ui.js';
 
 export const awalCadangan = () => 'Cadangan_' + new Date().toISOString().slice(0, 10);
-const ringkasDaftar = (a, n = 6) => a.slice(0, n).join('; ') + (a.length > n ? `; dan ${a.length - n} lainnya` : '');
-
-function ketikGanti(jenis, boleh, tahan) {
-  return new Promise(res => {
-    const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal card wide" role="alertdialog" aria-modal="true"><h3 style="margin:0 0 8px">Ganti semua ${esc(jenis)} prodi ini?</h3><div class="modal-isi">
-      <p>Yang ada di Excel diperbarui atau ditambahkan. <b>${boleh.length}</b> ${esc(jenis)} yang tidak ada di Excel akan <b>dihapus</b>:</p>
-      <ul class="small">${boleh.slice(0, 40).map(x => `<li>${esc(x)}</li>`).join('')}${boleh.length > 40 ? `<li>… dan ${boleh.length - 40} lainnya</li>` : ''}</ul>
-      ${tahan.length ? `<p><b>${tahan.length}</b> tidak dihapus karena sudah dipakai data lain:</p><ul class="small">${tahan.slice(0, 20).map(x => `<li>${esc(x.label)}: ${esc(x.alasan)}</li>`).join('')}${tahan.length > 20 ? `<li>… dan ${tahan.length - 20} lainnya</li>` : ''}</ul>` : ''}
-      <p class="small muted">File cadangan (isi data saat ini) diunduh otomatis lebih dulu. Ketik <b>GANTI</b> untuk melanjutkan.</p>
-      <input id="kt-ganti" class="inp" autocomplete="off" placeholder="GANTI" style="width:100%"></div>
-      <div class="drawer-act"><div class="sp"></div><button class="btn ghost" data-n>Batal</button><button class="btn danger" data-y disabled>Ganti semua</button></div></div>`;
-    const done = (v) => { bg.remove(); res(v); }, inp = bg.querySelector('#kt-ganti'), y = bg.querySelector('[data-y]');
-    inp.oninput = () => { y.disabled = inp.value.trim() !== 'GANTI'; };
-    y.onclick = () => done(true); bg.querySelector('[data-n]').onclick = () => done(false);
-    document.body.appendChild(bg); inp.focus();
-  });
+const NAMA = { nama: 'nama', teks: 'rumusan', sn: 'unsur SN Dikti', pl: 'profil', iabee: 'butir IABEE', ranah: 'ranah', sumber: 'sumber', bok: 'BoK induk', kedalaman: 'kedalaman', cpl: 'CPL', smt: 'semester', kel: 'kelompok', T: 'SKS teori', P: 'SKS praktik', lokasi: 'lokasi', inti: 'MK inti', bk: 'bahan kajian', prasyarat: 'prasyarat', kompetensi: 'kompetensi', alasanCpl: 'alasan pengecualian' };
+/** Ringkasan apa yang berubah antara data lama dan data dari Excel. */
+export function bedaRingkas(lama, baru) {
+  if (!lama) return '';
+  const urut = (v) => JSON.stringify(Array.isArray(v) ? v.slice().sort() : (v == null ? '' : v));
+  const beda = Object.keys(NAMA).filter(k => k in baru && urut(lama[k]) !== urut(baru[k]));
+  return beda.map(k => k === 'nama' ? `nama "${lama.nama}" menjadi "${baru.nama}"` : NAMA[k]).join(', ');
 }
+const LENCANA = { baru: ['Baru', '#16a34a'], ubah: ['Diperbarui', '#2563eb'], tetap: ['Tidak berubah', '#64748b'], lewat: ['Dilewati', '#ca8a04'], hapus: ['Akan dihapus', '#dc2626'], tahan: ['Dipertahankan', '#ea580c'] };
 
-/** Menanyakan mode. Mengembalikan 'tambah', 'ganti', atau null (batal). */
-export async function pilihMode({ pesan, jenis, boleh, tahan }) {
-  if (!boleh.length && !tahan.length) { return (await tanya(pesan + ' Lanjutkan?', 'Simpan')) ? 'tambah' : null; }
-  const lebih = `${pesan} Ada ${boleh.length + tahan.length} ${jenis} di aplikasi yang tidak ada di Excel. "Perbarui dan tambah" membiarkannya. "Ganti semua" menghapus ${boleh.length} di antaranya${tahan.length ? ` (${tahan.length} dipertahankan karena sudah dipakai: ${ringkasDaftar(tahan.map(x => x.label), 3)})` : ''}${boleh.length ? `: ${ringkasDaftar(boleh, 4)}` : ''}.`;
-  const r = await tanya3(lebih, 'Perbarui dan tambah', 'Ganti semua', 'Batal');
-  if (r === 'ya') return 'tambah';
-  if (r === 'buang') return (await ketikGanti(jenis, boleh, tahan)) ? 'ganti' : null;
-  return null;
+/** Pratinjau impor: satu tabel dengan lencana status per baris dan pilihan mode.
+    Mengembalikan 'tambah', 'ganti', atau null (batal). */
+export function pratinjauImpor({ jenis, baru = [], ubah = [], tetap = 0, lewat = [], catatan = [], boleh = [], tahan = [] }) {
+  return new Promise(res => {
+    const ada = boleh.length || tahan.length;
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal card wide" role="dialog" aria-modal="true"><h3 style="margin:0 0 8px">Pratinjau impor ${esc(jenis)}</h3><div class="modal-isi">
+      <p class="small">${baru.length} baru, ${ubah.length} diperbarui, ${tetap} tidak berubah${lewat.length ? `, ${lewat.length} dilewati` : ''}.</p>
+      ${ada ? `<div class="small" style="margin:6px 0"><b>${boleh.length + tahan.length}</b> data di aplikasi tidak ada di Excel. Pilih perlakuannya:
+        <label style="display:block;margin:4px 0"><input type="radio" name="md" value="tambah" checked> <b>Perbarui dan tambah</b>: data itu dibiarkan.</label>
+        <label style="display:block;margin:4px 0"><input type="radio" name="md" value="ganti"> <b>Ganti semua</b>: ${boleh.length} dihapus${tahan.length ? `, ${tahan.length} dipertahankan karena sudah dipakai` : ''}. Cadangan Excel diunduh otomatis.</label></div>` : ''}
+      <div class="tbl-wrap" style="max-height:46vh;overflow:auto"><table class="tbl"><thead><tr><th style="width:130px">Status</th><th>Data</th><th>Keterangan</th></tr></thead><tbody id="pv-isi"></tbody></table></div>
+      ${catatan.length ? `<p class="small muted" style="margin-top:6px">Catatan: ${esc(catatan.slice(0, 3).join('; '))}${catatan.length > 3 ? `, dan ${catatan.length - 3} lainnya` : ''}.</p>` : ''}
+      <div id="pv-kt" hidden style="margin-top:8px"><p class="small">Ketik <b>GANTI</b> untuk menyetujui penghapusan.</p><input id="kt-ganti" class="inp" autocomplete="off" placeholder="GANTI" style="width:100%"></div></div>
+      <div class="drawer-act"><div class="sp"></div><button class="btn ghost" data-n>Batal</button><button class="btn pri" data-y>Simpan</button></div></div>`;
+    const done = (v) => { bg.remove(); res(v); }, y = bg.querySelector('[data-y]'), kt = bg.querySelector('#pv-kt'), inp = bg.querySelector('#kt-ganti');
+    const mode = () => { const r = bg.querySelector('input[name=md]:checked'); return r ? r.value : 'tambah'; };
+    const lb = (k) => `<span class="tag" style="--c:${LENCANA[k][1]}">${LENCANA[k][0]}</span>`, MAKS = 150;
+    const baris = () => {
+      const g = mode() === 'ganti', r = [];
+      baru.forEach(t => r.push([lb('baru'), t, '']));
+      ubah.forEach(u => r.push([lb('ubah'), u.label, u.detail || '']));
+      if (g) { boleh.forEach(t => r.push([lb('hapus'), t, 'tidak ada di Excel'])); tahan.forEach(u => r.push([lb('tahan'), u.label, u.alasan])); }
+      lewat.forEach(t => { const m = /^(.*?): (.*)$/.exec(t); r.push([lb('lewat'), m ? m[1] : t, m ? m[2] : '']); });
+      bg.querySelector('#pv-isi').innerHTML = (r.length ? r.slice(0, MAKS).map(x => `<tr><td>${x[0]}</td><td>${esc(x[1])}</td><td class="small">${esc(x[2])}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">Tidak ada perubahan.</td></tr>') + (r.length > MAKS ? `<tr><td colspan="3" class="muted">… dan ${r.length - MAKS} baris lainnya</td></tr>` : '');
+      kt.hidden = !g; y.className = g ? 'btn danger' : 'btn pri'; y.textContent = g ? `Simpan dan hapus ${boleh.length}` : 'Simpan';
+      y.disabled = g && inp.value.trim() !== 'GANTI';
+    };
+    bg.querySelectorAll('input[name=md]').forEach(i => { i.onchange = baris; }); inp.oninput = baris; baris();
+    y.onclick = () => done(mode());
+    bg.querySelector('[data-n]').onclick = () => done(null);
+    document.body.appendChild(bg); y.focus();
+  });
 }
 
 const pakaiCpmk = (id) => S.cpmk.some(c => (c.cpl || []).includes(id));

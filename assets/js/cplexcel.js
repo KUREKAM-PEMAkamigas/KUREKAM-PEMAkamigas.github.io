@@ -7,7 +7,7 @@ import { byProdi, kodeBerikut, rencanaSelaras, iabeeOf } from './rules.js';
 import { BUTIR_IABEE } from './config.js';
 import { detect } from './bloom.js';
 import { unduh, loadXLSX } from './views/ui.js';
-import { pilihMode, rencanaHapus, awalCadangan } from './impor.js';
+import { pratinjauImpor, bedaRingkas, rencanaHapus, awalCadangan } from './impor.js';
 
 const RANAH = { S: 'Sikap', P: 'Pengetahuan', KU: 'Keterampilan umum', KK: 'Keterampilan khusus' };
 const HINT = { S: 'A', P: 'C', KU: 'C', KK: 'C' };
@@ -72,8 +72,7 @@ export async function imporCpl(file, pid) {
   }
   const hp = rencanaHapus('cpl', cpl.filter(x => !disebut.has(norm(x.kode))));
   if (!baru.length && !ubah.length && !hp.boleh.length) { toast(lewat.length ? 'Tidak ada baris yang valid. ' + lewat.slice(0, 2).join('; ') : tetap ? 'Tidak ada perubahan: semua baris sama dengan data di aplikasi.' : 'Tidak ada baris data terbaca.'); return; }
-  const msg = `${baru.length} CPL baru dan ${ubah.length} CPL diperbarui${tetap ? `, ${tetap} tidak berubah` : ''}.${lewat.length ? ` ${lewat.length} baris dilewati (${lewat.slice(0, 3).join('; ')}${lewat.length > 3 ? ', ...' : ''}).` : ''}${catatan.length ? ` Catatan Bloom: ${catatan.slice(0, 3).join('; ')}${catatan.length > 3 ? ', ...' : ''}.` : ''}`;
-  const mode = await pilihMode({ pesan: msg, jenis: 'CPL', boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
+  const mode = await pratinjauImpor({ jenis: 'CPL', baru: baru.map(d => `${d.ranah}: ${d.teks.slice(0, 80)}`), ubah: ubah.map(d => ({ label: `${d.kode} ${d.teks.slice(0, 60)}`, detail: bedaRingkas(cpl.find(x => x.id === d.id), d) })), tetap, lewat, catatan, boleh: hp.boleh, tahan: hp.tahan }); if (!mode) return;
   if (mode === 'ganti') { await templatCpl(pid, awalCadangan()); await hp.jalan(pid); }
   if (ubah.length) await saveMany('cpl', ubah, `Impor Excel: perbarui ${ubah.length} CPL (${pid})`);
   for (const d of baru) { d.kode = kodeBerikut(S, 'cpl', pid); d.id = `${pid}-${d.kode}`; await save('cpl', d, `Impor Excel: CPL baru ${d.kode} (${pid})`); }

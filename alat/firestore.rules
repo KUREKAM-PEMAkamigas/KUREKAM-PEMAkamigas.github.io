@@ -24,6 +24,8 @@ match /kur_pengguna/{id} {
 }
 match /kur_pulih/{id}     { allow read, write: if pengelola(); }
 match /kur_pulihdata/{id} { allow read, write: if pengelola(); }
+// nilai per mahasiswa (NIM, nama, nilai): hanya dosen, prodi, dan admin
+match /kur_nilai/{id}     { allow read, write: if superadmin() || kAny(['admin','developer','prodi','dosen']); }
 match /kur_status/{id}    { allow read: if pengelola(); allow write: if punyaPeran(['admin', 'developer']); }
 
 // jejak dan sesi: setiap akun boleh menulis catatannya sendiri; membaca hanya pengelola dan pemantau

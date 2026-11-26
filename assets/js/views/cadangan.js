@@ -30,7 +30,7 @@ export default function cadanganView(el) {
       lampu(sandiAwal ? 'warn' : 'ok', 'Kata sandi awal', sandiAwal ? `${sandiAwal} akun masih memakai kata sandi awal. Pengguna diminta menggantinya saat masuk; ingatkan yang belum.` : 'Tidak ada akun yang masih memakai kata sandi awal.'),
       lampu(nAdmin >= 2 ? 'ok' : 'warn', 'Jumlah akun admin atau developer', nAdmin >= 2 ? `${nAdmin} akun, ada cadangan bila satu akun bermasalah.` : 'Hanya ' + nAdmin + ' akun. Sebaiknya ada minimal dua agar pemulihan tetap bisa dilakukan.'),
       lampu('info', 'Aturan Firestore', 'Pembatasan akses sesungguhnya ada di aturan Firestore (Firebase Console, Firestore, Rules). Usulan aturan ada di berkas alat/firestore.rules. Uji dulu di Rules Playground sebelum diterapkan, karena SIMANTAP memakai proyek yang sama.'),
-      lampu('info', 'Perlindungan data pribadi', 'KUREKAM tidak menyimpan nama atau NIM mahasiswa, dan tidak menyimpan nilai per mahasiswa. Nilai diolah di peramban dan hanya hasil agregat yang disimpan. Titik pulih tidak menyalin akun pengguna maupun log.')
+      lampu('info', 'Perlindungan data pribadi', 'Data per mahasiswa (NIM, nama, nilai) hanya ada di koleksi kur_nilai pada menu Nilai per Mata Kuliah, dan seharusnya hanya terbaca oleh dosen, prodi, dan admin (lihat aturan Firestore). Data itu tidak ikut titik pulih. Titik pulih juga tidak menyalin akun pengguna maupun log.')
     ].join('');
 
     el.innerHTML = `

@@ -6,13 +6,13 @@ import { byProdi, kodeBerikut } from './rules.js';
 import { LEVELS } from './bloom.js';
 import { unduh, tanya, loadXLSX } from './views/ui.js';
 
-const nz = (v) => String(v == null ? '' : v).trim();
-const norm = (v) => nz(v).toLowerCase().replace(/[^a-z0-9]/g, '');
-const spasi = (v) => nz(v).replace(/\s+/g, ' ');
-const pecah = (v) => nz(v).split(/[,;\n]+/).map(t => t.trim()).filter(Boolean);
+export const nz = (v) => String(v == null ? '' : v).trim();
+export const norm = (v) => nz(v).toLowerCase().replace(/[^a-z0-9]/g, '');
+export const spasi = (v) => nz(v).replace(/\s+/g, ' ');
+export const pecah = (v) => nz(v).split(/[,;\n]+/).map(t => t.trim()).filter(Boolean);
 const LEVEL = Object.keys(LEVELS);
 
-async function bukaBuku(file, cocokKepala) {
+export async function bukaBuku(file, cocokKepala) {
   const X = await loadXLSX(), wb = X.read(await file.arrayBuffer(), { type: 'array' });
   for (const nm of wb.SheetNames) {
     const r = X.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: '' });
@@ -21,10 +21,10 @@ async function bukaBuku(file, cocokKepala) {
   }
   return null;
 }
-const kolom = (h, ...p) => { for (const q of p) { const i = h.findIndex(x => q.test(x)); if (i >= 0) return i; } return -1; };
-const hapusContoh = (row) => !row.some(v => nz(v)) || row.some(v => /hapus baris ini/i.test(nz(v)));
+export const kolom = (h, ...p) => { for (const q of p) { const i = h.findIndex(x => q.test(x)); if (i >= 0) return i; } return -1; };
+export const hapusContoh = (row) => !row.some(v => nz(v)) || row.some(v => /hapus baris ini/i.test(nz(v)));
 
-async function tulisBuku(nama, kepala, baris, lebar, petunjuk, daftar) {
+export async function tulisBuku(nama, kepala, baris, lebar, petunjuk, daftar) {
   const X = await loadXLSX(), wb = X.utils.book_new();
   const ws = X.utils.aoa_to_sheet([kepala, ...baris]); ws['!cols'] = lebar.map(w => ({ wch: w })); ws['!freeze'] = { xSplit: 0, ySplit: 1 };
   X.utils.book_append_sheet(wb, ws, 'DATA');

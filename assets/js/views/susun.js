@@ -1,5 +1,6 @@
 /* KUREKAM · Penyusunan: Visi & PL, CPL, BoK & BK, Mata Kuliah */
 import { templatCpl, imporCpl } from '../cplexcel.js';
+import { templatMk, imporMk } from '../mkexcel.js';
 import { templatBok, imporBok, templatBk, imporBk } from '../bokexcel.js';
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDrawer, closeDrawer, addLog, toast } from '../app.js';
 import { labelKel, labelGrup, kodeBaruMk, usulKodeProdi, KODE_USULAN, awalPraktik } from '../kode.js';
@@ -18,6 +19,8 @@ const liveBloom = (hintKey) => (v) => { const b = detect(v, hintKey()); return b
 /* ================= Visi & Profil Lulusan ================= */
 /* nama peran hasil impor Excel pernah dipotong dengan tanda … dari awal deskripsi; tidak ditampilkan agar tidak terpotong */
 const namaPL = (x) => (x.nama && /…$/.test(x.nama) && String(x.teks || '').startsWith(x.nama.slice(0, -1)) ? '' : x.nama || '');
+const pasangXl = (el, pre, tpl, imp) => { const bt = el.querySelector('#' + pre + '-tpl'), bi = el.querySelector('#' + pre + '-imp'), fi = el.querySelector('#' + pre + '-file'); if (!bt) return; bt.onclick = () => tpl(ctx.prodi).catch(e => toast('Templat gagal: ' + e.message)); bi.onclick = () => { fi.value = ''; fi.click(); }; fi.onchange = () => { const f = fi.files[0]; if (f) imp(f, ctx.prodi).catch(e => toast('Impor gagal: ' + e.message)); }; };
+
 export function visiView(el) {
   const p = S.prodi.find(x => x.id === ctx.prodi); const ed = can('susun');
   const pl = byProdi(S.pl, ctx.prodi);
@@ -145,8 +148,7 @@ export function bkView(el) {
   const bokForm = (x = {}) => formDrawer({ title: x.id ? 'Ubah BoK' : 'BoK baru', sub: prodiName(), obj: x, fields: [{ k: 'kode', label: 'Kode', type: 'kode', ph: x.kode || kodeBerikut(S, 'bok', ctx.prodi) }, { k: 'nama', label: 'Nama' }, { k: 'sumber', label: 'Sumber rujukan' }],
     onSave: async (o) => { if (!o.nama) return 'Nama wajib diisi.'; o.kode = o.kode || kodeBerikut(S, 'bok', ctx.prodi); o.id = o.id || `${ctx.prodi}-${o.kode}`; o.prodi = ctx.prodi; await save('bok', o, `Simpan BoK ${o.kode}`); rerender(); },
     onDelete: x.id ? async () => { await remove('bok', x.id, `Hapus BoK ${x.kode}`); rerender(); } : null });
-  const pasangXl = (pre, tpl, imp) => { const bt = el.querySelector('#' + pre + '-tpl'), bi = el.querySelector('#' + pre + '-imp'), fi = el.querySelector('#' + pre + '-file'); if (!bt) return; bt.onclick = () => tpl(ctx.prodi).catch(e => toast('Templat gagal: ' + e.message)); bi.onclick = () => { fi.value = ''; fi.click(); }; fi.onchange = () => { const f = fi.files[0]; if (f) imp(f, ctx.prodi).catch(e => toast('Impor gagal: ' + e.message)); }; };
-  pasangXl('bok', templatBok, imporBok); pasangXl('bk', templatBk, imporBk);
+  pasangXl(el, 'bok', templatBok, imporBok); pasangXl(el, 'bk', templatBk, imporBk);
   if (ed) {
     const kf = el.querySelector('#ked-fix'); if (kf) kf.onclick = async () => {
       const ub = bkTanpaKed.map(b => ({ ...b, kedalaman: kedalamanBk(S, b) })).filter(b => b.kedalaman);
@@ -177,7 +179,7 @@ export function mkView(el) {
     ${kpi('Porsi jam praktik', R.praktikJam, `semester 1–6, LAM ${P.praktikMin}–${P.praktikMax}%`, '#f5a524', 'bolt', 1)}
   </div>
   <div class="card" style="margin-top:18px">${head('Daftar mata kuliah', prodiName() + ' · JP dihitung otomatis: teori 60 menit, praktik MKW/MKBS 120 menit, MKBE/MKKK 170 menit per SKS', 'book', '#14b8a6',
-    `<button class="btn sm" id="calc">${icon('sim')} Kalkulator SKS</button>${ed ? `<button class="btn sm" id="kode">${icon('check')} Selaraskan kode sesuai Pedoman</button><button class="btn sm" id="pisah">${icon('grid4')} Pisahkan MK teori dan praktik</button>` : ''}${ed ? `<button class="btn pri sm" id="add">${icon('plus')} Mata kuliah</button>` : ro()}`)}
+    `<button class="btn sm" id="calc">${icon('sim')} Kalkulator SKS</button>${ed ? `<button class="btn sm" id="mk-tpl">${icon('download')} Templat Excel</button> <button class="btn sm" id="mk-imp">${icon('upload')} Impor Excel</button><input type="file" id="mk-file" accept=".xlsx,.xls" hidden> <button class="btn sm" id="kode">${icon('check')} Selaraskan kode sesuai Pedoman</button><button class="btn sm" id="pisah">${icon('grid4')} Pisahkan MK teori dan praktik</button>` : ''}${ed ? `<button class="btn pri sm" id="add">${icon('plus')} Mata kuliah</button>` : ro()}`)}
     <div class="filters"><div class="search">${icon('search')}<input class="inp" id="q" placeholder="Cari nama atau kode MK"></div>
       <select class="inp" id="f-smt"><option value="">Semua semester</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}">Semester ${s}</option>`).join('')}</select>
       <select class="inp" id="f-kel"><option value="">Semua kelompok</option>${Object.keys(GRUP).map(g => `<option value="${g}">${labelGrup(g)}</option>`).join('')}</select></div>
@@ -226,6 +228,7 @@ export function mkView(el) {
   const jpHelp = () => { const d = document.querySelector('#fd'); if (!d) return ''; const T = +d.querySelector('[name=T]').value || 0, Pp = +d.querySelector('[name=P]').value || 0; const kel = d.querySelector('[name=kel]').value; const m = { T, P: Pp, kel }; return `SKS ${T + Pp} · JP ${fmt(jpOf(m, P), 2)} jam/minggu · praktik ${durasi(m, P)} menit per SKS`; };
   if (ed) el.querySelector('#add').onclick = () => form();
   el.querySelector('#calc').onclick = () => kalkulator();
+  pasangXl(el, 'mk', templatMk, imporMk);
   if (ed) { el.querySelector('#kode').onclick = () => selaraskanKode(); el.querySelector('#pisah').onclick = () => pisahkanMk(); }
 }
 

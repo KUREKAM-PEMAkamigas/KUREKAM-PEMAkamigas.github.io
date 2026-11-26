@@ -101,7 +101,8 @@ export const PARAM_DEFAULT = {
   /* RPS: jumlah pertemuan minimal yang memuat integrasi penelitian atau PKM */
   integrasiMinPertemuan: 2,
   /* PI dan CPL: tercapai bila minimal piMinPersen % mahasiswa bernilai minimal piMinNilai. PI per CPL 2 sampai 4. */
-  piMinPersen: 70, piMinNilai: 65, piPerCplMin: 2, piPerCplMax: 4,
+  /* Angkatan dibaca dari NIM: mulai digit ke-nimPos sebanyak nimLen digit (22021101 -> 22 -> 2022). */
+  nimPos: 1, nimLen: 2, piMinPersen: 70, piMinNilai: 65, piPerCplMin: 2, piPerCplMax: 4,
   /* Kelengkapan CPL: jumlah minimal per prodi dan per ranah (S sikap, P pengetahuan, KU keterampilan umum, KK keterampilan khusus) */
   cplMin: { total: 9, S: 2, P: 2, KU: 2, KK: 3 },
   /* Butir IABEE (a sampai k) yang lazim dibebankan pada tiap ranah CPL: hanya peringatan, tidak memblokir */
@@ -143,11 +144,11 @@ export const DEVELOPER_SHA = ['f512cb3abb950d4c65241a0fda6c394decc7b29da869d6f51
 
 /* Menu yang tampil per peran. null berarti semua menu. Rute di luar daftar dialihkan ke Beranda. */
 export const MENU_PERAN = {
-  dosen: ['beranda', 'kinerja', 'jadwal', 'rambu', 'peta', 'cpmkprodi', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bloom'],
-  prodi: ['beranda', 'kinerja', 'jadwal', 'rambu', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
+  dosen: ['beranda', 'kinerja', 'jadwal', 'rambu', 'peta', 'cpmkprodi', 'deskmk', 'cpmk', 'rps', 'riset', 'nilai', 'realisasi', 'beban', 'bloom'],
+  prodi: ['beranda', 'kinerja', 'jadwal', 'rambu', 'asisten', 'visi', 'cpl', 'pi', 'bk', 'mk', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'nilai', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan'],
   pimpinan: ['beranda', 'jadwal', 'pimpinan', 'mutu', 'akademik', 'iabee', 'capaian', 'lulusan', 'laporan'],
-  wadir: ['beranda', 'pantau', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk', 'cadangan'],
-  spm: ['beranda', 'jadwal', 'rambu', 'mutu', 'visi', 'cpl', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk', 'cadangan'],
+  wadir: ['beranda', 'pantau', 'jadwal', 'rambu', 'pimpinan', 'mutu', 'akademik', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'rps', 'riset', 'realisasi', 'beban', 'bebanprodi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'nilai', 'capaian', 'lulusan', 'skpi', 'advisory', 'revisi', 'laporan', 'induk', 'cadangan'],
+  spm: ['beranda', 'jadwal', 'rambu', 'mutu', 'visi', 'cpl', 'pi', 'cpmkprodi', 'peta', 'matriks', 'obe', 'deskmk', 'cpmk', 'rps', 'riset', 'realisasi', 'periksa', 'iabee', 'bahanled', 'generator', 'panduan', 'nilai', 'capaian', 'lulusan', 'skpi', 'advisory', 'bloom', 'revisi', 'laporan', 'induk', 'cadangan'],
   akademik: ['beranda', 'jadwal', 'rambu', 'akademik', 'mk', 'peta', 'obe', 'rps', 'beban', 'bebanprodi', 'realisasi', 'panduan', 'skpi', 'laporan', 'induk'],
   admin: null,
   developer: null

@@ -20,6 +20,7 @@ import bebanView from './views/beban.js';
 import { periksaView, bloomView, revisiView, laporanView } from './views/evaluasi.js';
 import indukView from './views/induk.js';
 import cadanganView from './views/cadangan.js';
+import nilaiView from './views/nilai.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
 import { piView, kesiapanView } from './views/iabee.js';
@@ -240,6 +241,7 @@ export const ROUTES = [
   { id: 'bloom', t: 'Taksonomi Bloom', ic: 'sim', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bloomView },
   { id: 'revisi', t: 'Revisi & Pengesahan', ic: 'loop', c: '#6366f1', sec: 'Evaluasi & Kawal Mutu', v: revisiView },
   { id: 'laporan', t: 'Laporan & Cetak', ic: 'download', c: '#14b8a6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: laporanView },
+  { id: 'nilai', t: 'Nilai per Mata Kuliah', sub: 'Tempel nilai, hitung capaian CPL', ic: 'pulse', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', v: nilaiView },
   { id: 'cadangan', t: 'Cadangan & Keamanan', sub: 'Titik pulih dan pemeriksaan keamanan', ic: 'db', c: '#0ea5e9', sec: 'Sistem', v: cadanganView },
   { id: 'induk', t: 'Data Induk & Pengaturan', ic: 'db', c: '#64748b', sec: 'Sistem', v: indukView }
 ];
@@ -265,7 +267,7 @@ const NAV = [
   ['D · Pengendalian mutu', [
     { tabs: ['periksa'], step: 13 }, { tabs: ['revisi'], step: 14 }]],
   ['E · Realisasi dan capaian', [
-    { tabs: ['realisasi'], step: 15 }, { tabs: ['capaian'], step: 16 },
+    { tabs: ['realisasi'], step: 15 }, { tabs: ['nilai', 'capaian'], step: 16, t: 'Capaian CPL & Tindak Lanjut', sub: 'Nilai per MK, rekap angkatan, tindak lanjut', lbl: ['Nilai per mata kuliah', 'Rekap dan tindak lanjut'] },
     { tabs: ['lulusan', 'skpi'], step: 17, t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi dan SKPI', lbl: ['Capstone, lulusan, tracer', 'SKPI lulusan'] }]],
   ['F · Peta dan luaran', [
     { tabs: ['peta', 'matriks', 'obe'], t: 'Peta Kurikulum', sub: 'Peta, keterlacakan, dan tabel OBE', lbl: ['Peta kurikulum', 'Matriks keterlacakan', 'Tabel OBE'] },

@@ -122,7 +122,7 @@ export function formDrawer({ title, sub = '', fields, obj = {}, onSave, onDelete
     });
     /* keterangan di bawah pilihan (misalnya isi Sub-CPMK yang dipilih) */
     fields.filter(x => x.info).forEach(x => { const el = dr.querySelector(`[data-info="${x.k}"]`), pil = () => Array.from(dr.querySelectorAll(`[data-multi="${x.k}"] input:checked`)).map(i => i.value); const up = () => { el.innerHTML = x.info(pil()); }; dr.querySelectorAll(`[data-multi="${x.k}"] input`).forEach(i => i.addEventListener('change', up)); up(); });
-    fields.filter(x => x.live && x.type !== 'kode').forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); up(); });
+    fields.filter(x => x.live && x.type !== 'kode').forEach(x => { const el = dr.querySelector(`[name="${x.k}"]`); const h = dr.querySelector(`[data-help="${x.k}"]`); const up = () => { h.innerHTML = x.live(el.value); }; el.addEventListener('input', up); (x.watch || []).forEach(w => { const e2 = dr.querySelector(`[name="${w}"]`); if (e2) e2.addEventListener('input', up); }); up(); });
     if (onOpen) onOpen(dr);
   }, full ? 'full' : wide);
 }

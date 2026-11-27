@@ -423,7 +423,7 @@ export async function imporPenugasan(X, wb) {
   const t = bacaTabel(X, wb, /^(dosen|namadosen)/);
   if (!t) throw new Error('Kolom Dosen tidak ditemukan. Gunakan template penugasan.');
   const { h, rows, mulai } = t;
-  const c = { prodi: kol(h, /^prodi/), dosen: kol(h, /^(dosen|namadosen)/), nip: kol(h, /^nip|^nidn/), kode: kol(h, /^kodemk/, /^kode/), mk: kol(h, /^namamk/, /^matakuliah/, /^nama/), kelas: kol(h, /^kelas/), pt: kol(h, /^porsit/), pp: kol(h, /^porsip/), ko: kol(h, /^koordinator/) };
+  const c = { prodi: kol(h, /^prodi/), dosen: kol(h, /^(dosen|namadosen)/), nip: kol(h, /^nip|^nidn/), kode: kol(h, /^kodemk/, /^kode/), mk: kol(h, /^namamk/, /^matakuliah/, /^nama/), kelas: kol(h, /^kelas/), pt: kol(h, /^porsit/), pp: kol(h, /^porsip/), sT: kol(h, /^skstdiampu/, /^skstdosen/), sP: kol(h, /^sksp(diampu|dosen)/), ko: kol(h, /^peran/, /^koordinator/) };
   const docs = [], lewat = [], mirip = [], ambigu = []; let baru = 0; const lintas = new Set(), dosenBaru = new Map(), terpakai = new Set();
   const pecah = (v, d) => { if (v === '' || v == null) return d; let n = parseFloat(String(v).replace(',', '.')); if (isNaN(n)) return d; if (n > 1) n /= 100; return Math.max(0, Math.min(1, n)); };
   for (let r = mulai; r < rows.length; r++) {
@@ -442,9 +442,12 @@ export async function imporPenugasan(X, wb) {
     terpakai.add(d.id);
     const old = S.tugas.find(x => x.dosen === d.id && x.mk === m.id);
     if (!old) baru++; if (d.homebase !== m.prodi) lintas.add(d.id);
-    docs.push({ ...(old || { id: uid('T-' + m.id) + docs.length }), mk: m.id, prodi: m.prodi, dosen: d.id, kelas, porsiT: pecah(c.pt >= 0 ? row[c.pt] : '', 1), porsiP: pecah(c.pp >= 0 ? row[c.pp] : '', 1), koordinator: c.ko >= 0 ? /^(ya|y|1|true|x)$/i.test(rapi(row[c.ko])) : !!(old && old.koordinator) });
+    docs.push({ ...(old || { id: uid('T-' + m.id) + docs.length }), mk: m.id, prodi: m.prodi, dosen: d.id, kelas, porsiT: c.sT >= 0 && rapi(row[c.sT]) !== '' ? (m.T ? Math.max(0, Math.min(1, (parseFloat(String(row[c.sT]).replace(',', '.')) || 0) / m.T)) : 0) : pecah(c.pt >= 0 ? row[c.pt] : '', 1), porsiP: c.sP >= 0 && rapi(row[c.sP]) !== '' ? (m.P ? Math.max(0, Math.min(1, (parseFloat(String(row[c.sP]).replace(',', '.')) || 0) / m.P)) : 0) : pecah(c.pp >= 0 ? row[c.pp] : '', 1), koordinator: c.ko >= 0 ? /^(koordinator|ya|y|1|true|x)$/i.test(rapi(row[c.ko])) : !!(old && old.koordinator) });
   }
   if (!docs.length) throw new Error('Tidak ada penugasan yang valid. ' + lewat.concat(ambigu).join('; '));
+  const lastK = new Map(); docs.forEach((q, i) => { if (q.koordinator) lastK.set(q.mk, i); });
+  docs.forEach((q, i) => { if (q.koordinator && lastK.get(q.mk) !== i) q.koordinator = false; });
+  const lama = S.tugas.filter(q => q.koordinator && lastK.has(q.mk) && !docs.some(w => w.id === q.id)).map(q => ({ ...q, koordinator: false })); docs.push(...lama);
   const tambah = [...dosenBaru.values()].filter(d => terpakai.has(d.id));
   if (tambah.length) await saveMany('dosen', tambah, `Tambah ${tambah.length} dosen dari impor penugasan`);
   await saveMany('tugas', docs, `Impor penugasan: ${docs.length} baris`);

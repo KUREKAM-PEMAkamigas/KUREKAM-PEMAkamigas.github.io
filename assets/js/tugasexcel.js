@@ -48,7 +48,7 @@ export function cocokkanDosen(daftar, nama, nip = '', nidn = '') {
   return { d: kand[0].x, cara: 'mirip' };
 }
 
-export const KEPALA_PENUGASAN = ['Prodi', 'Semester', 'Kode MK', 'Nama MK', 'SKS T', 'SKS P', 'Dosen', 'Kelas', 'Porsi T', 'Porsi P', 'Koordinator'];
+export const KEPALA_PENUGASAN = ['Prodi', 'Semester', 'Kode MK', 'Nama MK', 'SKS T MK', 'SKS P MK', 'Dosen', 'Peran', 'Kelas', 'SKS T diampu', 'SKS P diampu'];
 
 /** Buat buku kerja template penugasan. mkList: MK yang dimuat. S: data aplikasi. kelasOf: fungsi jumlah kelas bawaan. */
 export function bangunTemplatePenugasan(X, S, mkList, kelasOf, judul = '') {
@@ -56,10 +56,11 @@ export function bangunTemplatePenugasan(X, S, mkList, kelasOf, judul = '') {
   const nama = (id) => (S.dosen.find(d => d.id === id) || {}).nama || '';
   mkList.forEach(m => {
     const ts = (S.tugas || []).filter(t => t.mk === m.id);
-    if (!ts.length) baris.push([m.prodi, m.smt, m.kode, m.nama, m.T || 0, m.P || 0, '', kelasOf(S, m.prodi, m.smt), 1, 1, '']);
-    else ts.forEach(t => baris.push([m.prodi, m.smt, m.kode, m.nama, m.T || 0, m.P || 0, nama(t.dosen), t.kelas, t.porsiT == null ? 1 : t.porsiT, t.porsiP == null ? 1 : t.porsiP, t.koordinator ? 'ya' : '']));
+    const r1 = (v) => Math.round(v * 100) / 100;
+    if (!ts.length) baris.push([m.prodi, m.smt, m.kode, m.nama, m.T || 0, m.P || 0, '', 'Koordinator', kelasOf(S, m.prodi, m.smt), m.T || 0, m.P || 0]);
+    else ts.forEach(t => baris.push([m.prodi, m.smt, m.kode, m.nama, m.T || 0, m.P || 0, nama(t.dosen), t.koordinator ? 'Koordinator' : 'Anggota', t.kelas, r1((t.porsiT == null ? 1 : t.porsiT) * (m.T || 0)), r1((t.porsiP == null ? 1 : t.porsiP) * (m.P || 0))]));
   });
-  const ws = X.utils.aoa_to_sheet(baris); ws['!cols'] = [8, 9, 12, 44, 7, 7, 40, 8, 9, 9, 12].map(w => ({ wch: w })); ws['!autofilter'] = { ref: `A1:K${baris.length}` };
+  const ws = X.utils.aoa_to_sheet(baris); ws['!cols'] = [8, 9, 12, 44, 9, 9, 40, 13, 8, 13, 13].map(w => ({ wch: w })); ws['!autofilter'] = { ref: `A1:K${baris.length}` };
   X.utils.book_append_sheet(wb, ws, 'PENUGASAN');
   const urut = (S.dosen || []).slice().sort((a, b) => String(a.nama).localeCompare(String(b.nama), 'id'));
   const ref = X.utils.aoa_to_sheet([['Nama terdaftar di KUREKAM (salin persis ke kolom Dosen)', 'Homebase', 'Status', 'Juga mengajar di'], ...urut.map(d => [d.nama, d.homebase || '', d.status || '', (d.prodiAjar || []).join(', ')])]);
@@ -69,9 +70,10 @@ export function bangunTemplatePenugasan(X, S, mkList, kelasOf, judul = '') {
     ['2. Nama tidak harus persis. Aplikasi mencocokkan nama tanpa memperhatikan gelar, urutan gelar, huruf besar kecil, dan singkatan (misalnya "M. Rehan" dikenali sebagai "Muhammad Rehan").'],
     ['3. Bila tidak ada yang cocok, nama dicatat apa adanya sebagai dosen baru (homebase mengikuti prodi MK, status "Belum ada di DUK"), dan dapat dilengkapi di Data Induk > Dosen.'],
     ['4. Bila nama cocok dengan lebih dari satu dosen terdaftar, baris itu dilewati dan dilaporkan. Tulis nama lebih lengkap lalu impor ulang.'],
-    ['5. Satu MK dengan dua dosen (team teaching atau kelas praktik dibagi): tambahkan baris baru dengan Prodi, Kode MK, dan Nama MK yang sama. Atur Kelas, Porsi T, dan Porsi P tiap dosen (0 sampai 1, atau persen).'],
-    ['6. Baris tanpa Dosen diabaikan. Penugasan yang sudah ada (dosen dan MK sama) diperbarui.'],
-    ['7. Koordinator: tulis "ya" untuk dosen koordinator MK.']];
+    ['5. Team teaching: satu MK boleh diampu dua dosen atau lebih. Tambahkan baris baru dengan Prodi, Kode MK, dan Nama MK yang sama, lalu isi dosen lain. Bagi SKS lewat kolom "SKS T diampu" dan "SKS P diampu" (per kelas). Contoh MK 2 SKS teori: dosen koordinator 1, dosen anggota 1. Jumlah SKS diampu semua dosen sebaiknya sama dengan SKS MK.'],
+    ['6. Peran: tulis Koordinator atau Anggota. Satu MK satu koordinator; bila lebih dari satu, yang terakhir dipakai.'],
+    ['7. Kelas: jumlah kelas yang diampu dosen itu. Bila dua dosen berbagi semua kelas, isi jumlah kelas yang sama untuk keduanya; bila membagi kelas, isi kelas masing-masing dan SKS penuh.'],
+    ['8. Baris tanpa Dosen diabaikan. Penugasan yang sudah ada (dosen dan MK sama) diperbarui.']];
   const ps = X.utils.aoa_to_sheet(pet); ps['!cols'] = [{ wch: 130 }]; X.utils.book_append_sheet(wb, ps, 'PETUNJUK');
   return wb;
 }

@@ -9,7 +9,7 @@ import { chart, AX } from '../charts.js';
 import { head, prodiTag, stTag, tanya, unduh, loadXLSX } from './ui.js';
 
 const KUNCI_SKALAR = [
-  ['totalSksMin', 'Total SKS minimal', 'SKS'], ['mkProdiMin', 'Jumlah MK per prodi, minimal', 'MK'], ['mkProdiMax', 'Jumlah MK per prodi, maksimal', 'MK'],
+  ['totalSksMin', 'Total SKS minimal', 'SKS'], ['totalSksMax', 'Total SKS maksimal (aturan Dikti)', 'SKS'], ['mkProdiMin', 'Jumlah MK per prodi, minimal', 'MK'], ['mkProdiMax', 'Jumlah MK per prodi, maksimal', 'MK'],
   ['muatanSpesifikMin', 'Muatan spesifik program (MK kompetensi), minimal', '%'], ['pendidikanUmumMax', 'Pendidikan umum, maksimal', '%'], ['matSainsMin', 'Matematika dan ilmu alam, minimal', 'SKS'],
   ['praktikMin', 'Porsi jam praktik semester 1 sampai 6, minimal', '%'], ['praktikMax', 'Porsi jam praktik semester 1 sampai 6, maksimal', '%']];
 const KOLOM_KER = ['SKS', 'Teori min', 'Teori maks', 'Praktik min', 'Praktik maks', 'MK min', 'MK maks'];
@@ -23,7 +23,7 @@ const kompetensiOf = (S, pid) => { const mk = S.mk.filter(m => m.prodi === pid),
 function metrik(pid) {
   const P = param(S), R = struktur(S, pid), K = kompetensiOf(S, pid), d = (v, n = 1) => fmt(v, n);
   return [
-    { label: 'Total SKS', acuan: 'Permen 39/2025, Pedoman Bab IV', pedoman: `≥ ${P.totalSksMin}`, desain: d(R.total, 0), st: nilaiSt(R.total >= P.totalSksMin, R.total >= P.totalSksMin - 2), go: 'mk', bantu: 'Jumlah seluruh SKS mata kuliah prodi.' },
+    { label: 'Total SKS', acuan: 'Permen 39/2025 (maks. 156), Pedoman Bab IV', pedoman: `${P.totalSksMin}–${P.totalSksMax}`, desain: d(R.total, 0), st: R.total > P.totalSksMax ? 'bad' : nilaiSt(R.total >= P.totalSksMin, R.total >= P.totalSksMin - 2), go: 'mk', bantu: 'Jumlah seluruh SKS mata kuliah prodi.' },
     { label: 'Jumlah mata kuliah', acuan: 'Pedoman Bab IV', pedoman: `${P.mkProdiMin}–${P.mkProdiMax}`, desain: d(R.n, 0), st: rentang(R.n, P.mkProdiMin, P.mkProdiMax), go: 'mk', bantu: 'Terlalu banyak MK memecah beban belajar; terlalu sedikit membuat MK terlalu besar.' },
     { label: 'Jumlah mata kuliah kompetensi', acuan: 'IABEE 2.1.1, LAM Teknik', pedoman: '(informasi)', desain: `${K.n} MK, ${K.sks} SKS`, st: 'ok', go: 'mk', bantu: 'MK kompetensi = kelompok MK Basic Engineering dan MK Kompetensi.' },
     { label: 'Muatan MK kompetensi terhadap total SKS', acuan: 'IABEE 2.1.1 (minimal 65%)', pedoman: `≥ ${P.muatanSpesifikMin}%`, desain: `${d(R.spesifik)}%`, st: nilaiSt(R.spesifik >= P.muatanSpesifikMin, R.spesifik >= P.muatanSpesifikMin - 3), go: 'peta', bantu: 'Persentase SKS MK kompetensi dari seluruh SKS.' },

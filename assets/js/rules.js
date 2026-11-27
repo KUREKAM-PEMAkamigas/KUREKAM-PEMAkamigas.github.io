@@ -72,7 +72,7 @@ export function cekStruktur(S, pid) {
       out.push({ grp: 'Semester ' + s, label: `JP per minggu semester ${s}`, val: fmt(x.jp, 1), target: `${fmt(jr[0], 1)}–${fmt(jr[1], 1)}`, k: st(x.jp >= jr[0] && x.jp <= jr[1], x.jp >= jr[0] - 2 && x.jp <= jr[1] + 2), acuan: 'Pedoman Tabel 4.4 (full day)' });
     }
   }
-  out.push({ grp: 'Total', label: 'Total SKS', val: fmt(R.total), target: `≥ ${P.totalSksMin}`, k: st(R.total >= P.totalSksMin, R.total >= P.totalSksMin - 2), acuan: 'Permendiktisaintek 39/2025' });
+  out.push({ grp: 'Total', label: 'Total SKS', val: fmt(R.total), target: `${P.totalSksMin}–${P.totalSksMax || 156}`, k: R.total > (P.totalSksMax || 156) ? 'bad' : st(R.total >= P.totalSksMin, R.total >= P.totalSksMin - 2), acuan: 'Permendiktisaintek 39/2025 (maksimal 156 SKS)' });
   out.push({ grp: 'Total', label: 'Jumlah MK prodi', val: fmt(R.n), target: `${P.mkProdiMin}–${P.mkProdiMax}`, k: st(R.n >= P.mkProdiMin && R.n <= P.mkProdiMax, R.n >= P.mkProdiMin - 3 && R.n <= P.mkProdiMax + 3), acuan: 'Pedoman Tabel 4.3' });
   out.push({ grp: 'Akreditasi', label: 'Muatan spesifik (MBE + MKK)', val: fmt(R.spesifik, 1) + '%', target: `≥ ${P.muatanSpesifikMin}%`, k: st(R.spesifik >= P.muatanSpesifikMin, R.spesifik >= P.muatanSpesifikMin - 3), acuan: 'IABEE 2.1.1' });
   out.push({ grp: 'Akreditasi', label: 'Pendidikan umum', val: fmt(R.umum, 1) + '%', target: `≤ ${P.pendidikanUmumMax}%`, k: st(R.umum <= P.pendidikanUmumMax, R.umum <= P.pendidikanUmumMax + 2), acuan: 'IABEE 2.1.1' });

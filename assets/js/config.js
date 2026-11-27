@@ -100,6 +100,8 @@ export const PARAM_DEFAULT = {
   praktikMin: 50, praktikMax: 70,
   /* RPS: jumlah pertemuan minimal yang memuat integrasi penelitian atau PKM */
   integrasiMinPertemuan: 2,
+  /* Batas jumlah: CPMK per MK dan Sub-CPMK per CPMK (dapat diubah di Parameter) */
+  cpmkPerMk: { min: 2, max: 4 }, subPerCpmk: { min: 2, max: 3 },
   /* PI dan CPL: tercapai bila minimal piMinPersen % mahasiswa bernilai minimal piMinNilai. PI per CPL 2 sampai 4. */
   /* Angkatan dibaca dari NIM: mulai digit ke-nimPos sebanyak nimLen digit (22021101 -> 22 -> 2022). */
   nimPos: 1, nimLen: 2, piMinPersen: 70, piMinNilai: 65, piPerCplMin: 2, piPerCplMax: 4,

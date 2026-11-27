@@ -1,7 +1,7 @@
 /* KUREKAM · Mesin temuan: satu sumber untuk Pemeriksa Kurikulum dan Asisten.
    Setiap butir pemeriksaan (dari rules.js) diperkaya dengan panduan: menu tujuan, mengapa, seharusnya bagaimana, langkah perbaikan,
    dan daftar item yang bermasalah (dapat diklik). Penjelasan ditulis netral terhadap aplikasi pada kalimat acuannya mengikuti pedoman. */
-import { cekIabee, cekStruktur, cekTrace, trace, piTrace, pelanggaranRambu, byProdi, param, fmt } from './rules.js';
+import { duplikasiMateri, telaahKeselarasan, cekIabee, cekStruktur, cekTrace, trace, piTrace, pelanggaranRambu, byProdi, param, fmt } from './rules.js';
 import { formatKode, awalanKode, kodeBaku, awalPraktik } from './kode.js';
 
 const MENU = { visi: 'Visi & Profil Lulusan', cpl: 'Capaian Pembelajaran Lulusan', pi: 'Indikator Kinerja (PI)', bk: 'BoK & Bahan Kajian', mk: 'Mata Kuliah & SKS', peta: 'Peta Kurikulum', matriks: 'Matriks Keterlacakan', cpmk: 'CPMK & Sub-CPMK per MK', deskmk: 'Deskripsi Singkat MK', rps: 'RPS & SAP', iabee: 'Kesiapan IABEE', capaian: 'Capaian CPL & Tindak Lanjut', lulusan: 'Capstone, Lulusan & Tracer', beban: 'Beban & Penugasan' };
@@ -13,7 +13,7 @@ const mkIds = (S, pid) => byProdi(S.mk, pid);
 
 /** Tabel aturan: [pola label, pembuat panduan]. Urutan penting: yang spesifik lebih dulu. */
 function aturan(S, pid) {
-  const t = trace(S, pid), P = param(S), pt = piTrace(S, pid), rb = pelanggaranRambu(S, pid), mks = mkIds(S, pid);
+  const ks = telaahKeselarasan(S, pid), t = trace(S, pid), P = param(S), pt = piTrace(S, pid), rb = pelanggaranRambu(S, pid), mks = mkIds(S, pid);
   const mkSmt = (s) => mks.filter(m => +m.smt === +s);
   const daftarMk = (a, h = '#mk') => a.map(m => mkItem(m, h));
   return [
@@ -53,6 +53,15 @@ function aturan(S, pid) {
     [/^CPMK selisih 2 level/, () => ({ h: '#cpmk', mengapa: 'Level Bloom CPMK menyimpang dua tingkat atau lebih dari rentang yang dianjurkan untuk semester MK itu.', seharusnya: 'Semester awal C1 sampai C3, semester 5 dan 6 C4 sampai C5, capstone C6. Selisih besar perlu alasan.', langkah: ['Ganti kata kerja operasional CPMK agar sesuai level, atau isi alasan penyimpangan.'], items: rb.cpmkSmt.filter(x => Math.abs(x.gap) >= 2 && !x.alasan).map(x => ({ t: `${x.c.kode} · ${x.m.kode} (${x.b.code})`, h: '#cpmk', mk: x.m.id })) })],
     [/^CPMK sedikit di luar rentang/, () => ({ h: '#cpmk', mengapa: 'Level CPMK sedikit di luar rentang semester atau sudah dikecualikan dengan alasan. Tidak wajib diubah, namun perlu dipastikan disengaja.', seharusnya: 'Level CPMK berada dalam rentang semester, atau ada alasan tertulis.', langkah: ['Tinjau CPMK dan beri alasan bila memang disengaja.'], items: rb.cpmkSmt.filter(x => Math.abs(x.gap) === 1 || (Math.abs(x.gap) >= 2 && x.alasan)).map(x => ({ t: `${x.c.kode} · ${x.m.kode} (${x.b.code})`, h: '#cpmk', mk: x.m.id })) })],
     [/^Sebaran integrasi penelitian/, () => ({ h: '#rps', mengapa: 'Informasi: sebaran integrasi penelitian dan PKM ke pertemuan RPS. Tidak wajib.', seharusnya: 'Pedoman menganjurkan integrasi pada sebagian pertemuan.', langkah: ['Isi integrasi pada tabel pertemuan RPS bila relevan.'] })],
+    /* ---- Keselarasan konstruktif ---- */
+    [/^MK dengan jumlah CPMK di luar/, () => ({ h: '#cpmk', mengapa: 'Jumlah CPMK per MK terlalu sedikit membuat MK tidak terukur per aspek; terlalu banyak membuat RPS dan penilaian terpecah-pecah.', seharusnya: `${(P.cpmkPerMk || {}).min} sampai ${(P.cpmkPerMk || {}).max} CPMK per MK (batas dapat diubah di Parameter).`, langkah: ['Buka CPMK & Sub-CPMK pada MK ini.', 'Gabungkan CPMK yang mirip, atau tambah CPMK bila ada capaian yang belum terwadahi.'], items: ks.cpmkLuar.map(m => ({ ...mkItem(m), t: `${m.kode} · ${m.nama} (${m.n} CPMK)` })) })],
+    [/^CPMK dengan jumlah Sub-CPMK di luar/, () => ({ h: '#cpmk', mengapa: 'Jumlah Sub-CPMK per CPMK menentukan kedalaman penilaian bertahap. Terlalu sedikit kurang menjabarkan, terlalu banyak menyulitkan RPS 16 pertemuan.', seharusnya: `${(P.subPerCpmk || {}).min} sampai ${(P.subPerCpmk || {}).max} Sub-CPMK per CPMK (batas dapat diubah di Parameter).`, langkah: ['Buka CPMK & Sub-CPMK pada MK ini.', 'Gabungkan atau tambah Sub-CPMK.'], items: ks.subLuar.map(c => ({ t: `${c.kode} (${c.n} Sub-CPMK)`, h: '#cpmk', mk: c.mk })) })],
+    [/^Sub-CPMK tidak terjadwal/, () => ({ h: '#rps', mengapa: 'Sub-CPMK yang tidak muncul pada pertemuan mana pun tidak diajarkan dan tidak dinilai, padahal CPMK dihitung dari Sub-CPMK.', seharusnya: 'Setiap Sub-CPMK dibahas pada minimal satu pertemuan reguler di RPS.', langkah: ['Buka RPS & SAP pada MK ini.', 'Pada pertemuan yang relevan, pilih Sub-CPMK yang dicapai.'], items: ks.subTakTerjadwal.map(m => ({ t: `${m.kode} · ${m.nama}: ${m.daftar.slice(0, 4).join(', ')}`, h: '#rps', mk: m.id })) })],
+    [/^Pertemuan RPS bermateri tanpa Sub-CPMK/, () => ({ h: '#rps', mengapa: 'Materi yang tidak terkait Sub-CPMK menandakan isi kuliah tidak diturunkan dari capaian (tidak selaras).', seharusnya: 'Setiap pertemuan reguler terkait minimal satu Sub-CPMK.', langkah: ['Buka RPS & SAP, isi kolom Sub-CPMK pertemuan itu, atau tinjau apakah materi perlu diganti.'], items: ks.materiTanpaSub.map(m => ({ t: `${m.kode} · ${m.nama}: ${m.daftar.slice(0, 5).join(', ')}`, h: '#rps', mk: m.id })) })],
+    [/^Pertemuan RPS tanpa indikator/, () => ({ h: '#rps', mengapa: 'Pertemuan yang mengajarkan Sub-CPMK harus punya indikator atau bentuk penilaian agar ketercapaiannya dapat dibuktikan.', seharusnya: 'Pertemuan memuat indikator dan bentuk penilaian yang sesuai Sub-CPMK.', langkah: ['Buka RPS & SAP dan isi indikator serta bentuk penilaian pertemuan itu.'], items: ks.tanpaUkur.map(m => ({ t: `${m.kode} · ${m.nama}: ${m.daftar.slice(0, 5).join(', ')}`, h: '#rps', mk: m.id })) })],
+    [/^CPMK yang tidak punya bobot/, () => ({ h: '#rps', mengapa: 'CPMK yang tidak dinilai pada pertemuan berbobot tidak akan punya skor, sehingga CPL tidak bisa dihitung.', seharusnya: 'Setiap CPMK dinilai pada minimal satu pertemuan berbobot (tugas, kuis, UTS, atau UAS).', langkah: ['Buka RPS & SAP dan beri bobot pada pertemuan yang menilai Sub-CPMK milik CPMK itu.'], items: ks.cpmkTanpaBobot.map(m => ({ t: `${m.kode} · ${m.nama}: ${m.daftar.join(', ')}`, h: '#rps', mk: m.id })) })],
+    [/^Total bobot penilaian RPS/, () => ({ h: '#rps', mengapa: 'Total bobot semua pertemuan menjadi dasar nilai akhir dan harus 100%.', seharusnya: 'Jumlah bobot 16 pertemuan tepat 100%.', langkah: ['Buka RPS & SAP dan sesuaikan bobot pertemuan.'], items: ks.bobotTotal.map(m => ({ t: `${m.kode} · ${m.nama} (${Math.round(m.tot * 10) / 10}%)`, h: '#rps', mk: m.id })) })],
+    [/^Kemiripan materi antar MK/, () => ({ h: '#rps', info: true, mengapa: 'Informasi: pasangan MK yang kata kunci, Sub-CPMK, dan materinya mirip. Bisa disengaja (MK pengantar dan lanjutan), tetapi bisa pula tumpang tindih sehingga mahasiswa mempelajari hal yang sama dua kali.', seharusnya: 'Pasangan MK yang mirip memiliki batas cakupan yang jelas, atau digabung bila memang tumpang tindih.', langkah: ['Buka kedua MK dan bandingkan Sub-CPMK serta materi pertemuan.', 'Bila tumpang tindih, pertajam cakupan masing-masing atau gabungkan MK.'], items: duplikasiMateri(S, pid).slice(0, 30).map(x => ({ t: `${x.a.kode} ${x.a.nama} ↔ ${x.b.kode} ${x.b.nama} (${x.sk}%)`, h: '#rps', mk: x.a.id })) })],
     /* ---- IABEE ---- */
     [/^CPL tanpa indikator kinerja/, () => ({ h: '#pi', mengapa: 'Tanpa indikator kinerja (PI), ketercapaian CPL tidak bisa diukur per aspek.', seharusnya: 'Setiap CPL punya 2 sampai 4 PI yang terukur.', langkah: ['Buka Indikator Kinerja (PI) dan tambahkan PI untuk CPL ini.'], items: (pt.cplNoPi || []).map(x => ob(x, '#pi')) })],
     [/^CPL dengan jumlah PI/, () => ({ h: '#pi', mengapa: 'Jumlah PI terlalu sedikit membuat ukuran kasar; terlalu banyak membebani asesmen.', seharusnya: `${P.piPerCplMin} sampai ${P.piPerCplMax} PI per CPL.`, langkah: ['Tambah atau gabungkan PI pada CPL ini.'], items: (pt.cplPiDiLuar || []).map(x => ob(x, '#pi')) })],
@@ -67,7 +76,7 @@ function aturan(S, pid) {
   ];
 }
 
-const GRP = { 'Keterlacakan': '#matriks', 'Kesiapan IABEE': '#iabee', 'Akreditasi': '#peta', 'Kode dan penamaan': '#mk', 'Total': '#mk' };
+const GRP = { 'Keselarasan konstruktif': '#rps', 'Keterlacakan': '#matriks', 'Kesiapan IABEE': '#iabee', 'Akreditasi': '#peta', 'Kode dan penamaan': '#mk', 'Total': '#mk' };
 
 /** Semua butir pemeriksaan beserta panduannya. */
 export function daftarTemuan(S, pid) {
@@ -77,7 +86,7 @@ export function daftarTemuan(S, pid) {
     for (const [re, fn] of R) { const m = String(c.label).match(re); if (m) { try { p = fn(c, m); } catch (e) { p = null; } break; } }
     if (!p) p = { h: GRP[c.grp] || (/^Semester/.test(c.grp) ? '#mk' : '#periksa'), mengapa: `${c.label}: hasil ${c.val}, ketentuan ${c.target}.`, seharusnya: String(c.target), langkah: ['Buka menu terkait dan sesuaikan data.'] };
     p.items = (p.items || []).slice(0, 60);
-    if (c.k === 'ok') { const i = p.mengapa.indexOf('. '), tujuan = i > 0 ? p.mengapa.slice(i + 2) : ''; p = { ...p, mengapa: `Hasil ${c.val} memenuhi ketentuan ${c.target} (${c.acuan}).${tujuan ? ' Tujuan butir ini: ' + tujuan : ''}`, langkah: [] }; }
+    if (c.k === 'ok' && !p.info) { const i = p.mengapa.indexOf('. '), tujuan = i > 0 ? p.mengapa.slice(i + 2) : ''; p = { ...p, mengapa: `Hasil ${c.val} memenuhi ketentuan ${c.target} (${c.acuan}).${tujuan ? ' Tujuan butir ini: ' + tujuan : ''}`, langkah: [] }; }
     return { ...c, p };
   });
 }

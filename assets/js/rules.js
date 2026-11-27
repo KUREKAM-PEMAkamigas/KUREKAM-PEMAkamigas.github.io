@@ -156,9 +156,74 @@ export function cekTrace(S, pid) {
     row('MK tanpa bahan kajian', t.mkNoBk, 'KPT OBE'),
     row('CPMK di luar CPL yang dibebankan', t.cpmkLuar, 'IABEE 2.2'),
     ...cekRambu(S, pid),
+    ...cekKeselarasan(S, pid),
+    ...cekDuplikasi(S, pid),
     ...cekIntegrasi(S, pid),
     { grp: 'Keterlacakan', label: 'Bobot Sub-CPMK tidak 100%', val: t.bobotSalah.length ? `${t.bobotSalah.length}: ${L(t.bobotSalah)}` : 'Tidak ada', target: '0', k: t.bobotSalah.length ? 'near' : 'ok', acuan: 'Pedoman RPS' }
   ];
+}
+
+/* ---------- Batas CPMK dan keselarasan konstruktif (RPS) ---------- */
+export function telaahKeselarasan(S, pid) {
+  const P = param(S), mk = byProdi(S.mk, pid).filter(m => !/magang|tugas akhir/i.test(m.kel || '')), cpmk = byProdi(S.cpmk, pid), sub = byProdi(S.sub, pid);
+  const cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 };
+  const o = { cpmkLuar: [], subLuar: [], subTakTerjadwal: [], materiTanpaSub: [], tanpaUkur: [], cpmkTanpaBobot: [], bobotTotal: [] };
+  mk.forEach(m => {
+    const cs = cpmk.filter(c => c.mk === m.id);
+    if (cs.length && (cs.length < cm.min || cs.length > cm.max)) o.cpmkLuar.push({ ...m, n: cs.length });
+    cs.forEach(c => { const n = sub.filter(s => s.cpmk === c.id).length; if (n && (n < sc.min || n > sc.max)) o.subLuar.push({ ...c, kode: `${m.kode}/${c.kode}`, mk: m.id, n }); });
+    const r = rpsOf(S, m.id); if (!r || !r.pertemuan || rpsLengkap(r) === 0) return;
+    const reg = r.pertemuan.filter(p => !p.ujian), ss = sub.filter(s => s.mk === m.id);
+    const tj = ss.filter(s => !reg.some(p => (p.sub || []).includes(s.id)));
+    if (ss.length && tj.length) o.subTakTerjadwal.push({ ...m, n: tj.length, daftar: tj.map(s => s.kode) });
+    const mt = reg.filter(p => (p.materi || '').trim() && !(p.sub || []).length);
+    if (mt.length) o.materiTanpaSub.push({ ...m, n: mt.length, daftar: mt.map(p => 'P' + p.m) });
+    const tu = reg.filter(p => (p.sub || []).length && !(p.indikator || '').trim() && !(p.asesmen || '').trim());
+    if (tu.length) o.tanpaUkur.push({ ...m, n: tu.length, daftar: tu.map(p => 'P' + p.m) });
+    const ctb = cs0(cpmk, m).filter(c => { const ids = sub.filter(s => s.cpmk === c.id).map(s => s.id); return ids.length && !reg.some(p => +p.bobot > 0 && (p.sub || []).some(i => ids.includes(i))); });
+    if (ctb.length && reg.some(p => +p.bobot > 0)) o.cpmkTanpaBobot.push({ ...m, n: ctb.length, daftar: ctb.map(c => c.kode) });
+    const tot = r.pertemuan.reduce((a, p) => a + (+p.bobot || 0), 0);
+    if (r.pertemuan.some(p => +p.bobot > 0) && Math.abs(tot - 100) > 0.5) o.bobotTotal.push({ ...m, tot });
+  });
+  return o;
+}
+const cs0 = (cpmk, m) => cpmk.filter(c => c.mk === m.id);
+export function cekKeselarasan(S, pid) {
+  const t = telaahKeselarasan(S, pid), P = param(S), cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 };
+  const L = (a) => a.map(x => x.kode).slice(0, 6).join(', ') + (a.length > 6 ? ', …' : '');
+  const row = (label, arr, acuan, k = 'near') => ({ grp: 'Keselarasan konstruktif', label, val: arr.length ? `${arr.length}: ${L(arr)}` : 'Tidak ada', target: '0', k: arr.length ? k : 'ok', acuan });
+  return [
+    row(`MK dengan jumlah CPMK di luar ${cm.min}–${cm.max}`, t.cpmkLuar, 'Pedoman CPMK (batas jumlah)'),
+    row(`CPMK dengan jumlah Sub-CPMK di luar ${sc.min}–${sc.max}`, t.subLuar, 'Pedoman CPMK (batas jumlah)'),
+    row('Sub-CPMK tidak terjadwal pada pertemuan RPS mana pun', t.subTakTerjadwal, 'Keselarasan konstruktif', 'bad'),
+    row('Pertemuan RPS bermateri tanpa Sub-CPMK', t.materiTanpaSub, 'Keselarasan konstruktif'),
+    row('Pertemuan RPS tanpa indikator maupun bentuk penilaian', t.tanpaUkur, 'Keselarasan konstruktif'),
+    row('CPMK yang tidak punya bobot penilaian pada RPS', t.cpmkTanpaBobot, 'Keselarasan konstruktif', 'bad'),
+    row('Total bobot penilaian RPS tidak 100%', t.bobotTotal, 'Pedoman RPS')
+  ];
+}
+
+/* ---------- Duplikasi materi antar MK (informasi) ---------- */
+const STOP = new Set('dan yang untuk dengan pada dari dalam atau serta oleh ini itu sebagai adalah mampu mahasiswa menjelaskan menerapkan menganalisis konsep dasar penerapan sistem analisis pengantar pertemuan'.split(' '));
+const kataDari = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !STOP.has(w));
+export function duplikasiMateri(S, pid, ambang = 0.5) {
+  const mk = byProdi(S.mk, pid).filter(m => !/magang|tugas akhir|capstone/i.test((m.kel || '') + m.nama));
+  const bag = mk.map(m => {
+    const r = rpsOf(S, m.id), w = new Set();
+    if (r) { (r.kataKunci || []).forEach(k => kataDari(k).forEach(x => w.add(x))); (r.pertemuan || []).forEach(p => { if (!p.ujian) kataDari(p.materi).forEach(x => w.add(x)); }); }
+    S.sub.filter(s => s.mk === m.id).forEach(s => kataDari(s.teks).forEach(x => w.add(x)));
+    return { m, w };
+  }).filter(x => x.w.size >= 8);
+  const out = [];
+  for (let i = 0; i < bag.length; i++) for (let j = i + 1; j < bag.length; j++) {
+    const a = bag[i], b = bag[j]; let n = 0; a.w.forEach(x => { if (b.w.has(x)) n++; });
+    const sk = n / (a.w.size + b.w.size - n); if (n >= 6 && sk >= ambang) out.push({ a: a.m, b: b.m, sk: Math.round(sk * 100) });
+  }
+  return out.sort((x, y) => y.sk - x.sk);
+}
+export function cekDuplikasi(S, pid) {
+  const d = duplikasiMateri(S, pid);
+  return [{ grp: 'Keselarasan konstruktif', info: true, label: 'Kemiripan materi antar MK (informasi)', val: d.length ? `${d.length} pasang: ${d.slice(0, 3).map(x => `${x.a.kode}–${x.b.kode} (${x.sk}%)`).join(', ')}${d.length > 3 ? ', …' : ''}` : 'Tidak ada yang mencolok', target: 'tinjau', k: 'ok', acuan: 'Efisiensi kurikulum; kemiripan bisa disengaja (pengantar dan lanjutan)' }];
 }
 
 /* ---------- Taksonomi Bloom ---------- */

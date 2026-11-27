@@ -5,6 +5,7 @@ import { prodiTag } from './views/ui.js';
 import { mkTanpaCpl } from './rules.js';
 import { asesmenBersih } from './rubrik.js';
 import { pecahPustaka, gabungUtama, gabungPend, pecahBahan, gabungBahan } from './rpsisi.js';
+import { bacaRpsLama, terapkanPeta, BIDANG } from './rpslama.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const rapi = (s) => String(s == null ? '' : s).replace(/ /g, ' ').replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
@@ -39,6 +40,25 @@ function barisTabel(xml) {
   const body = d.getElementsByTagNameNS(W, 'body')[0];
   kids(body, 'tbl').forEach(tb => kids(tb, 'tr').forEach(tr => rows.push(kids(tr, 'tc').map(tc => rapi(kids(tc, 'p').map(par).join('\n'))))));
   return rows;
+}
+
+/** Isi dokumen berurutan: paragraf dan tabel (sel gabungan diratakan: gridSpan diulang kosong, vMerge lanjutan kosong). */
+export async function bacaDokumenDocx(file) {
+  const buf = await file.arrayBuffer(), xml = await bacaZipEntri(buf, 'word/document.xml');
+  const d = new DOMParser().parseFromString(xml, 'application/xml'), W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const kids = (el, tag) => Array.from(el.childNodes).filter(n => n.localName === tag && n.namespaceURI === W);
+  const par = (p) => { let t = ''; const walk = (n) => { for (const c of n.childNodes) { if (c.namespaceURI !== W) continue; if (c.localName === 't') t += c.textContent; else if (c.localName === 'tab') t += ' '; else if (c.localName === 'br') t += '\n'; else walk(c); } }; walk(p); return t; };
+  const body = d.getElementsByTagNameNS(W, 'body')[0], blok = [];
+  Array.from(body.childNodes).forEach(n => {
+    if (n.namespaceURI !== W) return;
+    if (n.localName === 'p') { const t = par(n); if (rapi(t)) blok.push({ k: 'p', t }); }
+    else if (n.localName === 'tbl') {
+      const grid = [];
+      kids(n, 'tr').forEach(tr => { const row = []; kids(tr, 'tc').forEach(tc => { const pr = kids(tc, 'tcPr')[0], gs = pr && kids(pr, 'gridSpan')[0], vm = pr && kids(pr, 'vMerge')[0]; const span = gs ? +gs.getAttributeNS(W, 'val') || 1 : 1; const lanjut = vm && vm.getAttributeNS(W, 'val') !== 'restart'; const t = lanjut ? '' : rapi(kids(tc, 'p').map(par).join('\n')); row.push(t); for (let i = 1; i < span; i++) row.push(''); }); grid.push(row); });
+      blok.push({ k: 'tbl', grid });
+    }
+  });
+  return blok;
 }
 
 const kodeProdi = (raw) => { const s = norm(raw); const p = S.prodi.find(x => norm(x.id) === s || norm(x.nama) === s); if (p) return p.id; if (s === 'lg' || s === 'lo' || /logistik/.test(s)) return 'LG'; if (/produksi/.test(s)) return 'TP'; if (/pengolahan/.test(s)) return 'TO'; if (/instrumentasi/.test(s)) return 'TI'; if (/mesin/.test(s)) return 'TM'; return null; };
@@ -103,7 +123,7 @@ function susun(o, mk) {
   const petaCpl = (k) => { const n = parseInt(String(k).replace(/\D/g, ''), 10); const x = cplP.find(c => norm(c.kode) === norm(k)) || cplP[n - 1]; return x ? x.id : null; };
   const cplIds = Array.from(new Set(o.cpl.map(c => petaCpl(c.kode)).filter(Boolean)));
   o.cpl.forEach(c => { if (!petaCpl(c.kode)) pes.push(`${c.kode} tidak ditemukan pada CPL prodi ${mk.prodi}. Hubungkan manual di menu CPMK.`); });
-  const cpmk = !penuh ? ada : o.cpmk.map((c, i) => ({ id: `${mk.id}-C${i + 1}`, mk: mk.id, prodi: mk.prodi, kode: c.kode.replace(/^CPMK-?/, 'CPMK-'), teks: c.teks, cpl: cplIds }));
+  const cpmk = (!penuh || !o.cpmk.length) ? ada : o.cpmk.map((c, i) => ({ id: `${mk.id}-C${i + 1}`, mk: mk.id, prodi: mk.prodi, kode: c.kode.replace(/^CPMK-?/, 'CPMK-'), teks: c.teks, cpl: cplIds }));
   const noCp = (kodeSub) => { const k = o.korelasi.find(x => x.sub.includes(String(parseInt(kodeSub, 10)).padStart(2, '0')) || x.sub.includes(String(parseInt(kodeSub, 10)))); const c = k && cpmk.find(x => String(parseInt(x.kode.replace(/\D/g, ''), 10)) === String(parseInt(k.cpmk, 10))); return (c || cpmk[0] || {}).id; };
   const tot = {}; o.minggu.forEach(w => { const n = parseInt(w.subKode, 10); tot[n] = (tot[n] || 0) + w.bobot; }); const jum = Object.values(tot).reduce((a, b) => a + b, 0) || 1;
   const sub = o.sub.map((s, i) => { const n = parseInt(s.kode.replace(/\D/g, ''), 10); return { id: `${mk.id}-S${i + 1}`, cpmk: noCp(s.kode.replace(/\D/g, '')), mk: mk.id, prodi: mk.prodi, kode: s.kode, teks: s.teks, bobot: Math.round((tot[n] || 0) / jum * 1000) / 10, _n: n }; });
@@ -128,14 +148,17 @@ function susun(o, mk) {
 /* ---------- antarmuka ---------- */
 export function tombolUnggahRps(el, draw) {
   const wadah = el.querySelector('#rps-unggah'); if (!wadah) return;
-  wadah.innerHTML = `<button class="btn pri sm" id="rps-up">${icon('upload')} Unggah RPS (Word)</button><input type="file" id="rps-file" accept=".docx" multiple style="display:none"><span class="muted small">Format RPS baku (.docx). Hasilnya ditinjau dulu sebelum disimpan, dan tetap dapat direvisi.</span>`;
+  wadah.innerHTML = `<button class="btn pri sm" id="rps-up">${icon('upload')} Unggah RPS (Word)</button><input type="file" id="rps-file" accept=".docx,.doc" multiple style="display:none"><span class="muted small">RPS format baku maupun RPS lama yang susunannya berbeda (.docx). Aplikasi mengenali tabel pertemuan dari judul kolomnya dan menampilkan hasilnya untuk Anda periksa dulu.</span>`;
   const f = wadah.querySelector('#rps-file'); wadah.querySelector('#rps-up').onclick = () => { f.value = ''; f.click(); };
   f.onchange = async () => {
     const hasil = [];
-    for (const file of Array.from(f.files)) { try { const o = await bacaRps(file); hasil.push({ o, ...cariMk(o) }); } catch (e) { console.error(e); hasil.push({ o: { file: file.name, peringatan: [e.message], cpl: [], cpmk: [], sub: [], minggu: [], ujian: [] }, mk: null, prodi: null, cara: '', gagal: true }); } }
+    for (const file of Array.from(f.files)) { try { const o = await bacaRpsLama(file); hasil.push({ o, ...cariMk(o) }); } catch (e) { console.error(e); hasil.push({ o: { file: file.name, peringatan: [e.message], cpl: [], cpmk: [], sub: [], minggu: [], ujian: [] }, mk: null, prodi: null, cara: '', gagal: true }); } }
     if (hasil.length) tinjau(hasil, draw);
   };
 }
+
+/** CPMK hasil bacaan hanya menimpa CPMK yang ada bila CPMK itu memang dibaca dari berkas (bukan turunan). */
+const o_baru = (h) => !!(h.o && h.o.cpmk && h.o.cpmk.length);
 
 function tinjau(hasil, draw) {
   const boleh = S.mk.filter(m => can('rps', { prodi: m.prodi, mk: m.id }) && m.smt <= 8 && (!mkTanpaCpl(m) || can('susun', m)));
@@ -146,23 +169,29 @@ function tinjau(hasil, draw) {
     return `<div class="card" data-k="${i}" style="margin-bottom:12px"><div class="filters" style="margin:0"><label class="cp ${h.mk && !h.gagal ? 'on' : ''}"><input type="checkbox" data-pakai ${h.mk && !h.gagal && boleh.includes(h.mk) ? 'checked' : ''} ${h.gagal ? 'disabled' : ''}>Simpan</label><b>${esc(o.nama || o.file)}</b> <span class="muted small">${esc(o.kode || '')} · ${esc(o.file)}</span></div>
       ${h.gagal ? '' : `<div class="field" style="margin-top:8px"><label>Dicocokkan dengan MK rancangan ${h.cara ? `<span class="muted small">(lewat ${h.cara})</span>` : '<span class="st bad">belum cocok, pilih manual</span>'}${h.mk && !boleh.includes(h.mk) ? '<span class="st bad">peran Anda tidak berwenang atas RPS MK ini (dosen hanya untuk MK yang ditugaskan kepadanya). Ganti ke Admin atau Tim Kurikulum ' + h.mk.prodi + ', atau minta Kaprodi menugaskan Anda pada MK ini di menu Penugasan & Beban Dosen</span>' : ''}</label><select class="inp" data-mk><option value="">— pilih MK —</option>${opsi.map(m => `<option value="${m.id}" ${h.mk && h.mk.id === m.id ? 'selected' : ''}>${m.prodi} · S${m.smt} · ${esc(m.kode)} · ${esc(m.nama)}</option>`).join('')}</select></div>
       <div class="small" style="margin:6px 0">${o.cpl.length} CPL · ${o.cpmk.length} CPMK · ${o.sub.length} Sub-CPMK · ${o.minggu.length + o.ujian.length} pertemuan ${sem ? '· ' + (sem.rps.pertemuan.reduce((a, p) => a + (+p.bobot || 0), 0)) + '% bobot' : ''}${ada ? `<br><span class="st near">MK ini sudah punya ${ada} CPMK. Menyimpan akan menggantikan ${can('susun', h.mk) ? 'CPMK, ' : ''}Sub-CPMK dan RPS yang ada.</span>` : ''}</div>`}
+      ${(o.kepercayaan || []).length ? `<div class="filters" style="margin:4px 0">${o.kepercayaan.map(k => `<span class="st ${k.tingkat === 'yakin' ? 'ok' : k.tingkat === 'ragu' ? 'near' : 'bad'}" title="${esc(k.ket || '')}">${esc(k.bagian)}: ${k.tingkat === 'yakin' ? 'terbaca' : k.tingkat === 'ragu' ? 'periksa' : 'tidak terbaca'}</span>`).join(' ')}</div>` : ''}
+      ${o.tabel ? `<details ${(o.kepercayaan || []).some(k => k.tingkat !== 'yakin') ? 'open' : ''}><summary class="small">Pemetaan kolom tabel pertemuan (koreksi bila ada yang salah)</summary><div class="tbl-wrap" style="max-height:30vh"><table class="tbl"><thead><tr>${o.tabel.kepala.map((k, c) => `<th><select class="inp" data-peta="${c}">${Object.entries(BIDANG).map(([f, t]) => { const v = f === 'abaikan' ? '' : f; return `<option value="${v}" ${(o.peta[c] || '') === v ? 'selected' : ''}>${esc(t)}</option>`; }).join('')}</select><div class="small muted" style="white-space:normal">${esc(k || '(tanpa judul)')}</div></th>`).join('')}</tr></thead><tbody>${o.tabel.contoh.map(r => `<tr>${r.map(c => `<td class="small" style="white-space:normal">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : ''}
       ${[...(o.peringatan || []), ...((sem && sem.pes) || [])].map(p => `<div class="ribbon bad" style="margin:4px 0">${esc(p)}</div>`).join('')}
       ${sem ? `<details><summary class="small">Lihat hasil bacaan</summary><div class="small" style="margin-top:6px"><b>Deskripsi:</b> ${esc((o.deskripsi || '').slice(0, 260))}…<br>${o.cpmk.map(c => `<b>${esc(c.kode)}</b> ${esc(c.teks)}`).join('<br>')}<br>${o.sub.map(s => `<b>${esc(s.kode)}</b> ${esc(s.teks)}`).join('<br>')}<br><b>Pertemuan:</b> ${sem.rps.pertemuan.map(p => `${p.m}${p.ujian ? ' ' + p.ujian : ''}: ${esc(String(p.materi || '').replace(/^Materi Inti[^\n]*\n?/i, '').replace(/\s*\n\s*/g, ' ').slice(0, 60))}`).join(' · ')}</div></details>` : ''}</div>`;
   };
   openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:#10b981">${icon('upload')}</span><div><h3>Tinjau RPS yang dibaca</h3><div class="sub">${hasil.length} berkas. Periksa kecocokan MK dan peringatan, lalu simpan sebagai draf. Revisi lanjutan lewat menu CPMK & Sub-CPMK dan RPS.</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
     <div id="tj">${hasil.map(kartu).join('')}</div>
     <div class="drawer-act"><div class="sp"></div><button class="btn ghost" data-close>Batal</button><button class="btn pri" id="tj-ok">${icon('check')} Simpan yang dicentang</button></div>`, (dr) => {
+    dr.querySelectorAll('[data-peta]').forEach(sel => sel.onchange = () => { const k = +sel.closest('[data-k]').dataset.k, o = hasil[k].o, c = sel.dataset.peta; if (sel.value === 'm') Object.keys(o.peta).forEach(x => { if (o.peta[x] === 'm') o.peta[x] = ''; }); o.peta[c] = sel.value; terapkanPeta(o); tinjau(hasil, draw); });
     dr.querySelectorAll('[data-mk]').forEach(sel => sel.onchange = () => { const k = +sel.closest('[data-k]').dataset.k, m = S.mk.find(x => x.id === sel.value); hasil[k].mk = m || null; hasil[k].cara = m ? 'pilihan manual' : ''; dr.querySelector('#tj').innerHTML = hasil.map(kartu).join(''); dr.querySelectorAll('[data-mk]').forEach(s2 => s2.onchange = sel.onchange); });
     dr.querySelector('#tj-ok').onclick = async () => {
       let n = 0;
       for (const [i, h] of hasil.entries()) {
         const kt = dr.querySelector(`[data-k="${i}"]`); if (!kt || !kt.querySelector('[data-pakai]').checked || !h.mk || !h.sem) continue;
         const s = h.sem, mk = h.mk;
+        if (!s.rps.pertemuan || !s.rps.pertemuan.length) continue;
         if (!can('susun', mk) && !s.cpmk.length) continue;
-        if (can('susun', mk)) for (const c of S.cpmk.filter(x => x.mk === mk.id)) await remove('cpmk', c.id);
-        for (const c of S.sub.filter(x => x.mk === mk.id)) await remove('sub', c.id);
-        if (can('susun', mk)) await saveMany('cpmk', s.cpmk);
-        s.sub.forEach(x => { if (!x.cpmk) x.cpmk = s.cpmk[0].id; });
+        if (S.rps.find(r => r.mk === mk.id && r.status === 'disahkan') && ctx.role === 'dosen') continue;
+        if (can('susun', mk) && s.cpmk.length && o_baru(h)) for (const c of S.cpmk.filter(x => x.mk === mk.id)) await remove('cpmk', c.id);
+        if (s.sub.length) for (const c of S.sub.filter(x => x.mk === mk.id)) await remove('sub', c.id);
+        if (can('susun', mk) && s.cpmk.length && o_baru(h)) await saveMany('cpmk', s.cpmk);
+        const cp0 = s.cpmk[0] || S.cpmk.find(c => c.mk === mk.id); if (!cp0) { continue; }
+        s.sub.forEach(x => { if (!x.cpmk) x.cpmk = cp0.id; });
         await saveMany('sub', s.sub); await save('rps', s.rps);
         if (can('susun', mk) && s.cplIds.length) { mk.cpl = Array.from(new Set([...(mk.cpl || []), ...s.cplIds])); await save('mk', mk); }
         n++;

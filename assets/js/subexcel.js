@@ -127,10 +127,13 @@ export async function imporSub(file, pid) {
   if (mode === 'ganti') for (const s of hapusSub) await remove('sub', s.id, `Impor Excel (ganti semua): hapus ${s.kode} (${pid})`);
   /* pemetaan ke pertemuan RPS */
   const hapusId = new Set(mode === 'ganti' ? hapusSub.map(s => s.id) : []), mkRps = new Set([...rec.values()].map(x => x.d.mk).concat(mode === 'ganti' ? hapusSub.map(s => s.mk) : []));
-  let rpsUbah = 0;
+  let rpsUbah = 0; const pertKunci = [];
   for (const mkId of mkRps) {
     const m = S.mk.find(x => x.id === mkId), baruMk = [...rec.values()].filter(x => x.baru && x.d.mk === mkId).map(x => x.d.id), petaMk = [...pertMap].filter(([id]) => (S.sub.find(s => s.id === id) || {}).mk === mkId);
-    let rr = rpsOf(S, mkId); if (!rr && !petaMk.length) continue;
+    let rr = rpsOf(S, mkId);
+    /* RPS adalah pemilik pemetaan pertemuan: RPS yang sudah diajukan atau disahkan tidak diubah oleh impor Sub-CPMK */
+    if (rr && rr.status && rr.status !== 'draf' && petaMk.length) { petaMk.length = 0; pertKunci.push(m.kode); }
+    if (!rr && !petaMk.length) continue;
     const dibuat = !rr; rr = rr ? JSON.parse(JSON.stringify(rr)) : blankRps(m); let ubahR = dibuat;
     (rr.pertemuan || []).forEach(p => {
       const sebelum = (p.sub || []).join('|'); let ids = (p.sub || []).filter(id => !hapusId.has(id));
@@ -140,5 +143,5 @@ export async function imporSub(file, pid) {
     });
     if (ubahR) { await save('rps', rr, `Impor Excel Sub-CPMK: pemetaan pertemuan ${m.nama}`); rpsUbah++; }
   }
-  toast(`Sub-CPMK tersimpan: ${baru.length} baru, ${ubah.length} diperbarui${lewat.length ? `, ${lewat.length} dilewati` : ''}${mode === 'ganti' ? `, ${hapusSub.length} dihapus` : ''}${rpsUbah ? `; RPS diperbarui ${rpsUbah} MK` : ''}.`); rerender();
+  toast(`Sub-CPMK tersimpan: ${baru.length} baru, ${ubah.length} diperbarui${lewat.length ? `, ${lewat.length} dilewati` : ''}${mode === 'ganti' ? `, ${hapusSub.length} dihapus` : ''}${rpsUbah ? `; RPS diperbarui ${rpsUbah} MK` : ''}${pertKunci.length ? `. Pemetaan pertemuan tidak diubah pada RPS yang sudah diajukan atau disahkan (${pertKunci.slice(0, 4).join(', ')}${pertKunci.length > 4 ? ', …' : ''}); ubah lewat menu RPS & SAP` : ''}.`); rerender();
 }

@@ -54,6 +54,7 @@ async function initFirebase(cfg) {
   user = await new Promise(res => { const off = auth.onAuthStateChanged(u => { off(); res(u); }); });
 }
 
+let sandiPakai = null;
 export const DB = {
   get mode() { return mode; },
   get user() { return user; },
@@ -62,17 +63,22 @@ export const DB = {
   /** Kata sandi awal = email huruf kecil. Bila gagal karena huruf besar otomatis atau spasi dari papan ketik HP, dicoba sekali lagi dalam bentuk rapi. */
   async login(email, pass) {
     email = String(email || '').trim().toLowerCase();
-    try { const r = await auth.signInWithEmailAndPassword(email, pass); user = r.user; return user; }
+    try { const r = await auth.signInWithEmailAndPassword(email, pass); user = r.user; sandiPakai = pass; return user; }
     catch (e) {
       const rapi = String(pass || '').trim().toLowerCase();
-      if (rapi && rapi !== pass && /wrong-password|invalid-credential|invalid-login/.test(e.code || '')) { const r = await auth.signInWithEmailAndPassword(email, rapi); user = r.user; return user; }
+      if (rapi && rapi !== pass && /wrong-password|invalid-credential|invalid-login/.test(e.code || '')) { const r = await auth.signInWithEmailAndPassword(email, rapi); user = r.user; sandiPakai = rapi; return user; }
       throw e;
     }
   },
-  async logout() { if (auth) await auth.signOut(); user = null; },
+  /** true bila sesi ini masuk dengan kata sandi yang BUKAN kata sandi awal (berarti pengguna sudah punya kata sandi sendiri, misalnya lewat email atur ulang); null bila tidak diketahui (sesi tersimpan). */
+  get masukDenganSandiSendiri() { return user && sandiPakai != null ? String(sandiPakai).trim().toLowerCase() !== String(user.email || '').toLowerCase() : null; },
+  async logout() { if (auth) await auth.signOut(); user = null; sandiPakai = null; },
   /** Ganti kata sandi akun yang sedang masuk. Kata sandi lama diminta ulang demi keamanan. */
   async gantiSandi(lama, baru) {
-    const cred = window.firebase.auth.EmailAuthProvider.credential(user.email, lama);
+    /* Sesi yang baru masuk boleh langsung mengganti sandi. Verifikasi ulang hanya bila Firebase memintanya. */
+    try { await user.updatePassword(baru); return; }
+    catch (e) { if (e.code !== 'auth/requires-recent-login') throw e; }
+    const cred = window.firebase.auth.EmailAuthProvider.credential(user.email, sandiPakai || lama);
     await user.reauthenticateWithCredential(cred); await user.updatePassword(baru);
   },
   /** Firebase mengirim email berisi tautan untuk membuat kata sandi baru. */

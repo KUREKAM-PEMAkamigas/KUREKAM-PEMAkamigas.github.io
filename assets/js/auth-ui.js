@@ -37,7 +37,7 @@ export function loginForm() {
       tombol.disabled = false; tombol.textContent = 'Masuk';
     };
     pasangMata(v);
-    v.querySelector('#lg-lupa').onclick = async ev => { ev.preventDefault(); const em = v.querySelector('#lg-e').value.trim(), msg = v.querySelector('#lg-msg'); if (!em) { msg.textContent = 'Isi email lebih dulu, lalu klik Lupa kata sandi.'; return; } try { await DB.kirimReset(em); msg.textContent = 'Tautan untuk membuat kata sandi baru dikirim ke ' + em + ' bila email itu sudah punya akun masuk. Pengirimnya noreply dari firebaseapp.com, periksa juga folder spam. Bila tidak ada, minta admin mendaftarkan email ini lebih dulu.'; } catch (e) { msg.textContent = 'Gagal mengirim: ' + e.message; } };
+    v.querySelector('#lg-lupa').onclick = async ev => { ev.preventDefault(); const em = v.querySelector('#lg-e').value.trim(), msg = v.querySelector('#lg-msg'); if (!em) { msg.textContent = 'Isi email lebih dulu, lalu klik Lupa kata sandi.'; return; } try { await DB.kirimReset(em); msg.textContent = 'Tautan untuk membuat kata sandi baru dikirim ke ' + em + ' bila email itu sudah punya akun masuk. Pengirimnya noreply dari firebaseapp.com, periksa juga folder spam. Klik tautannya sekali saja dan buka langsung di Chrome (jangan lewat pratinjau WhatsApp atau aplikasi email); tautan yang sudah dibuka atau dipindai pihak lain dinyatakan kedaluwarsa, bila begitu kirim ulang. Bila email tidak datang, minta admin mendaftarkan email ini lebih dulu.'; } catch (e) { msg.textContent = 'Gagal mengirim: ' + e.message; } };
   });
 }
 

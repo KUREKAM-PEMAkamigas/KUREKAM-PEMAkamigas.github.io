@@ -443,7 +443,7 @@ function wajibGantiSandi() {
       if (b.length < 8) { msg.textContent = 'Kata sandi baru minimal 8 karakter.'; return; }
       if (b !== u) { msg.textContent = 'Ulangan kata sandi tidak sama.'; return; }
       if (b.toLowerCase() === em) { msg.textContent = 'Kata sandi baru tidak boleh sama dengan alamat email.'; return; }
-      try { await DB.gantiSandi(em, b); } catch (e) { msg.textContent = 'Gagal menyimpan: ' + e.message + '. Coba keluar lalu masuk lagi.'; return; }
+      try { await DB.gantiSandi(em, b); } catch (e) { msg.textContent = /requires-recent-login|invalid-credential|wrong-password/.test(e.code || '') ? 'Sesi masuk sudah terlalu lama. Tekan Bukan akun saya, keluar, lalu masuk lagi dan ganti kata sandi segera.' : 'Gagal menyimpan: ' + e.message; return; }
       ctx.akun.sandiDiubah = new Date().toISOString(); await save('pengguna', ctx.akun); await addLog('Mengganti kata sandi awal');
       toast('Kata sandi tersimpan.'); resolve();
     };
@@ -493,6 +493,8 @@ export async function start() {
     try { for (const c of migLG) await DB.replaceAll(c, d[c]); await addLog('Kode prodi Logistik diseragamkan dari LO menjadi LG'); toast('Kode prodi Logistik kini LG di basis data.'); }
     catch (e) { console.warn('Penyeragaman LG ke basis data gagal:', e.message); }
   }
+  /* Masuk dengan kata sandi selain sandi awal berarti pengguna sudah punya sandi sendiri (mis. lewat email atur ulang): tidak perlu dipaksa mengganti */
+  if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user && DB.masukDenganSandiSendiri === true) { ctx.akun.sandiDiubah = new Date().toISOString(); try { await save('pengguna', ctx.akun); } catch (e) { /* abaikan */ } }
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah && DB.user) await wajibGantiSandi();
   mulaiJejak();
   import('./pulih.js').then(m => m.titikHarian()).catch(() => { });

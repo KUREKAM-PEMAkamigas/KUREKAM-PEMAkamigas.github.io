@@ -65,6 +65,20 @@ function tAkun(el, ed, adm) {
     onDelete: u.id ? async (o) => { const nanti = S.pengguna.filter(x => x.id !== o.id); if (!adaAdmin(nanti)) { toast('Tidak bisa dihapus: daftar harus menyisakan satu admin, atau kosong sama sekali.'); return; } await remove('pengguna', o.id, `Hapus pengguna ${o.email}`); muatUlangAkun(); rerender(); } : null });
   const pasangReset = (u) => setTimeout(() => { const k = document.querySelector('#u-akun'); if (k) k.onclick = async () => { try { const h = await DB.buatAkun(u.email, u.email); if (h === 'baru') { u.sandiAwal = new Date().toISOString(); delete u.sandiDiubah; await save('pengguna', u, `Buat akun masuk ${u.email}`); toast('Akun masuk dibuat. Kata sandi awal sama dengan alamat email.'); rerender(); } else toast('Email ini sudah punya akun masuk, kata sandinya tidak diubah. Pakai email atur ulang bila lupa.'); } catch (e) { toast('Gagal membuat akun: ' + e.message); } };
     const b = document.querySelector('#u-reset'); if (b) b.onclick = async () => { try { await DB.kirimReset(u.email); await addLog(`Kirim email atur ulang kata sandi ke ${u.email}`); toast('Email atur ulang kata sandi dikirim ke ' + u.email); } catch (e) { toast('Gagal mengirim: ' + e.message); } }; }, 0);
+  /* Tautan akses pertama: yang dibagikan ke pengguna baru. Tautan pendek diisi admin (bawaan bit.ly KUREKAM). */
+  if (adm) {
+    const pendek = () => (S.settings.tautanAkses || 'https://bit.ly/KUREKAM_PEMAkamigas'), panjang = buatTautanFirebase();
+    const pesan = () => `Bapak/Ibu, KUREKAM PEM Akamigas sudah bisa dipakai.\n1. Buka tautan ini: ${pendek()}\n2. Masuk dengan email Anda. Kata sandi awal sama dengan alamat email (huruf kecil semua, tanpa spasi).\n3. Ganti kata sandi saat diminta, lalu simpan kata sandi baru itu.\nBila lupa kata sandi, tekan Lupa kata sandi di halaman masuk, lalu klik tautan di email sekali saja langsung di Chrome.\nSesudahnya cukup buka ${pendek().replace(/\/\?.*$/, '')} atau alamat kurekam-pemakamigas.github.io.`;
+    el.insertAdjacentHTML('beforeend', `<div class="card" style="margin-top:14px">${head('Tautan akses pertama', 'Dibagikan ke pengguna yang baru pertama membuka KUREKAM', 'link', '#10b981', '')}
+      <div class="small" style="white-space:normal;margin-bottom:8px">Tautan ini menyambungkan peramban ke Firebase satu kali. Sesudahnya alamat tampil rapi (tanpa bagian ?fb=) dan cukup dibuka seperti biasa.</div>
+      <label class="small">Tautan pendek yang dibagikan<input class="inp" id="ta-pendek" value="${esc(pendek())}" style="width:100%;box-sizing:border-box"></label>
+      <div class="drawer-act" style="flex-wrap:wrap;margin-top:8px"><button class="btn sm" id="ta-simpan">${icon('check')} Simpan tautan pendek</button><button class="btn sm" id="ta-salin">${icon('upload')} Salin tautan pendek</button><button class="btn sm" id="ta-panjang" ${panjang ? '' : 'disabled'}>Salin tautan panjang (cadangan)</button><button class="btn sm pri" id="ta-pesan">Salin pesan siap kirim</button></div></div>`);
+    const salin = async (t, ok) => { try { await navigator.clipboard.writeText(t); toast(ok); } catch (e) { window.prompt('Salin teks ini:', t); } };
+    el.querySelector('#ta-simpan').onclick = async () => { const v = el.querySelector('#ta-pendek').value.trim(); if (v && !/^https:\/\//.test(v)) { toast('Tautan harus diawali https://'); return; } S.settings.tautanAkses = v; await saveSettings(); toast('Tautan pendek tersimpan.'); };
+    el.querySelector('#ta-salin').onclick = () => salin(pendek(), 'Tautan pendek disalin.');
+    el.querySelector('#ta-panjang').onclick = () => salin(panjang, 'Tautan panjang disalin.');
+    el.querySelector('#ta-pesan').onclick = () => salin(pesan(), 'Pesan siap kirim disalin. Tempel ke WhatsApp.');
+  }
   const bra = el.querySelector('#u-resetall'); if (bra) bra.onclick = async () => {
     /* Sasaran: akun yang dibuat lewat aplikasi dan belum pernah mengganti kata sandi awal. Yang sudah masuk dan mengganti sandi tidak disentuh. */
     const sasaran = S.pengguna.filter(u => u.email && u.sandiAwal && !u.sandiDiubah);

@@ -82,7 +82,11 @@ export const DB = {
     await user.reauthenticateWithCredential(cred); await user.updatePassword(baru);
   },
   /** Firebase mengirim email berisi tautan untuk membuat kata sandi baru. */
-  async kirimReset(email) { await auth.sendPasswordResetEmail(email); },
+  async kirimReset(email) {
+    /* Setelah mengatur sandi baru, tombol lanjut di halaman Firebase kembali ke aplikasi. Bila domain belum diizinkan Firebase, kirim tanpa tautan lanjut. */
+    try { await auth.sendPasswordResetEmail(email, { url: location.origin + location.pathname }); }
+    catch (e) { if (/unauthorized-continue-uri|invalid-continue-uri|missing-continue-uri/.test(e.code || '')) await auth.sendPasswordResetEmail(email); else throw e; }
+  },
   /** Membuat akun masuk baru lewat aplikasi kedua agar sesi admin tidak tergantikan. */
   async buatAkun(email, sandi) {
     const fb = window.firebase, nama = 'kurekam-daftar';

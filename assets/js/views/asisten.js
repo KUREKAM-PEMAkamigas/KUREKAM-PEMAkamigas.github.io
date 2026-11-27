@@ -8,8 +8,10 @@ import { kodeBaruMk, kodeBaku } from '../kode.js';
 import { PRODI_DEF, CPL_T, PL_CPL, GBK, BOK, SPEC_CPL, VERB, OBJ, SUBV, KUNCI, ROT, SCI_SMT, kelompokKunci } from '../seed.js';
 import { detect, ANJURAN_SMT } from '../bloom.js';
 import { ringkasIntegrasi } from '../riset.js';
-import { kodeBerikut, param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
+import { rpsLengkap, sapLengkap, kodeBerikut, param, struktur, trace, progres, cekStruktur, cekTrace, byProdi, sksOf, durasi, rpsOf, integrasiOf, fmt } from '../rules.js';
 import { usulanProdi, bolehSetuju, setujui, hapusSlotKosong } from '../usulan.js';
+import { pilihMk } from './ajar.js';
+import { perluDitangani, namaMenu } from '../temuan.js';
 import { head, bar, pctColor, kTag, tanya, prodiName, ro } from './ui.js';
 import { turunkanDok } from './dokgen.js';
 
@@ -327,6 +329,23 @@ export default function asistenView(el) {
   const smtRows = [1, 2, 3, 4, 5, 6, 7, 8].map(s => { const k = P.kerangka[s], x = R.smt[s]; return { s, k, x, sisa: k[0] - x.sks }; });
   const sisaTot = smtRows.filter(r => r.s <= 6).reduce((a, r) => a + Math.max(0, r.sisa), 0);
   const mkA = t.mk.filter(akad), tanpaCpmk = t.mkNoCpmk.length, rpsAda = mkA.filter(m => rpsOf(S, m.id)).length;
+  const tanpaSubMk = Array.from(new Set(t.cpmkNoSub.map(c => c.mk))).map(id => t.mk.find(m => m.id === id)).filter(Boolean);
+  const rpsBlm = mkA.filter(m => { const r = rpsOf(S, m.id); return !r || r.status === 'draf' || rpsLengkap(r) < 99; }), sapBlm = mkA.filter(m => { const r = rpsOf(S, m.id); return !r || sapLengkap(r) < 99; });
+  const jml = (a, x) => a.length ? `${a.length} ${x}` : 'Buka menu';
+  const smtBeda = [1, 2, 3, 4, 5, 6, 7, 8].filter(sm => R.smt[sm].sks !== P.kerangka[sm][0]);
+  const aksiTahap = [
+    { h: '#visi', ket: String(p.visiKeilmuan || '').trim() ? 'Buka menu' : 'Isi visi keilmuan' },
+    { h: '#visi', ket: t.pl.length < 3 ? `Tambah profil (${t.pl.length}/3)` : 'Buka menu' },
+    { h: '#cpl', ket: t.cplNoPl.length ? jml(t.cplNoPl, 'CPL tanpa profil') : 'Buka menu' },
+    { h: '#bk', ket: t.bkNoMk.length ? jml(t.bkNoMk, 'bahan kajian belum dipakai MK') : 'Buka menu' },
+    { h: '#mk', ket: R.n < P.mkProdiMin ? `MK ${R.n}/${P.mkProdiMin}` : 'Buka menu' },
+    { h: '#peta', ket: smtBeda.length ? `Semester ${smtBeda.join(', ')} belum sesuai kerangka` : 'Buka menu' },
+    { h: '#matriks', ket: t.cplNoMk.length ? jml(t.cplNoMk, 'CPL tanpa MK') : 'Buka menu' },
+    { h: '#cpmk', mk: (t.mkNoCpmk[0] || {}).id, ket: jml(t.mkNoCpmk, 'MK belum ada CPMK') },
+    { h: '#cpmk', mk: (tanpaSubMk[0] || {}).id, ket: jml(tanpaSubMk, 'MK belum ada Sub-CPMK') },
+    { h: '#rps', mk: (rpsBlm[0] || {}).id, ket: jml(rpsBlm, 'MK belum ada RPS lengkap') },
+    { h: '#rps', mk: (sapBlm[0] || {}).id, ket: jml(sapBlm, 'MK belum ada SAP lengkap') }];
+  const tindakan = perluDitangani(S, pid).slice(0, 8);
   const st = (ok, near) => kTag(ok ? 'ok' : near ? 'near' : 'bad');
   const li = (a) => a.filter(Boolean).map(x => `<li>${x}</li>`).join('');
   const tombol = (id, teks, aktif = true) => ed ? `<button class="btn pri sm" data-gen="${id}" ${aktif ? '' : 'disabled'}>${icon('spark')} ${teks}</button>` : '';
@@ -335,7 +354,8 @@ export default function asistenView(el) {
   el.innerHTML = `
   <div class="card">${head('Asisten Kurikulum ' + esc(pid), esc(prodiName()) + ' · pemandu langkah demi langkah dan pembuat usulan otomatis', 'spark', '#f5a524', ed ? '' : ro())}
     <p class="small" style="margin:6px 0 10px">Ikuti tujuh langkah di bawah. Di tiap langkah prodi boleh mengisi sendiri lewat menunya, atau menekan tombol usulan otomatis lalu menyunting hasilnya. Usulan otomatis hanya menambah bagian yang masih kosong dan tidak pernah menimpa isian prodi. Rumusan mengikuti Buku Pedoman Kurikulum ${APP.tahunKurikulum}, SN Dikti, LAM Teknik, IABEE, dan Taksonomi Bloom.</p>
-    <div class="grid g4 mini">${g.tahap.slice(0, 9).map(x => `<div><small>${x.n}</small><b>${x.v}%</b>${bar(x.v, pctColor(x.v))}</div>`).join('')}</div>
+    <div class="grid g4 mini">${g.tahap.map((x, i) => { const a = aksiTahap[i]; return `<a class="tahap-k" href="${a.h}" data-tk="${i}" title="${esc(a.ket)}" style="display:block;color:inherit;text-decoration:none"><small>${x.n}</small><b>${x.v}%</b>${bar(x.v, pctColor(x.v))}<div class="small ${x.v >= 99 ? 'muted' : ''}" style="margin-top:4px;color:${x.v >= 99 ? '' : '#b42335'}">${x.v >= 99 ? 'Sudah lengkap' : esc(a.ket) + ' ›'}</div></a>`; }).join('')}</div>
+    ${tindakan.length ? `<h4 style="margin:14px 0 6px">Perlu ditangani lebih dulu (${tindakan.length}${ck.length > tindakan.length ? ' teratas' : ''})</h4><div class="tbl-wrap"><table class="tbl"><tbody>${tindakan.map((c, i) => `<tr class="click" data-tn="${i}"><td>${kTag(c.k)}</td><td><b>${esc(c.label)}</b><div class="small muted" style="white-space:normal">${esc(c.val)} · seharusnya ${esc(c.target)}</div></td><td class="small muted">${esc(namaMenu(c.p.h))} ›</td></tr>`).join('')}</tbody></table></div><div class="small muted" style="margin-top:4px">Klik baris untuk menuju menunya. Penjelasan lengkap tiap butir ada di <a href="#periksa">Pemeriksa Kurikulum</a>.</div>` : ''}
     <div class="field" style="margin-top:12px;max-width:640px"><label>Bidang keahlian prodi (dipakai dalam rumusan visi, profil lulusan, dan CPL)</label><input class="inp" id="as-bidang" value="${esc(bidang)}" placeholder="Contoh: operasi produksi sumur dan fasilitas produksi migas" ${ed ? '' : 'disabled'}></div>
   </div>
   ${langkah(1, 'Visi keilmuan dan profil lulusan', st(String(p.visiKeilmuan || '').trim() && t.pl.length >= 3, t.pl.length > 0), li([
@@ -383,6 +403,8 @@ export default function asistenView(el) {
   const ujHps = el.querySelector('#uj-hapus'); if (ujHps) ujHps.onclick = async () => { if (!(await tanya('Slot MK usulan yang belum dipakai (belum punya CPMK, penugasan, atau RPS) dihapus. Lanjutkan?', 'Hapus'))) return; const n = await hapusSlotKosong(pid); toast(n ? `${n} slot MK usulan dihapus.` : 'Tidak ada slot yang bisa dihapus.'); rerender(); };
   const inp = el.querySelector('#as-bidang'); if (inp) inp.onchange = () => { bidangInp = inp.value.trim(); rerender(); };
   const PESAN = { visi: 'visi dan profil lulusan', cpl: 'CPL', bk: 'BoK dan bahan kajian', kunci: 'MK kunci', slot: 'slot MK usulan', lacak: 'pemetaan', cpmk: 'CPMK dan Sub-CPMK' };
+  el.querySelectorAll('[data-tk]').forEach(a => a.onclick = (e) => { e.preventDefault(); const x = aksiTahap[+a.dataset.tk]; if (x.mk) pilihMk(x.mk); location.hash = x.h; });
+  el.querySelectorAll('[data-tn]').forEach(r => r.onclick = () => { const c = tindakan[+r.dataset.tn]; const mk = (c.p.items[0] || {}).mk; if (mk) pilihMk(mk); location.hash = c.p.h; });
   el.querySelectorAll('[data-gen]').forEach(b => b.onclick = async () => {
     const k = b.dataset.gen; b.disabled = true;
     try { const n = await GEN[k](pid, (inp ? inp.value.trim() : bidang)); if (n) await addLog(`Asisten kurikulum ${pid}: ${n} usulan ${PESAN[k]}`);

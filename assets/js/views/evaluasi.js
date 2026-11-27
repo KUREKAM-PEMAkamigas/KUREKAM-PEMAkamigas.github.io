@@ -1,5 +1,7 @@
 /* KUREKAM · Evaluasi dan kawal mutu: pemeriksa, Taksonomi Bloom, revisi dan pengesahan, laporan */
-import { S, ctx, can, save, rerender, esc, icon, uid, toast } from '../app.js';
+import { S, ctx, can, save, rerender, esc, icon, uid, toast, openDrawer, closeDrawer } from '../app.js';
+import { daftarTemuan, namaMenu } from '../temuan.js';
+import { pilihMk } from './ajar.js';
 import { labelKel, labelGrup } from '../kode.js';
 import { APP, ACUAN } from '../config.js';
 import { chart, AX, gaugeOption } from '../charts.js';
@@ -11,7 +13,7 @@ import { head, formDrawer, kTag, statusTag, prodiTag, prodiName, kpi, animateCou
 
 /* ================= Pemeriksa kurikulum ================= */
 export function periksaView(el) {
-  const ck = cekStruktur(S, ctx.prodi).concat(cekTrace(S, ctx.prodi), cekIabee(S, ctx.prodi));
+  const ck = daftarTemuan(S, ctx.prodi);
   const n = { ok: ck.filter(c => c.k === 'ok').length, near: ck.filter(c => c.k === 'near').length, bad: ck.filter(c => c.k === 'bad').length };
   const grp = Array.from(new Set(ck.map(c => c.grp)));
   let only = false;
@@ -23,7 +25,23 @@ export function periksaView(el) {
   </div>
   <div class="card" style="margin-top:18px">${head('Daftar periksa otomatis', 'Diperbarui setiap kali data kurikulum berubah', 'audit', '#f0616d', `<label class="small"><input type="checkbox" id="only"> Hanya yang belum sesuai</label>`)}
     <div class="tbl-wrap"><table class="tbl" id="t"></table></div></div>`;
-  const draw = () => { el.querySelector('#t').innerHTML = `<thead><tr><th>Kelompok</th><th>Butir yang diperiksa</th><th>Hasil</th><th>Ketentuan</th><th>Acuan</th><th>Status</th></tr></thead><tbody>${ck.filter(c => !only || c.k !== 'ok').map(c => `<tr><td class="small muted">${c.grp}</td><td><b>${c.label}</b></td><td>${esc(c.val)}</td><td>${esc(c.target)}</td><td class="small muted">${c.acuan}</td><td>${kTag(c.k)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Semua butir sudah sesuai.</td></tr>'}</tbody>`; };
+  const baris = () => ck.filter(c => !only || c.k !== 'ok');
+  const draw = () => { el.querySelector('#t').innerHTML = `<thead><tr><th>Kelompok</th><th>Butir yang diperiksa</th><th>Hasil</th><th>Ketentuan</th><th>Acuan</th><th>Status</th><th></th></tr></thead><tbody>${baris().map((c, i) => `<tr class="click" data-i="${i}" title="Klik untuk panduan"><td class="small muted">${c.grp}</td><td><b>${c.label}</b></td><td>${esc(c.val)}</td><td>${esc(c.target)}</td><td class="small muted">${c.acuan}</td><td>${kTag(c.k)}</td><td class="muted">›</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Semua butir sudah sesuai.</td></tr>'}</tbody>`;
+    el.querySelectorAll('#t tr[data-i]').forEach(tr => tr.onclick = () => bukaPanduan(baris()[+tr.dataset.i])); };
+  const bukaPanduan = (c) => {
+    const p = c.p, ok = c.k === 'ok';
+    openDrawer(`<div class="card-h"><span class="ico-badge" style="--c:${ok ? '#10b981' : c.k === 'near' ? '#f5a524' : '#f0616d'}">${icon(ok ? 'check' : 'alert')}</span><div><h3>${c.label}</h3><div class="sub">${esc(c.grp)} · ${esc(c.acuan)}</div></div><div class="sp"></div><button class="btn ghost" data-close>${icon('close')}</button></div>
+      <div class="legend" style="margin:6px 0 10px">${kTag(c.k)} <span class="small">Hasil: <b>${esc(c.val)}</b> · Ketentuan: <b>${esc(c.target)}</b></span></div>
+      <h4 style="margin:12px 0 4px">${ok ? 'Dasar penilaian' : 'Mengapa belum sesuai'}</h4><p class="small">${esc(p.mengapa)}</p>
+      <h4 style="margin:12px 0 4px">Seharusnya</h4><p class="small">${esc(p.seharusnya)}</p>
+      ${ok ? '' : `<h4 style="margin:12px 0 4px">Langkah memperbaiki</h4><ol class="small" style="margin:0 0 0 18px;line-height:1.6">${p.langkah.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`}
+      ${p.items.length ? `<h4 style="margin:12px 0 4px">${ok ? 'Item terkait' : 'Item yang perlu diperbaiki'} (${p.items.length})</h4><div class="tbl-wrap" style="max-height:34vh"><table class="tbl"><tbody>${p.items.map((x, i) => `<tr class="click" data-it="${i}"><td class="small">${esc(x.t)}</td><td class="muted">›</td></tr>`).join('')}</tbody></table></div>` : ''}
+      <div class="drawer-act"><button class="btn pri" id="pg-buka">${icon('arrowUp')} Buka ${esc(namaMenu(p.h))}</button><div class="sp"></div><button class="btn" data-close>Tutup</button></div>`, (dr) => {
+      const ke = (h, mk) => { if (mk) pilihMk(mk); closeDrawer(); location.hash = h; };
+      dr.querySelector('#pg-buka').onclick = () => ke(p.h, (p.items[0] || {}).mk);
+      dr.querySelectorAll('[data-it]').forEach(r => r.onclick = () => { const x = p.items[+r.dataset.it]; ke(x.h || p.h, x.mk); });
+    }, true);
+  };
   draw(); el.querySelector('#only').onchange = e => { only = e.target.checked; draw(); };
   chart(el.querySelector('#c-g'), gaugeOption(n.ok / ck.length * 100, 100, '% butir sesuai', n.bad ? '#f5a524' : '#10b981', 0));
   chart(el.querySelector('#c-k'), { tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, legend: { top: 0 }, grid: { left: 8, right: 16, top: 34, bottom: 8, containLabel: true }, xAxis: { type: 'value', ...AX }, yAxis: { type: 'category', data: grp, inverse: true, ...AX },

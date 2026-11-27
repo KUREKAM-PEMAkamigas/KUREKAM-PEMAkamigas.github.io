@@ -150,6 +150,7 @@ function kerjaSelesai(gagal) {
   }, 450);
 }
 export async function save(col, doc, aksi) {
+  if (doc && doc.contoh) delete doc.contoh;
   const arr = S[col]; const i = arr.findIndex(x => x.id === doc.id);
   if (i >= 0) arr[i] = doc; else arr.push(doc);
   kerjaMulai('simpan');
@@ -157,6 +158,7 @@ export async function save(col, doc, aksi) {
   try { if (col !== 'log') jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(false); }
 }
 export async function saveMany(col, docs, aksi) {
+  docs.forEach(x => { if (x && x.contoh) delete x.contoh; });
   docs.forEach(doc => { const i = S[col].findIndex(x => x.id === doc.id); if (i >= 0) S[col][i] = doc; else S[col].push(doc); });
   kerjaMulai('simpan'); let gagal = false;
   try { if (DB.mode === 'firebase') { for (let i = 0; i < docs.length; i += 20) await Promise.all(docs.slice(i, i + 20).map(d => DB.put(col, d, S[col]))); } else await DB.put(col, docs[0] || {}, S[col]); } catch (e) { gagal = true; toast('Gagal menyimpan: ' + e.message); }

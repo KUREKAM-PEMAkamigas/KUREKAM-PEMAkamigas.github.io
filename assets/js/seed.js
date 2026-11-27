@@ -255,6 +255,8 @@ export function buildSeed() {
       let n = 0; g.forEach(c => { c.kode = `CPMK${pad2(i + 1)}`; D.sub.filter(x => x.cpmk === c.id).forEach(x => { x.kode = `SUB-CPMK${pad2(i + 1)}${pad2(++n)}`; }); });
     });
   });
+  /* Penanda data contoh: dihapus otomatis begitu pengguna mengubah atau mengimpor rekaman, sehingga hanya contoh yang belum disentuh yang bisa dibersihkan. */
+  ['pl', 'cpl', 'bok', 'bk', 'cpmk', 'sub', 'rps'].forEach(c => (D[c] || []).forEach(r => { r.contoh = true; }));
   return D;
 }
 

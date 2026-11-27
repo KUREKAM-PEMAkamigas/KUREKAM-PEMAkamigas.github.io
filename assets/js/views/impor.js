@@ -1,13 +1,31 @@
 /* KUREKAM · Impor dan ekspor: jalur bertahap templat Excel dengan urutan runtun, prasyarat, dan penanda berkas yang sudah diunggah.
    Tiap tahap memakai templat dan pratinjau impor yang sama dengan menu aslinya. Halaman ini hanya mengumpulkan dan mengurutkannya. */
-import { S, ctx, can, addLog, rerender, esc, icon, toast } from '../app.js';
+import { S, ctx, can, addLog, rerender, esc, icon, toast, saveMany, remove } from '../app.js';
 import { byProdi, mkTanpaCpl } from '../rules.js';
 import { templatCpl, imporCpl } from '../cplexcel.js';
 import { templatBok, imporBok, templatBk, imporBk } from '../bokexcel.js';
 import { templatMk, imporMk, templatCpmk, imporCpmk } from '../mkexcel.js';
 import { templatSub, imporSub, mkBolehSub } from '../subexcel.js';
 import { LANGKAH_DOKMK } from '../dokmkexcel.js';
-import { head, stTag, ro } from './ui.js';
+import { head, stTag, ro, tanya } from './ui.js';
+
+
+/** Rekaman contoh bawaan (bertanda contoh) milik satu prodi. */
+export function contohProdi(pid) {
+  const o = {}; ['rps', 'sub', 'cpmk', 'bk', 'bok', 'cpl', 'pl'].forEach(c => { o[c] = byProdi(S[c] || [], pid).filter(r => r.contoh); }); return o;
+}
+/** Hapus rekaman contoh dengan urutan aman: yang bergantung dihapus lebih dulu, rujukan di MK dan lainnya dibersihkan. */
+export async function bersihkanContoh(pid) {
+  const c = contohProdi(pid), ids = (a) => new Set(a.map(r => r.id));
+  for (const k of ['rps', 'sub', 'cpmk']) for (const r of c[k]) await remove(k, r.id);
+  const idCpl = ids(c.cpl), idBk = ids(c.bk), idPl = ids(c.pl);
+  const pakai = (arr, f, set) => arr.filter(x => (x[f] || []).some(i => set.has(i))).map(x => ({ ...x, [f]: x[f].filter(i => !set.has(i)) }));
+  if (idCpl.size) { for (const col of ['mk', 'bk', 'cpmk']) { const u = pakai(S[col], 'cpl', idCpl); if (u.length) await saveMany(col, u); } for (const p of (S.pi || []).filter(p => idCpl.has(p.cpl))) await remove('pi', p.id); }
+  if (idBk.size) { const u = pakai(S.mk, 'bk', idBk); if (u.length) await saveMany('mk', u); }
+  if (idPl.size) { const u = pakai(S.cpl, 'pl', idPl); if (u.length) await saveMany('cpl', u); }
+  for (const k of ['cpl', 'bk', 'bok', 'pl']) for (const r of c[k]) await remove(k, r.id);
+  await addLog(`Bersihkan data contoh (${pid})`, 'hapus');
+}
 
 const akad = (m) => !/magang|tugas akhir/i.test(m.kel || '');
 
@@ -45,6 +63,16 @@ export default function imporView(el) {
     </tbody></table></div>
     <input type="file" id="im-file" accept=".xlsx,.xls" hidden>
   </div>`;
+
+  const co = contohProdi(pid), nCo = Object.values(co).reduce((a, x) => a + x.length, 0);
+  if (nCo) el.insertAdjacentHTML('beforeend', `<div class="card" style="margin-top:14px">${head('Data contoh', 'Bawaan aplikasi, belum pernah diubah atau diimpor', 'trash', '#f59e0b', ed ? '' : ro())}
+    <div class="small" style="white-space:normal;margin-bottom:8px">Prodi ini masih memuat <b>${nCo}</b> rekaman contoh (${Object.entries(co).filter(([, v]) => v.length).map(([k, v]) => `${v.length} ${k.toUpperCase()}`).join(', ')}). Rekaman yang pernah Bapak/Ibu ubah atau impor <b>tidak</b> ikut terhapus. Sebelum membersihkan, unduh cadangan dari Data Induk.</div>
+    <button class="btn" id="im-bersih" ${ed ? '' : 'disabled'}>${icon('trash')} Bersihkan data contoh prodi ini</button></div>`);
+  const bb = el.querySelector('#im-bersih');
+  if (bb) bb.onclick = async () => {
+    if (!(await tanya(`Hapus ${nCo} rekaman contoh milik ${pid}? Mata kuliah dan struktur semester tetap ada. Tindakan ini tidak bisa dibatalkan.`))) return;
+    await bersihkanContoh(pid); toast('Data contoh dibersihkan.'); rerender();
+  };
   const fi = el.querySelector('#im-file'); let aktif = null;
   el.querySelectorAll('[data-tpl]').forEach(b => b.onclick = async () => { const s = L.find(x => x.id === b.dataset.tpl); try { await s.tpl(); } catch (e) { console.error(e); toast('Templat gagal dibuat: ' + (e.message || e)); } });
   el.querySelectorAll('[data-imp]').forEach(b => b.onclick = () => { aktif = L.find(x => x.id === b.dataset.imp); fi.value = ''; fi.click(); });

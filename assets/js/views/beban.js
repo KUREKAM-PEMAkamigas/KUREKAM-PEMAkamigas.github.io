@@ -1,8 +1,10 @@
 /* KUREKAM · Penugasan dan beban dosen (JP total hasil konversi SKS ke jam pelajaran) */
-import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, saveSettings } from '../app.js';
+import { S, ctx, can, save, remove, rerender, esc, icon, uid, openDrawer, saveSettings, toast } from '../app.js';
+import { bangunTemplatePenugasan } from '../tugasexcel.js';
+import { imporPenugasan } from './induk.js';
 import { chart, AX } from '../charts.js';
 import { beban, bebanTugas, mkTanpaPengampu, param, fmt, sksOf, kelasOf, durasi, byProdi } from '../rules.js';
-import { head, formDrawer, kpi, animateCounts, stTag, prodiTag, short, bar, unduh } from './ui.js';
+import { head, formDrawer, kpi, animateCounts, stTag, prodiTag, short, bar, unduh, loadXLSX } from './ui.js';
 
 let fHome = '', tabB = 'rekap';
 const KL = { ok: 'Wajar', near: 'Di bawah batas', bad: 'Melebihi batas' };
@@ -117,15 +119,21 @@ function jalanTab(P) {
     </tbody></table></div>${ctx.role === 'dosen' && !list.length ? '<p class="empty">Nama Anda belum tercatat sebagai pengampu pada berkas yang diimpor.</p>' : ''}<p class="note">Data satu semester ganjil dari berkas beban mengajar. Dosen luar biasa tidak dinilai terhadap batas dosen tetap, abaikan statusnya bila tidak relevan.</p></div>`;
 }
 
+let hasilTugas = '';
+const mkTugas = (par) => (ctx.role === 'prodi' ? byProdi(S.mk, ctx.prodi) : S.mk).filter(m => m.smt <= 6 && (m.smt % 2 === 1) === (par === 'ganjil')).filter(m => !fHome || fHome === 'Bersama' || m.prodi === fHome).sort((a, b) => a.prodi.localeCompare(b.prodi) || a.smt - b.smt);
+const bolehTugas = () => ['prodi', 'admin', 'developer', 'wadir', 'akademik'].includes(ctx.role);
 function tugasTab(par, P) {
-  const mk = (ctx.role === 'prodi' ? byProdi(S.mk, ctx.prodi) : S.mk).filter(m => m.smt <= 6 && (m.smt % 2 === 1) === (par === 'ganjil')).filter(m => !fHome || fHome === 'Bersama' || m.prodi === fHome).sort((a, b) => a.prodi.localeCompare(b.prodi) || a.smt - b.smt);
-  return `<div class="card">${head('Penugasan dosen per mata kuliah', 'Kaprodi menugaskan pengampu; porsi dipakai untuk team teaching atau kelas praktik yang dibagi', 'book', '#14b8a6')}
+  const mk = mkTugas(par);
+  return `${hasilTugas ? `<div class="ribbon info" style="display:block;margin-bottom:12px">${hasilTugas}</div>` : ''}<div class="card">${head('Penugasan dosen per mata kuliah', 'Kaprodi menugaskan pengampu; porsi dipakai untuk team teaching atau kelas praktik yang dibagi', 'book', '#14b8a6', `<button class="btn sm" id="tg-tpl">${icon('download')} Template Excel</button><button class="btn sm" id="tg-imp" ${bolehTugas() ? '' : 'disabled'}>${icon('upload')} Impor Excel</button>`)}
   <div class="tbl-wrap" style="max-height:640px"><table class="tbl"><thead><tr><th>Prodi</th><th>Smt</th><th>Mata kuliah</th><th class="num">T+P</th><th class="num">Kelas</th><th>Pengampu (kelas · porsi T/P)</th><th class="num">Tertutup</th><th></th></tr></thead><tbody>
   ${mk.map(m => { const ts = S.tugas.filter(t => t.mk === m.id); const kls = kelasOf(S, m.prodi, m.smt); const cT = m.T ? ts.reduce((a, t) => a + (+t.kelas || 0) * (t.porsiT == null ? 1 : +t.porsiT), 0) / Math.max(1, kls) : 1; const cP = m.P ? ts.reduce((a, t) => a + (+t.kelas || 0) * (t.porsiP == null ? 1 : +t.porsiP), 0) / Math.max(1, kls) : 1; const cov = Math.min(cT, cP) * 100;
     return `<tr><td>${prodiTag(m.prodi)}</td><td class="num">${m.smt}</td><td><b>${esc(short(m.nama, 46))}</b></td><td class="num">${m.T}+${m.P}</td><td class="num">${kls}</td><td>${ts.map(t => `<span class="tag pick ${can('susun', m) ? 'click' : ''}" data-tg="${t.id}" style="--c:#0ea5e9">${esc((S.dosen.find(d => d.id === t.dosen) || {}).nama || '?')} · ${t.kelas} kls · ${fmt((t.porsiT == null ? 1 : t.porsiT) * 100)}/${fmt((t.porsiP == null ? 1 : t.porsiP) * 100)}</span>`).join(' ') || '<span class="st bad">Belum ada pengampu</span>'}</td><td class="num"><span class="st ${cov >= 99.5 && cov <= 100.5 ? 'ok' : cov > 100.5 ? 'near' : 'bad'}">${fmt(cov)}%</span></td><td>${can('susun', m) ? `<button class="btn sm" data-add="${m.id}">${icon('plus')}</button>` : ''}</td></tr>`; }).join('')}
   </tbody></table></div><p class="note">Kolom "Tertutup" menunjukkan apakah seluruh kelas dan seluruh porsi teori serta praktik sudah punya pengampu (target 100%).</p></div>`;
 }
 function bindTugas(el, par) {
+  const tpl = el.querySelector('#tg-tpl'), imp = el.querySelector('#tg-imp');
+  if (tpl) tpl.onclick = async () => { const X = await loadXLSX(); unduh(new Blob([X.write(bangunTemplatePenugasan(X, S, mkTugas(par), kelasOf, `semester ${par}`), { bookType: 'xlsx', type: 'array' })]), `Template_Penugasan_${par}${ctx.role === 'prodi' ? '_' + ctx.prodi : ''}.xlsx`); };
+  if (imp) imp.onclick = () => { const f = document.createElement('input'); f.type = 'file'; f.accept = '.xlsx,.xls'; f.onchange = async () => { if (!f.files[0]) return; try { const X = await loadXLSX(); hasilTugas = await imporPenugasan(X, X.read(await f.files[0].arrayBuffer(), { type: 'array' })); } catch (e) { console.error(e); hasilTugas = `<b>Impor gagal.</b> ${esc(e.message)}`; } rerender(); }; f.click(); };
   const form = (x, m) => {
     const P = param(S);
     formDrawer({ title: x.id ? 'Ubah penugasan' : 'Tugaskan dosen', sub: `${m.nama} · ${m.T}T + ${m.P}P · ${kelasOf(S, m.prodi, m.smt)} kelas`, obj: x,

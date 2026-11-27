@@ -8,6 +8,7 @@ import { param, fmt, KMAP, kelasOf, RANAH_CPL, HURUF_IABEE } from '../rules.js';
 import { head, formDrawer, prodiTag, ro, tanya, unduh, loadXLSX } from './ui.js';
 import { DATA_HEAD, JP_DEFAULT } from './bebanprodi.js';
 import { imporObe } from '../obeimpor.js';
+import { cocokkanDosen, bangunTemplatePenugasan } from '../tugasexcel.js';
 import { bokStandarProdi } from '../rules.js';
 
 let tab = 'prodi', fH = '', hasil = '';
@@ -210,7 +211,7 @@ function tImpor(el, ed, adm) {
       <p class="small">Berkas diproses di peramban Anda dan tidak dikirim ke mana pun. Dosen dicocokkan lewat NIP, NIDN, atau nama, jadi impor ulang memperbarui data tanpa menggandakan. Kolom <b>Prodi mengajar</b> (kode dipisah koma) mendaftarkan dosen yang mengajar di prodi lain.</p>
       <div class="drawer-act"><button class="btn" id="i-dtpl">${icon('download')} Template dosen</button><button class="btn pri" id="i-dsn" ${ed ? '' : 'disabled'}>${icon('upload')} Pilih berkas dosen</button></div></div>
     <div class="card">${head('Impor penugasan dosen (Excel)', 'Dosen mengampu MK di prodi mana pun', 'book', '#14b8a6')}
-      <p class="small">Kolom: ${TUGAS_HEAD.map(h => `<span class="tag">${h}</span>`).join(' ')}. Satu baris satu penugasan. Dosen dicocokkan lewat NIP, NIDN, atau nama, dan MK lewat kode atau nama pada prodi tersebut. Dosen yang sama boleh muncul di banyak prodi, dengan MK yang sama maupun berbeda. Penugasan yang sudah ada (dosen dan MK sama) diperbarui.</p>
+      <p class="small">Template berisi daftar MK, nama dosen yang sudah ada, dan lembar REFERENSI nama dosen terdaftar. Satu baris satu penugasan. Dosen dicocokkan lewat NIP, NIDN, atau nama (gelar, urutan, dan singkatan boleh berbeda; bila tidak ada yang cocok, nama dicatat apa adanya sebagai dosen baru), dan MK lewat kode atau nama pada prodi tersebut. Dosen yang sama boleh muncul di banyak prodi, dengan MK yang sama maupun berbeda. Penugasan yang sudah ada (dosen dan MK sama) diperbarui.</p>
       <div class="drawer-act"><button class="btn" id="i-ttpl">${icon('download')} Template penugasan</button><button class="btn pri" id="i-tgs" ${ed ? '' : 'disabled'}>${icon('upload')} Pilih berkas penugasan</button></div></div>
     <div class="card">${head('Impor pengampu MK kurikulum berjalan (Excel)', 'Daftar beban mengajar dosen per kelas, semester ganjil', 'book', '#8b5cf6')}
       <p class="small">Lembar "gasal" berkolom: ${AJAR_HEAD.map(h => `<span class="tag">${h}</span>`).join(' ')}. Satu baris satu dosen pada satu kelas, sehingga team teaching tercatat per dosen. Dosen dicocokkan dengan data dosen lewat nama. Dosen yang belum terdaftar (dosen luar biasa, purna, dan lainnya) ditambahkan otomatis. Hasilnya tampil di menu Beban Dosen, tab <b>Beban kurikulum berjalan</b>.</p>
@@ -230,7 +231,7 @@ function tImpor(el, ed, adm) {
   el.querySelector('#i-tgs').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporPenugasan(X, wb); });
   const tpl = async (head, contoh, lebar, nama, file) => { const X = await loadXLSX(); const wb = X.utils.book_new(); const ws = X.utils.aoa_to_sheet([head, ...contoh]); ws['!cols'] = lebar.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, nama); unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), file); };
   el.querySelector('#i-dtpl').onclick = () => tpl(DOSEN_HEAD, [['Contoh Dosen, S.T., M.T. (hapus baris ini)', '199001012015011001', '0001019001', 'Lektor', 'S2', 'TP', 'TP, TO', 'Teknik Perminyakan', '', 'Teknik Perminyakan', 'Teknik Perminyakan', '', 'Well Control IWCF, Ahli K3 Migas']], [34, 20, 14, 16, 12, 10, 14, 26, 16, 22, 22, 22, 36], 'DOSEN', 'Template_Dosen.xlsx');
-  el.querySelector('#i-ttpl').onclick = () => tpl(TUGAS_HEAD, [['TP', 'Contoh Dosen, S.T., M.T.', 'TP3101', 'Contoh mata kuliah (hapus baris ini)', 3, 1, 0.5, 'ya']], [10, 34, 12, 40, 8, 8, 8, 12], 'PENUGASAN', 'Template_Penugasan_Dosen.xlsx');
+  el.querySelector('#i-ttpl').onclick = async () => { const X = await loadXLSX(); const mk = S.mk.filter(m => ctx.role !== 'prodi' || m.prodi === ctx.prodi).slice().sort((a, b) => a.prodi.localeCompare(b.prodi) || a.smt - b.smt || String(a.kode).localeCompare(b.kode)); unduh(new Blob([X.write(bangunTemplatePenugasan(X, S, mk, kelasOf, ctx.role === 'prodi' ? ctx.prodi : 'semua prodi'), { bookType: 'xlsx', type: 'array' })]), `Template_Penugasan_Dosen${ctx.role === 'prodi' ? '_' + ctx.prodi : ''}.xlsx`); };
   el.querySelector('#i-tpl').onclick = async () => { const X = await loadXLSX(); const wb = X.utils.book_new(); const ws = X.utils.aoa_to_sheet([DATA_HEAD, ['TP', 1, 'CONTOH01', 'Contoh mata kuliah (hapus baris ini)', 'MBE', 1, 1, 'A, B, C']]); ws['!cols'] = [14, 10, 12, 48, 12, 10, 12, 16].map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, 'DATA'); unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), 'Template_Data_Kurikulum_Berjalan.xlsx'); };
   el.querySelector('#i-bak').onclick = () => { const o = {}; Object.keys(S).forEach(k => { o[k] = k === 'settings' ? [S.settings] : S[k]; }); unduh(new Blob([JSON.stringify(o)], { type: 'application/json' }), `kurekam-cadangan-${new Date().toISOString().slice(0, 10)}.json`); };
   el.querySelector('#i-res').onclick = () => pilih('.json', async f => { const d = JSON.parse(await f.text()); if (!Array.isArray(d.mk) || !Array.isArray(d.prodi)) throw new Error('Berkas bukan cadangan KUREKAM.'); if (!(await tanya(`Seluruh data akan diganti dengan isi cadangan (${d.mk.length} MK). Lanjutkan?`))) { hasil = ''; return; } await titikOtomatis('Sebelum memulihkan dari berkas cadangan'); await replaceData(d); await addLog('Pulihkan data dari cadangan'); hasil = '<b>Data dipulihkan dari cadangan.</b>'; });
@@ -418,28 +419,40 @@ async function imporAjar(X, wb) {
   return `<b>Impor pengampu selesai.</b> ${docs.length} baris pengampu dari ${peng.size} dosen terbaca (${peng.size - tambah.length} cocok dengan data dosen, ${tambah.length} ditambahkan${tambah.length ? ': ' + Object.entries(per).map(([k, v]) => `${v} ${esc(k)}`).join(', ') : ''}). ${lin} dosen mengajar di lebih dari satu prodi.${tanpa ? ` ${tanpa} baris tanpa nama dosen dilewati.` : ''}${lewat.length ? '<br>Dilewati: ' + lewat.map(esc).join('; ') : ''}<br>Lihat hasilnya di menu Beban Dosen, tab Beban kurikulum berjalan.`;
 }
 
-async function imporPenugasan(X, wb) {
+export async function imporPenugasan(X, wb) {
   const t = bacaTabel(X, wb, /^(dosen|namadosen)/);
   if (!t) throw new Error('Kolom Dosen tidak ditemukan. Gunakan template penugasan.');
   const { h, rows, mulai } = t;
   const c = { prodi: kol(h, /^prodi/), dosen: kol(h, /^(dosen|namadosen)/), nip: kol(h, /^nip|^nidn/), kode: kol(h, /^kodemk/, /^kode/), mk: kol(h, /^namamk/, /^matakuliah/, /^nama/), kelas: kol(h, /^kelas/), pt: kol(h, /^porsit/), pp: kol(h, /^porsip/), ko: kol(h, /^koordinator/) };
-  const docs = [], lewat = []; let baru = 0; const lintas = new Set();
+  const docs = [], lewat = [], mirip = [], ambigu = []; let baru = 0; const lintas = new Set(), dosenBaru = new Map(), terpakai = new Set();
   const pecah = (v, d) => { if (v === '' || v == null) return d; let n = parseFloat(String(v).replace(',', '.')); if (isNaN(n)) return d; if (n > 1) n /= 100; return Math.max(0, Math.min(1, n)); };
   for (let r = mulai; r < rows.length; r++) {
     const row = rows[r], nm = rapi(row[c.dosen]); if (!nm || /hapus baris ini/i.test(String(row[c.mk]))) continue;
     const salah = (m) => { if (lewat.length < 8) lewat.push(`baris ${r + 1}: ${m}`); };
     const pid = c.prodi >= 0 ? kodeProdi(row[c.prodi]) : null;
-    const d = cocokDosen(c.nip >= 0 ? digit(row[c.nip]) : '', '', nm); if (!d) { salah(`dosen "${nm}" belum terdaftar`); continue; }
     const kd = c.kode >= 0 ? rapi(row[c.kode]) : '', kn = c.mk >= 0 ? rapi(row[c.mk]) : '';
     const kand = S.mk.filter(m => (!pid || m.prodi === pid) && ((kd && norm(m.kode) === norm(kd)) || (kn && norm(m.nama) === norm(kn)))); if (!kand.length) { salah(`MK "${kd || kn}" tidak ditemukan${pid ? ' di ' + pid : ''}`); continue; }
     const m = kand[0], kelas = parseInt(row[c.kelas], 10) || kelasOf(S, m.prodi, m.smt);
+    if (ctx.role === 'prodi' && m.prodi !== ctx.prodi) { salah(`MK ${m.kode} milik prodi ${m.prodi}, di luar wewenang Anda`); continue; }
+    const semua = S.dosen.concat([...dosenBaru.values()]), cm = cocokkanDosen(semua, nm, c.nip >= 0 ? digit(row[c.nip]) : '');
+    let d;
+    if (cm && cm.ambigu) { ambigu.push(`"${nm}" cocok dengan ${cm.ambigu.slice(0, 3).map(x => x.nama).join(' / ')}`); continue; }
+    if (cm) { d = cm.d; if (cm.cara !== 'persis' && !mirip.some(q => q[0] === nm)) mirip.push([nm, d.nama]); }
+    else { d = { id: uid('D') + dosenBaru.size, nama: nm, nip: '', nidn: '', homebase: m.prodi, jabatan: '', pendidikan: '', bidang: '', status: 'Belum ada di DUK', prodiAjar: [] }; dosenBaru.set(norm(nm), d); }
+    terpakai.add(d.id);
     const old = S.tugas.find(x => x.dosen === d.id && x.mk === m.id);
     if (!old) baru++; if (d.homebase !== m.prodi) lintas.add(d.id);
     docs.push({ ...(old || { id: uid('T-' + m.id) + docs.length }), mk: m.id, prodi: m.prodi, dosen: d.id, kelas, porsiT: pecah(c.pt >= 0 ? row[c.pt] : '', 1), porsiP: pecah(c.pp >= 0 ? row[c.pp] : '', 1), koordinator: c.ko >= 0 ? /^(ya|y|1|true|x)$/i.test(rapi(row[c.ko])) : !!(old && old.koordinator) });
   }
-  if (!docs.length) throw new Error('Tidak ada penugasan yang valid. ' + lewat.join('; '));
+  if (!docs.length) throw new Error('Tidak ada penugasan yang valid. ' + lewat.concat(ambigu).join('; '));
+  const tambah = [...dosenBaru.values()].filter(d => terpakai.has(d.id));
+  if (tambah.length) await saveMany('dosen', tambah, `Tambah ${tambah.length} dosen dari impor penugasan`);
   await saveMany('tugas', docs, `Impor penugasan: ${docs.length} baris`);
-  return `<b>Impor penugasan selesai.</b> ${baru} penugasan baru dan ${docs.length - baru} diperbarui. ${lintas.size} dosen mengajar di prodi selain homebase-nya.${lewat.length ? '<br>Dilewati: ' + lewat.map(esc).join('; ') : ''}<br>Cek hasilnya di menu Beban Dosen.`;
+  return `<b>Impor penugasan selesai.</b> ${baru} penugasan baru dan ${docs.length - baru} diperbarui. ${lintas.size} dosen mengajar di prodi selain homebase-nya.`
+    + (mirip.length ? `<br><b>${mirip.length} nama dicocokkan ke dosen terdaftar</b> (Excel → aplikasi): ${mirip.slice(0, 10).map(q => esc(q[0]) + ' → ' + esc(q[1])).join('; ')}${mirip.length > 10 ? '; …' : ''}. Periksa bila ada yang keliru.` : '')
+    + (tambah.length ? `<br><b>${tambah.length} nama tidak ada di data dosen</b> dan dicatat apa adanya sebagai dosen baru: ${tambah.slice(0, 10).map(d => esc(d.nama)).join('; ')}${tambah.length > 10 ? '; …' : ''}. Lengkapi di Data Induk, tab Dosen.` : '')
+    + (ambigu.length ? `<br><b>${ambigu.length} baris dilewati</b> karena nama cocok dengan lebih dari satu dosen: ${ambigu.slice(0, 6).map(esc).join('; ')}. Tulis nama lebih lengkap lalu impor ulang.` : '')
+    + (lewat.length ? '<br>Dilewati: ' + lewat.map(esc).join('; ') : '') + '<br>Cek hasilnya di menu Beban Dosen.';
 }
 
 /* ---------- basis data ---------- */

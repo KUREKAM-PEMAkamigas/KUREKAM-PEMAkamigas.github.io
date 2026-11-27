@@ -55,18 +55,43 @@ export function tebakPeta(kolom, cpmk) {
   return peta;
 }
 
+/** Bagian kolom untuk tiap CPMK: [{cpmk, share}] (share 0..1). Tanpa pembagian, seluruh kolom untuk satu CPMK. Satu penilaian boleh mengukur beberapa CPMK dengan persen pembagian. */
+export function bagianKolom(p) {
+  if (!p) return [];
+  const b = (p.bagi || []).filter(x => x && x.cpmk && +x.persen > 0);
+  if (b.length) { const t = b.reduce((a, x) => a + +x.persen, 0); return b.map(x => ({ cpmk: x.cpmk, share: +x.persen / t })); }
+  return p.cpmk ? [{ cpmk: p.cpmk, share: 1 }] : [];
+}
+
+/** Pemeriksaan pemetaan: peringatan bila CPMK lebih banyak dari komponen penilaian, CPMK tak terukur, atau pembagian tidak berjumlah 100. */
+export function periksaPeta(kolom, peta, cpmk) {
+  const w = [], terukur = new Set();
+  let aktif = 0;
+  kolom.forEach(k => {
+    const p = peta[k.nama], bg = bagianKolom(p); if (bg.length) aktif++;
+    bg.forEach(x => terukur.add(x.cpmk));
+    const b = (p && p.bagi) || [];
+    if (b.length) { const t = b.reduce((a, x) => a + (+x.persen || 0), 0); if (Math.abs(t - 100) > 0.5) w.push(`Pembagian kolom "${k.nama}" berjumlah ${Math.round(t * 10) / 10}%, dinormalkan ke 100%.`); if (b.some(x => !x.cpmk)) w.push(`Kolom "${k.nama}" punya baris pembagian tanpa CPMK.`); }
+  });
+  if (cpmk.length > aktif) w.push(`CPMK (${cpmk.length}) lebih banyak dari komponen penilaian yang dipakai (${aktif}). Pastikan satu komponen yang mengukur beberapa CPMK memang demikian rancangannya (atur pembagian persen), atau ringkas CPMK menjadi 2–4.`);
+  const tak = cpmk.filter(c => !terukur.has(c.id));
+  if (tak.length) w.push(`CPMK belum terukur: ${tak.map(c => c.kode || c.id).join(', ')}.`);
+  return w;
+}
+
 /** Hitung. cpmk: CPMK MK ({id, cpl:[id]}), bobotCpmk: {id: bobot}, peta: {namaKolom: {cpmk, bobot}}. kelasBawaan dipakai bila baris tak punya kelas.
     Hasil: baris agregat per kelas, angkatan, dan CPL; ringkasan per CPL; ringkasan per kelas; dan skor tiap mahasiswa. */
 export function hitungCpl({ tabel, cpmk, bobotCpmk, peta, ambang, nimPos, nimLen, kelasBawaan = '' }) {
   const kol = tabel.kolom, per = {}, semua = {}, perKelas = {}, angk = new Set(), kelasSet = new Set(), mahasiswa = [];
-  const cpmkAda = cpmk.filter(c => kol.some(k => (peta[k.nama] || {}).cpmk === c.id));
+  const bg = {}; kol.forEach(k => { bg[k.nama] = bagianKolom(peta[k.nama]); });
+  const cpmkAda = cpmk.filter(c => kol.some(k => bg[k.nama].some(x => x.cpmk === c.id)));
   const cplIds = Array.from(new Set(cpmkAda.flatMap(c => c.cpl || [])));
   tabel.mhs.forEach(m => {
     const a = angkatanNim(m.nim, nimPos, nimLen), kelas = m.kelas || kelasBawaan || ''; angk.add(a); kelasSet.add(kelas);
     const skorC = {}, skorL = {};
     cpmkAda.forEach(c => {
       let s = 0, b = 0;
-      kol.forEach((k, j) => { const p = peta[k.nama]; if (!p || p.cpmk !== c.id || m.v[j] == null) return; const w = +p.bobot > 0 ? +p.bobot : 1; s += w * m.v[j]; b += w; });
+      kol.forEach((k, j) => { const x = bg[k.nama].find(y => y.cpmk === c.id); if (!x || m.v[j] == null) return; const p = peta[k.nama], w = (+p.bobot > 0 ? +p.bobot : 1) * x.share; s += w * m.v[j]; b += w; });
       if (b) skorC[c.id] = s / b;
     });
     cplIds.forEach(id => {
@@ -81,7 +106,7 @@ export function hitungCpl({ tabel, cpmk, bobotCpmk, peta, ambang, nimPos, nimLen
   const baris = Object.keys(per).map(key => { const [kelas, angkatan, cpl] = key.split('|'), x = per[key]; return { kelas, angkatan, cpl, n: x.n, lulus: x.lulus, rata: x.jum / x.n }; });
   const ringkas = cplIds.map(id => { const x = semua[id] || { n: 0, lulus: 0, jum: 0 }; return { cpl: id, n: x.n, lulus: x.lulus, persen: x.n ? x.lulus / x.n * 100 : null, rata: x.n ? x.jum / x.n : null }; });
   const kelasHasil = Object.keys(perKelas).map(key => { const [kelas, cpl] = key.split('|'), x = perKelas[key]; return { kelas, cpl, n: x.n, lulus: x.lulus, persen: x.lulus / x.n * 100, rata: x.jum / x.n }; });
-  return { baris, ringkas, kelasHasil, kelas: Array.from(kelasSet).sort(), cplIds, cpmkAda: cpmkAda.map(c => c.id), mahasiswa, mhs: tabel.mhs.length, angkatan: Array.from(angk).sort(), takTerpetakan: kol.filter(k => !(peta[k.nama] || {}).cpmk).map(k => k.nama) };
+  return { baris, ringkas, kelasHasil, kelas: Array.from(kelasSet).sort(), cplIds, cpmkAda: cpmkAda.map(c => c.id), mahasiswa, mhs: tabel.mhs.length, angkatan: Array.from(angk).sort(), takTerpetakan: kol.filter(k => !bg[k.nama].length).map(k => k.nama) };
 }
 
 /** Status per CPL: 'ok' bila persen ≥ target, 'near' bila selisih ≤ 10 poin, selain itu 'bad'. */

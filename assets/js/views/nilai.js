@@ -9,7 +9,7 @@ import { chart } from '../charts.js';
 import { predikat, rataSkor, narasi, lintasMk, htmlRapor, BATAS_KUAT } from '../rapor.js';
 import { SKPI_DEF } from '../skpilogic.js';
 import { berkasDocxSkpiWord } from '../skpiword.js';
-import { bacaTempel, kenaliTabel, tebakPeta, hitungCpl, statusCapaian } from '../nilaicpl.js';
+import { bacaTempel, kenaliTabel, tebakPeta, hitungCpl, statusCapaian, periksaPeta } from '../nilaicpl.js';
 
 const st = { mk: '', smt: '', kelas: '', teks: '', tabel: null, peta: {}, hasil: null, galat: '', membaca: false, kelasLihat: '' };
 const smtBawaan = () => { const d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1, awal = m >= 7 ? y : y - 1, gj = (S.settings.paritas || 'ganjil') === 'ganjil'; return `${gj ? 'Ganjil' : 'Genap'} ${awal}/${awal + 1}`; };
@@ -58,14 +58,27 @@ export default function nilaiView(el) {
     if (!st.tabel) { petaEl.innerHTML = ''; hasilEl.innerHTML = ''; return; }
     const c = cpmkMk(), t = st.tabel;
     const opsi = (pilih) => `<option value="">Abaikan kolom ini</option>${c.map(x => `<option value="${esc(x.id)}" ${x.id === pilih ? 'selected' : ''}>${esc(x.kode || '')} · ${esc(short(x.teks || '', 70))} (${esc((x.cpl || []).map(kodeCpl).join(', ') || 'tanpa CPL')})</option>`).join('')}`;
-    petaEl.innerHTML = `<div class="card" style="margin-top:14px">${head('2 · Petakan kolom nilai ke CPMK', 'Pilih CPMK yang diukur tiap kolom. Bobot dipakai bila beberapa kolom mengukur CPMK yang sama (dari persen di judul kolom bila ada).', 'link', '#6366f1')}
+    petaEl.innerHTML = `<div class="card" style="margin-top:14px">${head('2 · Petakan kolom nilai ke CPMK', 'Pilih CPMK yang diukur tiap kolom. Satu kolom boleh mengukur beberapa CPMK: pilih "+ CPMK lain" lalu atur persen pembagian (awalnya rata). Bobot dipakai bila beberapa kolom mengukur CPMK yang sama.', 'link', '#6366f1')}
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Kolom</th><th>Contoh nilai</th><th>CPMK yang diukur</th><th>Bobot</th></tr></thead><tbody>
-      ${t.kolom.map((k, j) => { const p = st.peta[k.nama] || { cpmk: '', bobot: 1 }; return `<tr><td><b>${esc(k.nama)}</b></td><td class="small">${esc(t.mhs.slice(0, 3).map(m => m.v[j] == null ? '-' : m.v[j]).join(', '))}</td>
-        <td><select class="inp" data-k="${esc(k.nama)}" style="max-width:460px">${opsi(p.cpmk)}</select></td>
-        <td><input class="inp pnum" type="number" min="0" step="any" data-b="${esc(k.nama)}" value="${p.bobot == null ? '' : p.bobot}" style="width:80px"></td></tr>`; }).join('')}
+      ${t.kolom.map((k, j) => { const p = st.peta[k.nama] || { cpmk: '', bobot: 1 }, bagi = p.bagi || [], kn = esc(k.nama);
+        const sel = (v, attr) => `<select class="inp" ${attr} style="max-width:420px">${opsi(v)}</select>`;
+        const sel2 = bagi.length ? bagi.map((x, i) => `<div style="display:flex;gap:6px;align-items:center;margin:2px 0">${sel(x.cpmk, `data-bk="${kn}" data-i="${i}"`)}<input class="inp pnum" type="number" min="0" max="100" step="any" data-bp="${kn}" data-i="${i}" value="${x.persen}" style="width:70px" title="Persen"><span class="small">%</span><button class="btn sm" data-bx="${kn}" data-i="${i}" title="Hapus">×</button></div>`).join('') + `<div class="small muted">Total ${Math.round(bagi.reduce((a, x) => a + (+x.persen || 0), 0) * 10) / 10}% · <a href="#" data-bt="${kn}">+ CPMK lain</a> · <a href="#" data-br="${kn}">bagi rata</a> · <a href="#" data-b1="${kn}">satu CPMK saja</a></div>` : sel(p.cpmk, `data-k="${kn}"`) + (p.cpmk ? ` <a href="#" class="small" data-bt="${kn}">+ CPMK lain</a>` : '');
+        return `<tr><td><b>${kn}</b></td><td class="small">${esc(t.mhs.slice(0, 3).map(m => m.v[j] == null ? '-' : m.v[j]).join(', '))}</td>
+        <td>${sel2}</td>
+        <td><input class="inp pnum" type="number" min="0" step="any" data-b="${kn}" value="${p.bobot == null ? '' : p.bobot}" style="width:80px"></td></tr>`; }).join('')}
       </tbody></table></div>
+      ${(() => { const w = periksaPeta(t.kolom, st.peta, c); return w.length ? `<div class="ribbon warn" style="margin-top:8px">${icon('alert')} <div>${w.map(esc).join('<br>')}</div></div>` : ''; })()}
       <div class="drawer-act" style="margin-top:8px"><button class="btn pri" id="n-hitung">Hitung capaian CPL →</button></div></div>`;
-    petaEl.querySelectorAll('[data-k]').forEach(s => s.onchange = () => { (st.peta[s.dataset.k] = st.peta[s.dataset.k] || { bobot: 1 }).cpmk = s.value; });
+    petaEl.querySelectorAll('[data-k]').forEach(s => s.onchange = () => { (st.peta[s.dataset.k] = st.peta[s.dataset.k] || { bobot: 1 }).cpmk = s.value; gambarPeta(); });
+    const pk = (n) => (st.peta[n] = st.peta[n] || { cpmk: '', bobot: 1 });
+    const rata = (b) => { const n = b.length; b.forEach(x => { x.persen = Math.round(10000 / n) / 100; }); };
+    petaEl.querySelectorAll('[data-bt]').forEach(a => a.onclick = (e) => { e.preventDefault(); const p = pk(a.dataset.bt); if (!(p.bagi || []).length) p.bagi = [{ cpmk: p.cpmk, persen: 100 }]; p.bagi.push({ cpmk: '', persen: 0 }); rata(p.bagi); gambarPeta(); });
+    petaEl.querySelectorAll('[data-br]').forEach(a => a.onclick = (e) => { e.preventDefault(); rata(pk(a.dataset.br).bagi); gambarPeta(); });
+    petaEl.querySelectorAll('[data-b1]').forEach(a => a.onclick = (e) => { e.preventDefault(); const p = pk(a.dataset.b1); p.cpmk = ((p.bagi || [])[0] || {}).cpmk || ''; delete p.bagi; gambarPeta(); });
+    petaEl.querySelectorAll('[data-bk]').forEach(x => x.onchange = () => { pk(x.dataset.bk).bagi[+x.dataset.i].cpmk = x.value; gambarPeta(); });
+    petaEl.querySelectorAll('[data-bp]').forEach(x => x.oninput = () => { pk(x.dataset.bp).bagi[+x.dataset.i].persen = +x.value || 0; });
+    petaEl.querySelectorAll('[data-bp]').forEach(x => x.onchange = () => gambarPeta());
+    petaEl.querySelectorAll('[data-bx]').forEach(x => x.onclick = () => { const p = pk(x.dataset.bx); p.bagi.splice(+x.dataset.i, 1); if (p.bagi.length <= 1) { p.cpmk = (p.bagi[0] || {}).cpmk || ''; delete p.bagi; } else rata(p.bagi); gambarPeta(); });
     petaEl.querySelectorAll('[data-b]').forEach(i => i.oninput = () => { (st.peta[i.dataset.b] = st.peta[i.dataset.b] || { cpmk: '' }).bobot = i.value === '' ? 1 : +i.value; });
     petaEl.querySelector('#n-hitung').onclick = () => { hitung(); hasilEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     gambarHasil();
@@ -193,7 +206,7 @@ export default function nilaiView(el) {
     const m = mk(), smt = st.smt.trim(), h = st.hasil;
     if (!m || !smt || !h) return;
     if (h.angkatan.includes('?') && !(await tanya('Sebagian mahasiswa tidak terbaca angkatannya dan tidak ikut rekap, tetapi datanya tetap tersimpan per mahasiswa. Lanjutkan?', 'Simpan'))) return;
-    const peta = {}; st.tabel.kolom.forEach(k => { const p = st.peta[k.nama]; if (p && p.cpmk) peta[k.nama] = { cpmk: p.cpmk, bobot: +p.bobot || 1 }; });
+    const peta = {}; st.tabel.kolom.forEach(k => { const p = st.peta[k.nama]; if (p && (p.cpmk || (p.bagi || []).length)) peta[k.nama] = { cpmk: p.cpmk || ((p.bagi || [])[0] || {}).cpmk || '', bobot: +p.bobot || 1, ...((p.bagi || []).length ? { bagi: p.bagi.filter(x => x.cpmk).map(x => ({ cpmk: x.cpmk, persen: +x.persen || 0 })) } : {}) }; });
     const tgl = new Date().toISOString().slice(0, 10), pre = `CN-${m.id}-${kunci(smt)}-`, kelasSet = new Set(h.kelas);
     const baru = h.baris.filter(b => b.angkatan !== '?').map(b => ({ id: `${pre}${kunci(b.kelas) || 'semua'}-${b.angkatan}-${b.cpl}`, prodi: m.prodi, angkatan: b.angkatan, cpl: b.cpl, pi: '', mk: m.id, smt, kelas: b.kelas, n: b.n, lulus: b.lulus, rata: +b.rata.toFixed(1), ambang, peta: Object.fromEntries(Object.entries(peta).map(([k, v]) => [k.slice(0, 40), v])), catatan: `Dari nilai ${m.nama}, ${smt}${b.kelas ? ', kelas ' + b.kelas : ''}`, tgl }));
     if (!baru.length) { toast('Tidak ada angkatan yang terbaca dari NIM.'); return; }
@@ -219,7 +232,7 @@ export default function nilaiView(el) {
     if (t.galat) { st.galat = t.galat; st.tabel = null; return ulang(); }
     st.tabel = t; st.teks = '';
     const simpanan = S.capaian.find(r => r.mk === st.mk && r.peta), tebak = tebakPeta(t.kolom, cpmkMk());
-    st.peta = {}; t.kolom.forEach(k => { const s = simpanan && simpanan.peta[k.nama.slice(0, 40)]; st.peta[k.nama] = s ? { ...s } : tebak[k.nama]; });
+    st.peta = {}; t.kolom.forEach(k => { const s = simpanan && simpanan.peta[k.nama.slice(0, 40)]; st.peta[k.nama] = s ? JSON.parse(JSON.stringify(s)) : tebak[k.nama]; });
     ulang();
   }
 

@@ -7,6 +7,7 @@ import { badanRps, berkasDocxRps, namaBerkasRps } from '../rpsdok.js';
 import { badanSap, berkasDocxSap, namaBerkasSap } from '../sapdok.js';
 import { badanAcp, berkasDocxAcp, namaBerkasAcp } from '../acpdok.js';
 import { urutkanCpmk } from './matrikscpmk.js';
+import { templatSub, imporSub } from '../subexcel.js';
 import { penyusun } from '../rumusan.js';
 import { bukaAsistenRps, periksaRps } from './asisten.js';
 import { alasanRps, usulanMk } from '../usulan.js';
@@ -62,7 +63,7 @@ export function cpmkView(el) {
       ${edS ? `<div class="filters" style="margin-top:8px"><button class="btn sm pri" id="ed-bk">${icon('edit')} ${bkl.length ? 'Ubah' : 'Isi'} bahan kajian</button></div>` : ''}`;
     const cp = S.cpmk.filter(c => c.mk === m.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })), cplMk = (m.cpl || []).map(id => S.cpl.find(c => c.id === id)).filter(Boolean);
     const tot = S.sub.filter(s => s.mk === m.id).reduce((a, s) => a + (+s.bobot || 0), 0);
-    R.innerHTML = `<div class="card">${head(esc(m.nama), `${m.inti ? 'Mata kuliah inti · ' : ''}Semester ${m.smt} · ${m.T}T + ${m.P}P · CPL dibebankan: ${cplMk.map(c => c.kode).join(', ') || 'belum ada'}`, 'spark', '#0ea5e9', edC ? `<button class="btn pri sm" id="add-c">${icon('plus')} CPMK</button>` : ro())}
+    R.innerHTML = `<div class="card">${head(esc(m.nama), `${m.inti ? 'Mata kuliah inti · ' : ''}Semester ${m.smt} · ${m.T}T + ${m.P}P · CPL dibebankan: ${cplMk.map(c => c.kode).join(', ') || 'belum ada'}`, 'spark', '#0ea5e9', edC ? `<button class="btn sm" id="sx-mk" title="Template Excel Sub-CPMK untuk MK ini">${icon('download')} Template MK</button>${ctx.role !== 'dosen' ? `<button class="btn sm" id="sx-prodi" title="Template Excel Sub-CPMK seluruh MK prodi">${icon('download')} Template prodi</button>` : ''}<button class="btn sm" id="sx-imp">${icon('upload')} Impor Excel</button><input type="file" id="sx-file" accept=".xlsx,.xls" style="display:none"><button class="btn pri sm" id="add-c">${icon('plus')} CPMK</button>` : ro())}
       <div class="cplbox">${cplMk.map(c => `<div><span class="tag" style="--c:#0ea5e9">${c.kode}</span> ${esc(c.teks)} ${badge((detect(c.teks, c.ranah === 'S' ? 'A' : 'C') || {}).code)}</div>`).join('')}</div>
       ${cp.map(c => { const b = detect(c.teks, hintOf(m)); const ss = S.sub.filter(s => s.cpmk === c.id).sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true })); return `<div class="cpmk"><div class="cpmk-h" data-c="${c.id}"><span class="orbsm">${c.kode.replace('CPMK', 'C')}</span><div><b>${esc(c.teks)}</b><div class="small muted">Mendukung ${(c.cpl || []).map(id => (S.cpl.find(x => x.id === id) || {}).kode).join(', ') || '–'} · PI: ${(S.pi || []).filter(p => (p.cpmk || []).includes(c.id)).map(p => p.kode).join(', ') || (m.inti ? '<span class="st bad">belum ada</span>' : '–')}</div></div>${b ? badge(b.code) : badge(null)} ${b ? tagRentang(m, b) : ''}${edC ? `<span class="aksi"><button class="btn sm btn-ic" data-ec="${c.id}">${icon('edit')} Alasan${c.usul ? ' / rumusan' : ''}</button><button class="btn sm btn-ic danger" data-dc="${c.id}">${icon('trash')} Lepas dari MK</button></span>` : ''}</div>
         <div class="subs">${ss.map(s => { const sb = detect(s.teks, 'C'); return `<div class="sub" data-s="${s.id}"><span class="small muted">${s.kode}</span><span>${esc(s.teks)}</span>${sb ? badge(sb.code) : badge(null)}<b>${fmt(s.bobot)}%</b>${edC ? `<span class="aksi"><button class="btn sm btn-ic" data-es="${s.id}">${icon('edit')} Ubah</button><button class="btn sm btn-ic danger" data-ds="${s.id}">${icon('trash')} Hapus</button></span>` : ''}</div>`; }).join('')}
@@ -107,6 +108,10 @@ export function cpmkView(el) {
           turunkanDok(r2); await save('rps', r2, `Bahan kajian ${m.nama}`); draw();
         } });
     };
+    const sxm = R.querySelector('#sx-mk'), sxp = R.querySelector('#sx-prodi'), sxi = R.querySelector('#sx-imp'), sxf = R.querySelector('#sx-file');
+    if (sxm) sxm.onclick = () => templatSub(m.prodi, [m.id], 'Template', m.kode).catch(e => toast('Template gagal: ' + e.message));
+    if (sxp) sxp.onclick = () => templatSub(m.prodi, null).catch(e => toast('Template gagal: ' + e.message));
+    if (sxi) { sxi.onclick = () => { sxf.value = ''; sxf.click(); }; sxf.onchange = () => { const f = sxf.files[0]; if (f) imporSub(f, m.prodi).catch(e => toast('Impor gagal: ' + e.message)); }; }
     const ac = R.querySelector('#add-c'); if (ac) ac.onclick = () => cForm();
     if (edC) {
       R.querySelectorAll('[data-ec]').forEach(b => b.onclick = () => cEdit({ ...S.cpmk.find(c => c.id === b.dataset.ec) }));

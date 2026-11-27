@@ -17,6 +17,7 @@ import { cpmkMatriksView } from './views/matrikscpmk.js';
 import { petaView, matriksView } from './views/peta.js';
 import { cpmkView, rpsView, deskView } from './views/ajar.js';
 import bebanView from './views/beban.js';
+import kesesuaianView from './views/kesesuaian.js';
 import { periksaView, bloomView, revisiView, laporanView } from './views/evaluasi.js';
 import indukView from './views/induk.js';
 import cadanganView from './views/cadangan.js';
@@ -232,6 +233,7 @@ export const ROUTES = [
   { id: 'riset', t: 'Penelitian & PKM Dosen', sub: 'Daftar untuk integrasi di RPS', ic: 'book', c: '#14b8a6', sec: 'Pembelajaran', v: risetView },
   { id: 'beban', t: 'Beban & Penugasan', ic: 'user', c: '#f5a524', sec: 'Beban Dosen & Prodi', v: bebanView },
   { id: 'bebanprodi', t: 'Beban Prodi & Kapasitas JP', ic: 'pulse', c: '#0ea5e9', sec: 'Beban Dosen & Prodi', v: bebanProdiView },
+  { id: 'kesesuaian', t: 'Kesesuaian Pedoman', sub: 'Pedoman vs desain dan target', ic: 'target', c: '#10b981', sec: 'Ringkasan', v: kesesuaianView },
   { id: 'periksa', t: 'Pemeriksa Kurikulum', ic: 'check', c: '#10b981', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: periksaView },
   { id: 'iabee', t: 'Kesiapan IABEE', sub: '10 indikator per prodi', ic: 'medal', c: '#8b5cf6', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: kesiapanView },
   { id: 'bahanled', t: 'Bahan LED IABEE', sub: 'Tabel suplemen A1–C2', ic: 'book', c: '#0ea5e9', sec: 'Evaluasi & Kawal Mutu', prodi: true, v: bahanLedView },
@@ -258,7 +260,7 @@ const NAV = [
     { tabs: ['rambu', 'bloom'], t: 'Rambu & Panduan', sub: 'Semester, level Bloom, kata kerja, RPS', lbl: ['Rambu pengisian', 'Taksonomi Bloom'] },
     { tabs: ['asisten', 'generator', 'impor'], sub: 'Pemandu, generator usulan, impor Excel', lbl: ['Pemandu dan validasi', 'Generator usulan', 'Impor dan ekspor'] }]],
   ['Pantau', [
-    { tabs: ['pimpinan'] }, { tabs: ['mutu'] }, { tabs: ['akademik'] },
+    { tabs: ['kesesuaian'] }, { tabs: ['pimpinan'] }, { tabs: ['mutu'] }, { tabs: ['akademik'] },
     { tabs: ['jadwal', 'pantau'], t: 'Jadwal & Pemantauan', sub: 'Tahapan, progres, dan aktivitas', lbl: ['Jadwal dan progres', 'Aktivitas pengguna'] },
     { tabs: ['kinerja'] }]],
   ['A · Landasan', [

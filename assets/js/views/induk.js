@@ -36,6 +36,7 @@ function tAkun(el, ed, adm) {
   const NAMA_MENU = { panduan: 'Panduan 10 Indikator', lulusan: 'Capstone, Lulusan & Tracer', capaian: 'Capaian CPL & Tindak Lanjut', beranda: 'Beranda', pimpinan: 'Dasbor Pimpinan', mutu: 'Dasbor Mutu', akademik: 'Dasbor Akademik', asisten: 'Asisten Kurikulum', visi: 'Visi & PL', cpl: 'CPL', bk: 'BoK & BK', mk: 'Mata Kuliah', peta: 'Peta', matriks: 'Matriks', cpmk: 'CPMK', rps: 'RPS & SAP', beban: 'Beban Dosen', bebanprodi: 'Beban Prodi', periksa: 'Pemeriksa', bloom: 'Bloom', revisi: 'Revisi', laporan: 'Laporan', induk: 'Data Induk' };
   el.innerHTML = `<div class="card">${head('Pengguna dan peran', 'Email akun masuk (sama dengan akun SIMANTAP) dipasangkan dengan peran di KUREKAM', 'user', '#8b5cf6', adm ? `${DB.mode === 'firebase' ? `<button class="btn sm" id="u-resetall" title="Hanya akun yang belum pernah mengganti kata sandi awal">${icon('upload')} Kirim atur ulang ke yang belum login</button> ` : ''}<button class="btn sm" id="u-xl">${icon('download')} Unduh Excel</button> <button class="btn sm" id="u-up">${icon('upload')} Unggah Excel</button> <button class="btn pri sm" id="u-add">${icon('plus')} Tambah pengguna</button><input type="file" id="u-file" accept=".xlsx,.xls" hidden>` : ro())}
     <div class="ribbon info" style="margin:10px 0">${icon('info')} ${S.pengguna.length ? 'Daftar ini aktif. Akun yang terdaftar hanya melihat menu sesuai perannya, dan akun yang belum terdaftar hanya bisa melihat sebagai dosen tanpa mata kuliah.' : 'Daftar masih kosong, sehingga setiap akun yang masuk masih bisa berganti peran lewat pilihan di kanan atas (masa penyiapan). Begitu pengguna pertama didaftarkan, pembatasan langsung berlaku. Daftarkan akun admin lebih dulu.'}${DB.mode === 'firebase' ? '' : ' Saat ini aplikasi berjalan di mode lokal tanpa akun masuk, jadi pembatasan per akun belum berlaku.'}</div>
+    ${adm && DB.mode === 'firebase' ? `<div class="card" style="margin:10px 0">${head('Status login', 'Siapa yang sudah dan belum login', 'user', '#f5a524', '')}<div id="u-status"></div></div>` : ''}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Email</th><th>Nama</th><th>Peran</th><th>Prodi</th><th>Data dosen</th><th>Kata sandi</th></tr></thead><tbody>
     ${rows.map(u => `<tr class="${adm ? 'click' : ''}" data-u="${esc(u.id)}"><td><b>${esc(u.email)}</b></td><td>${esc(u.nama || '')}</td><td>${(u.peran || []).map(k => `<span class="tag" style="--c:${(PERAN[k] || {}).c || '#64748b'}">${esc(nmP(k))}</span>`).join(' ')}</td><td>${esc(u.prodi || '')}</td><td class="small">${esc((S.dosen.find(d => d.id === u.dosen) || {}).nama || '')}</td><td class="small">${u.sandiDiubah ? `<span class="st ok">Diganti pengguna</span> ${tgl(u.sandiDiubah)}` : u.sandiAwal ? `<span class="st near">Masih kata sandi awal</span> ${tgl(u.sandiAwal)}` : '<span class="muted">Akun lama</span>'}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Belum ada pengguna terdaftar.</td></tr>'}</tbody></table></div></div>
   <div class="card" style="margin-top:14px">${head('Menu yang tampil per peran', 'Menu di luar daftar tidak muncul dan tidak bisa dibuka lewat alamat', 'eye', '#0ea5e9')}
@@ -79,11 +80,38 @@ function tAkun(el, ed, adm) {
     el.querySelector('#ta-panjang').onclick = () => salin(panjang, 'Tautan panjang disalin.');
     el.querySelector('#ta-pesan').onclick = () => salin(pesan(), 'Pesan siap kirim disalin. Tempel ke WhatsApp.');
   }
+  /* Status login: bukti sudah login = sandi pernah diganti, atau tercatat sesi/jejak aktif. Selain itu dianggap belum login. */
+  let statusRows = null;
+  const muatStatus = async () => {
+    if (statusRows) return statusRows;
+    let sesi = [], jejak = [];
+    try { sesi = await DB.ambilSemua('sesi'); } catch (e) { /* abaikan */ }
+    try { jejak = await DB.ambilSejak('jejak', new Date(Date.now() - 120 * 864e5).toISOString(), 10000); } catch (e) { /* abaikan */ }
+    const akhir = new Map(); [...sesi.map(x => [x.email, x.terakhir || x.t]), ...jejak.map(x => [x.email, x.t])].forEach(([em, t]) => { em = String(em || '').toLowerCase(); if (em && t && t > (akhir.get(em) || '')) akhir.set(em, t); });
+    statusRows = S.pengguna.slice().sort((x, y) => (x.email || '').localeCompare(y.email || '')).map(u => { const t = akhir.get((u.email || '').toLowerCase()) || ''; const sudah = !!u.sandiDiubah || !!t; return { u, sudah, t, dasar: u.sandiDiubah ? 'sandi sudah diganti' : t ? 'tercatat aktif' : u.sandiAwal ? 'akun dibuat lewat aplikasi, belum pernah masuk' : 'tidak ada catatan masuk' }; });
+    return statusRows;
+  };
+  const kartuStatus = el.querySelector('#u-status');
+  if (kartuStatus) {
+    let saringSt = 'belum';
+    const gambar = async () => {
+      kartuStatus.innerHTML = '<div class="small muted">Memuat status login…</div>'; const R = await muatStatus(), sudah = R.filter(r => r.sudah), belum = R.filter(r => !r.sudah);
+      const tampil = saringSt === 'sudah' ? sudah : saringSt === 'belum' ? belum : R;
+      kartuStatus.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px"><div class="tag" style="--c:#64748b"><b>${R.length}</b> terdaftar</div><div class="tag" style="--c:#10b981"><b>${sudah.length}</b> sudah login</div><div class="tag" style="--c:#f5a524"><b>${belum.length}</b> belum login</div></div>
+        <div class="seg" style="margin-bottom:8px">${[['belum', 'Belum login'], ['sudah', 'Sudah login'], ['semua', 'Semua']].map(([k, t]) => `<button data-st="${k}" class="${saringSt === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+        <div class="tbl-wrap" style="max-height:60vh;overflow:auto"><table class="tbl"><thead><tr><th>No</th><th>Email</th><th>Nama</th><th>Status</th><th>Terakhir aktif</th></tr></thead><tbody>${tampil.map((r, i) => `<tr style="cursor:default"><td class="num">${i + 1}</td><td><b>${esc(r.u.email)}</b></td><td>${esc(r.u.nama || '')}</td><td><span class="st ${r.sudah ? 'ok' : 'near'}">${r.sudah ? 'Sudah login' : 'Belum login'}</span><div class="small muted">${esc(r.dasar)}</div></td><td class="small">${r.t ? esc(new Date(r.t).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '-'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Tidak ada.</td></tr>'}</tbody></table></div>
+        <div class="small muted" style="margin-top:6px">Sudah login = kata sandi pernah diganti, atau tercatat aktif di aplikasi (sesi dan jejak 120 hari terakhir). Yang tidak punya bukti itu dihitung belum login, termasuk akun lama yang mungkin masuk sebelum pencatatan ada; periksa daftar ini sebelum mengirim.</div>
+        <div class="drawer-act" style="margin-top:8px"><button class="btn sm" id="st-xl">${icon('download')} Unduh daftar ini (Excel)</button></div>`;
+      kartuStatus.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { saringSt = b.dataset.st; gambar(); });
+      kartuStatus.querySelector('#st-xl').onclick = async () => { const X = await loadXLSX(), wb = X.utils.book_new(); const ws = X.utils.aoa_to_sheet([['No', 'Email', 'Nama', 'Status', 'Dasar', 'Terakhir aktif'], ...tampil.map((r, i) => [i + 1, r.u.email, r.u.nama || '', r.sudah ? 'Sudah login' : 'Belum login', r.dasar, r.t || ''])]); ws['!cols'] = [6, 34, 28, 14, 40, 22].map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, 'STATUS'); unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), `Status_Login_${saringSt}.xlsx`); };
+    };
+    gambar();
+  }
   const bra = el.querySelector('#u-resetall'); if (bra) bra.onclick = async () => {
-    /* Sasaran: akun yang dibuat lewat aplikasi dan belum pernah mengganti kata sandi awal. Yang sudah masuk dan mengganti sandi tidak disentuh. */
-    const sasaran = S.pengguna.filter(u => u.email && u.sandiAwal && !u.sandiDiubah);
-    if (!sasaran.length) { toast('Semua pengguna sudah pernah masuk dan mengganti kata sandi. Tidak ada yang dikirimi.'); return; }
-    if (!(await tanya(`Kirim email atur ulang kata sandi ke ${sasaran.length} pengguna yang belum pernah login?\n\n${sasaran.slice(0, 12).map(u => u.email).join('\n')}${sasaran.length > 12 ? '\n…' : ''}\n\nPengguna yang sudah login dan mengganti sandi tidak dikirimi.`, 'Ya, kirim'))) return;
+    bra.disabled = true; const R = await muatStatus(); bra.disabled = false;
+    const sasaran = R.filter(r => !r.sudah && r.u.email && r.u.email.toLowerCase() !== (DB.user && DB.user.email || '').toLowerCase()).map(r => r.u);
+    if (!sasaran.length) { toast('Semua pengguna sudah login. Tidak ada yang dikirimi.'); return; }
+    if (!(await tanya(`Kirim email atur ulang kata sandi ke ${sasaran.length} pengguna yang BELUM login (dari ${R.length} terdaftar)?\n\nDaftar lengkap ada di kartu Status login. Yang sudah login tidak dikirimi.`, 'Ya, kirim'))) return;
     bra.disabled = true; let ok = 0; const gagal = [];
     for (const u of sasaran) { try { await DB.kirimReset(u.email); ok++; } catch (e) { gagal.push(u.email); } await new Promise(r => setTimeout(r, 400)); }
     await addLog(`Kirim email atur ulang kata sandi massal: ${ok} terkirim${gagal.length ? ', ' + gagal.length + ' gagal' : ''}`);

@@ -1,10 +1,11 @@
 /* KUREKAM · Data induk dan pengaturan: prodi dan kelas, dosen, parameter, impor/ekspor, basis data, log */
-import { muatUlangAkun, S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, uid, saveSettings, addLog, resetData, replaceData } from '../app.js';
+import { muatUlangAkun, S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, uid, saveSettings, addLog, userName, resetData, replaceData } from '../app.js';
 import { labelKel, labelGrup } from '../kode.js';
 import { titikOtomatis } from '../pulih.js';
 import { DB, getFirebaseConfig, saveFirebaseConfig, buatTautanFirebase } from '../db.js';
 import { PARAM_DEFAULT, KELOMPOK, KAT_IABEE, GRUP, APP, PERAN, MENU_PERAN } from '../config.js';
 import { param, fmt, KMAP, kelasOf, RANAH_CPL, HURUF_IABEE } from '../rules.js';
+import { daftarTarget, unduhRevisi } from './kesesuaian.js';
 import { head, formDrawer, prodiTag, ro, tanya, unduh, loadXLSX } from './ui.js';
 import { DATA_HEAD, JP_DEFAULT } from './bebanprodi.js';
 import { imporObe } from '../obeimpor.js';
@@ -18,6 +19,7 @@ const GK = ['MKU', 'MBS', 'MBE', 'MKK'];
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const pad = (n) => String(n).padStart(2, '0');
 
+export const bukaParameter = () => { tab = 'param'; };
 export default function indukView(el) {
   const edI = can('induk') || ['admin', 'developer'].includes(ctx.role), adm = ['admin', 'developer'].includes(ctx.role), admP = can('parameter');
   const tabs = adm || ctx.role === 'akademik' ? TABS : TABS.filter(([k]) => k === 'param');
@@ -180,7 +182,7 @@ function tParam(el, ed, adm) {
       <div class="pform">
         <div class="pfrow"><span>Batas bawah beban dosen</span>${num('p-bmin', P.bebanRiilMin, .5)}<small>JP total per minggu</small></div>
         <div class="pfrow"><span>Batas atas beban dosen</span>${num('p-bmax', P.bebanRiilMax, .5)}<small>JP total per minggu</small></div>
-        <div class="pfrow"><span>Total SKS minimal</span>${num('p-sks', P.totalSksMin)}<small>Permendiktisaintek 39/2025</small></div>
+        <div class="pfrow"><span>Total SKS minimal dan maksimal</span><span class="duo">${num('p-sks', P.totalSksMin)}${num('p-sksmax', P.totalSksMax || 156)}</span><small>Permendiktisaintek 39/2025; lebih dari maksimal ditandai merah</small></div>
         <div class="pfrow"><span>Jumlah MK per prodi</span><span class="duo">${num('p-mkmin', P.mkProdiMin)}${num('p-mkmax', P.mkProdiMax)}</span><small>minimal dan maksimal</small></div>
         <div class="pfrow"><span>Jumlah CPMK per MK</span><span class="duo">${num('p-cmmin', P.cpmkPerMk.min)}${num('p-cmmax', P.cpmkPerMk.max)}</span><small>minimal dan maksimal</small></div>
         <div class="pfrow"><span>Jumlah Sub-CPMK per CPMK</span><span class="duo">${num('p-scmin', P.subPerCpmk.min)}${num('p-scmax', P.subPerCpmk.max)}</span><small>minimal dan maksimal</small></div>
@@ -223,6 +225,7 @@ function tParam(el, ed, adm) {
     ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<tr><td><b>Semester ${s}</b></td>${P.kerangka[s].map((v, i) => `<td class="num">${num(`k-${s}-${i}`, v)}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
     <p class="note">Batas beban dosen ${PARAM_DEFAULT.bebanRiilMin}–${PARAM_DEFAULT.bebanRiilMax} JP total per minggu adalah nilai awal aplikasi dan perlu ditetapkan pimpinan. Semester 7 dan 8 tidak memakai rentang teori dan praktik.</p></div>
+  ${adm ? `<div class="card" style="margin-top:14px">${head('Alasan dan riwayat perubahan target', 'Perubahan target Pedoman (SKS, rentang semester, jumlah MK, porsi praktik) wajib beralasan', 'doc', '#6366f1')}<label class="small" style="display:block">Alasan perubahan<textarea class="inp" id="p-alasan" rows="2" style="width:100%;box-sizing:border-box" placeholder="Misalnya: disepakati rapat prodi, semester 6 menjadi 16 SKS karena kebutuhan capstone"></textarea></label><div class="drawer-act" style="margin-top:8px"><button class="btn sm" id="p-revisi">${icon('download')} Unduh usulan revisi Pedoman (Excel)</button></div>${((S.settings.riwayatTarget || []).length) ? `<div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Waktu</th><th>Oleh</th><th>Perubahan</th><th>Alasan</th></tr></thead><tbody>${S.settings.riwayatTarget.slice(0, 8).map(r => `<tr style="cursor:default"><td class="small">${esc(new Date(r.t).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }))}</td><td class="small">${esc(r.oleh || '')}</td><td class="small">${(r.ubah || []).slice(0, 6).map(u => esc(u.nama) + ': ' + esc(String(u.dari)) + ' → ' + esc(String(u.ke))).join('<br>')}${(r.ubah || []).length > 6 ? '<br>…' : ''}</td><td class="small">${esc(r.alasan || '')}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>` : ''}
   ${adm ? `<div class="savebar"><span id="p-dirty" class="small muted">Ubah angka lalu tekan Simpan parameter.</span><div class="sp"></div><button class="btn danger" id="p-def">${icon('loop')} Kembalikan ke nilai pedoman</button><button class="btn pri" id="p-save">${icon('check')} Simpan parameter</button></div>` : ''}`;
   const simpanKp = async () => {
     const kp = {}; for (const k of Object.keys(PARAM_DEFAULT.kodePrefix)) { kp[k] = el.querySelector('#kp-' + k).value.trim(); if (!/^[A-Za-z][A-Za-z0-9-]{0,11}$/.test(kp[k])) { toast('Awalan kode tidak sah (huruf dan angka, maksimal 12 karakter, diawali huruf): ' + kp[k]); return false; } }
@@ -236,15 +239,21 @@ function tParam(el, ed, adm) {
   if (!adm) return;
   const v = (id) => { const x = el.querySelector('#' + id).value; return x === '' ? null : +x; };
   el.querySelector('#p-save').onclick = async () => {
+    const sebelum = daftarTarget(); const alasanT = (el.querySelector('#p-alasan').value || '').trim();
     const ker = {}; for (let s = 1; s <= 8; s++) ker[s] = P.kerangka[s].map((_, i) => v(`k-${s}-${i}`));
     const kodeBakuForm = () => { const out = []; for (let i = 0; el.querySelector('#kb-p-' + i); i++) { const p = el.querySelector('#kb-p-' + i).value.trim(), k = el.querySelector('#kb-k-' + i).value.trim(), n = el.querySelector('#kb-n-' + i).value.trim(); if (p && k) out.push({ p, k, n }); } return out; };
     for (const x of kodeBakuForm()) { try { new RegExp(x.p, 'i'); } catch (e) { toast('Pola nama tidak sah: ' + x.p); return; } if (!/^(AK|TP|TO|TM|TI|LG)[1-4]\d{3}$/i.test(x.k)) { toast('Kode tidak sesuai pola: ' + x.k); return; } }
     if (!(v('p-t') > 0) || GK.some(g => !(v('p-' + g) > 0))) { toast('Durasi harus lebih dari nol'); return; }
-    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), praktikMaxSks: v('p-pmaxs') || 3, capstoneSks: v('p-caps') || 4, magangInti: v('p-mgi') || 10, magangKonversi: v('p-mgk') || 10, masaStudiNormal: v('p-msn') || 8, masaStudiMaks: v('p-msm') || 14, kodeBaku: kodeBakuForm(), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), nimPos: v('p-nimpos') || 1, nimLen: v('p-nimlen') || 2, piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), cpmkPerMk: { min: v('p-cmmin') || 2, max: v('p-cmmax') || 4 }, subPerCpmk: { min: v('p-scmin') || 2, max: v('p-scmax') || 3 }, indikatorPerSub: { min: v('p-inmin') || 3, max: v('p-inmax') || 3 }, cplMin: { total: v('c-tot') || 0, ...Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, v('c-' + r) || 0])) }, cplIabee: Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, Array.from(new Set(el.querySelector('#ci-' + r).value.toLowerCase().split(/[^a-z]+/).filter(x => HURUF_IABEE.includes(x)))).sort()])), kerangka: ker, dok: { sap: { no: el.querySelector('#d-sap-no').value.trim() || PARAM_DEFAULT.dok.sap.no, terbit: el.querySelector('#d-sap-tg').value.trim() || PARAM_DEFAULT.dok.sap.terbit, rev: el.querySelector('#d-sap-rv').value.trim() || PARAM_DEFAULT.dok.sap.rev }, acp: { no: el.querySelector('#d-acp-no').value.trim() || PARAM_DEFAULT.dok.acp.no, terbit: el.querySelector('#d-acp-tg').value.trim() || PARAM_DEFAULT.dok.acp.terbit, rev: el.querySelector('#d-acp-rv').value.trim() || PARAM_DEFAULT.dok.acp.rev } } };
+    const paramLama = S.settings.param, jpLama = S.settings.jp;
+    S.settings.param = { ...(S.settings.param || {}), menitTeori: v('p-t'), praktikMaxSks: v('p-pmaxs') || 3, capstoneSks: v('p-caps') || 4, magangInti: v('p-mgi') || 10, magangKonversi: v('p-mgk') || 10, masaStudiNormal: v('p-msn') || 8, masaStudiMaks: v('p-msm') || 14, kodeBaku: kodeBakuForm(), durasiPraktik: Object.fromEntries(GK.map(g => [g, v('p-' + g)])), bebanRiilMin: v('p-bmin'), bebanRiilMax: v('p-bmax'), totalSksMin: v('p-sks'), totalSksMax: v('p-sksmax') || 156, mkProdiMin: v('p-mkmin'), mkProdiMax: v('p-mkmax'), muatanSpesifikMin: v('p-spes'), pendidikanUmumMax: v('p-umum'), matSainsMin: v('p-mat'), praktikMin: v('p-prmin'), praktikMax: v('p-prmax'), piMinPersen: v('p-pipct'), piMinNilai: v('p-pinil'), nimPos: v('p-nimpos') || 1, nimLen: v('p-nimlen') || 2, piPerCplMin: v('p-pimin'), piPerCplMax: v('p-pimax'), cpmkPerMk: { min: v('p-cmmin') || 2, max: v('p-cmmax') || 4 }, subPerCpmk: { min: v('p-scmin') || 2, max: v('p-scmax') || 3 }, indikatorPerSub: { min: v('p-inmin') || 3, max: v('p-inmax') || 3 }, cplMin: { total: v('c-tot') || 0, ...Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, v('c-' + r) || 0])) }, cplIabee: Object.fromEntries(Object.keys(RANAH_CPL).map(r => [r, Array.from(new Set(el.querySelector('#ci-' + r).value.toLowerCase().split(/[^a-z]+/).filter(x => HURUF_IABEE.includes(x)))).sort()])), kerangka: ker, dok: { sap: { no: el.querySelector('#d-sap-no').value.trim() || PARAM_DEFAULT.dok.sap.no, terbit: el.querySelector('#d-sap-tg').value.trim() || PARAM_DEFAULT.dok.sap.terbit, rev: el.querySelector('#d-sap-rv').value.trim() || PARAM_DEFAULT.dok.sap.rev }, acp: { no: el.querySelector('#d-acp-no').value.trim() || PARAM_DEFAULT.dok.acp.no, terbit: el.querySelector('#d-acp-tg').value.trim() || PARAM_DEFAULT.dok.acp.terbit, rev: el.querySelector('#d-acp-rv').value.trim() || PARAM_DEFAULT.dok.acp.rev } } };
     S.settings.jp = { dur: v('j-dur') || JP_DEFAULT.dur, perDay: v('j-day') || JP_DEFAULT.perDay, days: v('j-days') || JP_DEFAULT.days };
     if (kb && !(await simpanKp())) return;
-    await saveSettings(); await addLog('Ubah parameter kurikulum'); rerender();
+    const ubahT = daftarTarget().map((x, i) => ({ nama: x.nama, dari: sebelum[i] ? sebelum[i].berlaku : '', ke: x.berlaku })).filter(u => String(u.dari) !== String(u.ke));
+    if (ubahT.length && !alasanT) { S.settings.param = paramLama; S.settings.jp = jpLama; toast('Isi alasan perubahan target Pedoman lebih dulu (kotak Alasan di atas tombol simpan).'); return; }
+    if (ubahT.length) S.settings.riwayatTarget = [{ t: new Date().toISOString(), oleh: userName(), alasan: alasanT, ubah: ubahT }].concat(S.settings.riwayatTarget || []).slice(0, 100);
+    await saveSettings(); await addLog('Ubah parameter kurikulum' + (ubahT.length ? ` (${ubahT.length} butir target Pedoman): ${alasanT}` : '')); rerender();
   };
+  el.querySelector('#p-revisi').onclick = () => unduhRevisi();
   el.querySelector('#p-def').onclick = async () => { if (!(await tanya('Semua parameter dikembalikan ke nilai Buku Pedoman 2027. Lanjutkan?'))) return; S.settings.param = {}; delete S.settings.jp; await saveSettings(); await addLog('Parameter dikembalikan ke nilai pedoman'); rerender(); };
 }
 

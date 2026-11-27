@@ -3,6 +3,7 @@
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, addLog, toast } from '../app.js';
 import { chart, AX } from '../charts.js';
 import { fmt, param, byProdi, capaianCpl, tlProdi, TL_STATUS } from '../rules.js';
+import { laporanCplWord } from '../laporancpl.js';
 import { head, formDrawer, ro, kpi, animateCounts, short, stTag, tanya, unduh, loadXLSX } from './ui.js';
 
 let tab = 'capaian';
@@ -61,7 +62,7 @@ function tCapaian(el, pid, p, ed) {
     ${kpi('Di bawah kriteria', K.bawah.length, 'perlu tindak lanjut', K.bawah.length ? '#f0616d' : '#10b981', 'alert')}
     ${kpi('Angkatan terdata', K.angkatan.length, K.angkatan.join(', ') || 'belum ada data', '#8b5cf6', 'calendar')}
   </div>
-  <div class="card" style="margin-top:18px">${head('Rekap capaian CPL · ' + pid, esc(p.nama) + '. Klik angka untuk mengubah.', 'pulse', '#0ea5e9', ed ? `<button class="btn sm" id="c-tpl">${icon('download')} Templat Excel</button><button class="btn sm" id="c-imp">${icon('upload')} Impor Excel</button><button class="btn pri sm" id="c-add">${icon('plus')} Isi capaian</button>` : ro())}
+  <div class="card" style="margin-top:18px">${head('Rekap capaian CPL · ' + pid, esc(p.nama) + '. Klik angka untuk mengubah.', 'pulse', '#0ea5e9', `<button class="btn sm" id="c-doc">${icon('download')} Laporan Word</button>` + (ed ? `<button class="btn sm" id="c-tpl">${icon('download')} Templat Excel</button><button class="btn sm" id="c-imp">${icon('upload')} Impor Excel</button><button class="btn pri sm" id="c-add">${icon('plus')} Isi capaian</button>` : ro()))}
     ${cpl.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>CPL</th>${K.angkatan.map(a => `<th class="num">Angkatan ${esc(a)}</th>`).join('')}<th>Status</th></tr></thead><tbody>
       ${baris.map(h => `<tr><td><b>${esc(h.c.kode)}</b><div class="small muted" style="white-space:normal">${esc(h.c.teks)}</div></td>
         ${K.angkatan.map(a => { const x = h.per.find(q => q.angkatan === a); return x ? `<td class="num ${ed && !x.turunan ? 'click' : ''}" ${ed && !x.turunan ? `data-cap="${esc(x.id)}"` : ''}><b style="color:${x.persen >= K.krit ? '#0f8a5f' : '#b42335'}">${fmt(x.persen, 1)}%</b><div class="small muted">${x.lulus}/${x.n}${x.dari === 'PI' ? ' · PI terendah' : ''}${x.turunan === 'CPMK' ? ' · dari realisasi (CPMK)' : x.turunan ? ' · estimasi dari nilai akhir MK' : ''}</div></td>` : '<td class="num muted">–</td>'; }).join('')}
@@ -71,6 +72,10 @@ function tCapaian(el, pid, p, ed) {
   ${matriksCard(pid, cpl, K)}
   ${K.terukur.length ? `<div class="card" style="margin-top:18px">${head('Capaian angkatan terbaru terhadap kriteria', 'Garis putus-putus = kriteria ketercapaian', 'target', '#10b981')}<div class="chart" id="c-cap"></div></div>` : ''}`;
   animateCounts(el);
+  el.querySelector('#c-doc').onclick = async () => {
+    try { const blob = await laporanCplWord({ prodi: p, K, M: petaMk(pid, cpl), tl: tlProdi(S, pid), par: param(S), tglCetak: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) });
+      unduh(new Blob([blob], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), `Laporan_Evaluasi_CPL_${pid}.docx`); }
+    catch (e) { console.error(e); toast('Gagal membuat Word: ' + (e.message || e)); } };
   const bx = el.querySelector('#c-xlsx'); if (bx) bx.onclick = () => unduhRekap(pid, p, cpl, K);
   if (K.terukur.length) chart(el.querySelector('#c-cap'), { tooltip: { trigger: 'axis', valueFormatter: v => fmt(v, 1) + '%' }, grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: K.terukur.map(h => h.c.kode), ...AX }, yAxis: { type: 'value', max: 100, ...AX },

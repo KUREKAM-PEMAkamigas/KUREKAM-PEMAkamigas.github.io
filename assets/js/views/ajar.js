@@ -3,6 +3,7 @@ import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, uid, openDraw
 import { labelKel, labelGrup } from '../kode.js';
 import { APP } from '../config.js';
 import { tombolUnggahRps } from '../rpsimpor.js';
+import { templatDokMk, imporDokMk, mkBolehDok } from '../dokmkexcel.js';
 import { badanRps, berkasDocxRps, namaBerkasRps } from '../rpsdok.js';
 import { badanSap, berkasDocxSap, namaBerkasSap } from '../sapdok.js';
 import { badanAcp, berkasDocxAcp, namaBerkasAcp } from '../acpdok.js';
@@ -129,6 +130,17 @@ export function blankRps(m) {
   const ss = S.sub.filter(s => s.mk === m.id); const prak = m.P > m.T;
   return { id: m.id, mk: m.id, prodi: m.prodi, deskripsi: '', pustaka: '', penelitian: '', pkm: '', status: 'draf', pertemuan: Array.from({ length: 16 }, (_, i) => { const w = i + 1; if (w === 8 || w === 16) return { m: w, ujian: w === 8 ? 'UTS' : 'UAS', sub: ss.map(s => s.id), materi: w === 8 ? 'Ujian Tengah Semester' : 'Ujian Akhir Semester', metode: prak ? 'Ujian praktik' : 'Ujian tertulis', asesmen: prak ? 'Unjuk kerja' : 'Tes tertulis', bobot: w === 8 ? 20 : 25, sap: {} }; return { m: w, sub: [], materi: '', metode: '', asesmen: '', bobot: 0, integ: '', integUraian: '', sap: {} }; }) };
 }
+/** Tombol Excel untuk paket dokumen MK (Deskripsi, RPS, SAP): templat MK terpilih, templat semua MK yang boleh diisi, dan unggah. */
+function tombolExcelDok(wadah) {
+  if (!wadah) return;
+  const pid = ctx.prodi, kap = ['prodi', 'admin', 'developer'].includes(ctx.role);
+  wadah.insertAdjacentHTML('beforeend', `<button class="btn sm" id="dx-mk">${icon('download')} Templat Excel MK ini</button><button class="btn sm" id="dx-semua">${icon('download')} ${kap ? 'Templat Excel prodi' : 'Templat Excel MK saya'}</button><button class="btn pri sm" id="dx-imp">${icon('upload')} Unggah Excel</button><input type="file" id="dx-file" accept=".xlsx,.xls" hidden>`);
+  const gagal = (e) => { console.error(e); toast('Gagal: ' + (e.message || e)); };
+  wadah.querySelector('#dx-mk').onclick = () => { const m = S.mk.find(x => x.id === sel); if (!m) { toast('Pilih mata kuliah dulu.'); return; } if (!mkBolehDok(pid).some(x => x.id === m.id)) { toast('MK ini belum dapat diisi atau bukan MK yang Anda ampu.'); return; } templatDokMk(pid, [m.id], 'Template', m.kode).catch(gagal); };
+  wadah.querySelector('#dx-semua').onclick = () => templatDokMk(pid, mkBolehDok(pid).map(m => m.id)).catch(gagal);
+  const f = wadah.querySelector('#dx-file'); wadah.querySelector('#dx-imp').onclick = () => { f.value = ''; f.click(); };
+  f.onchange = () => { if (f.files[0]) imporDokMk(f.files[0], pid).catch(gagal); };
+}
 export function rpsView(el) {
   el.innerHTML = `<div class="filters" id="rps-unggah" style="margin-bottom:12px"></div><div class="grid g-12 split-mk"><div class="card" id="left"></div><div id="right"></div></div>`;
   const draw = () => {
@@ -249,7 +261,7 @@ export function rpsView(el) {
     q('#asis').onclick = () => bukaAsistenRps(m, draw, blankRps);
     q('#gen-dok').onclick = () => bukaGeneratorDok(m, draw);
   };
-  tombolUnggahRps(el, draw);
+  tombolUnggahRps(el, draw); tombolExcelDok(el.querySelector('#rps-unggah'));
   draw();
 }
 
@@ -305,7 +317,7 @@ export function susunDeskripsi(m, kunci) {
   return t;
 }
 export function deskView(el) {
-  el.innerHTML = `<div class="grid g-12 split-mk"><div class="card" id="left"></div><div id="right"></div></div>`;
+  el.innerHTML = `<div class="filters" id="dk-excel" style="margin-bottom:12px"></div><div class="grid g-12 split-mk"><div class="card" id="left"></div><div id="right"></div></div>`;
   const draw = () => {
     mkList(el.querySelector('#left'), draw, m => { const r = rpsOf(S, m.id); return deskLengkap(r) ? '<span class="st ok">lengkap</span>' : '<span class="st near">belum</span>'; });
     const m = S.mk.find(x => x.id === sel), R = el.querySelector('#right');
@@ -364,5 +376,6 @@ export function deskView(el) {
         } });
     };
   };
+  tombolExcelDok(el.querySelector('#dk-excel'));
   draw();
 }

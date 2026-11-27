@@ -23,6 +23,7 @@ import cadanganView from './views/cadangan.js';
 import nilaiView from './views/nilai.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
+import imporView from './views/impor.js';
 import { piView, kesiapanView } from './views/iabee.js';
 import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
@@ -212,6 +213,7 @@ export const ROUTES = [
   { id: 'mutu', t: 'Dasbor Mutu', sub: 'SPM', ic: 'medal', c: '#f0616d', sec: 'Ringkasan', v: mutu },
   { id: 'akademik', t: 'Dasbor Akademik', sub: 'Kasubbag AK', ic: 'calendar', c: '#f5a524', sec: 'Ringkasan', v: akademik },
   { id: 'asisten', t: 'Asisten Kurikulum', sub: 'Pemandu dan generator', ic: 'spark', c: '#f5a524', sec: 'Penyusunan Kurikulum', prodi: true, v: asistenView },
+  { id: 'impor', t: 'Impor & Ekspor', sub: 'Jalur templat Excel bertahap', ic: 'upload', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: imporView },
   { id: 'visi', t: 'Visi & Profil Lulusan', ic: 'flag', c: '#10b981', sec: 'Penyusunan Kurikulum', prodi: true, v: visiView },
   { id: 'cpl', t: 'Capaian Pembelajaran Lulusan', ic: 'target', c: '#0ea5e9', sec: 'Penyusunan Kurikulum', prodi: true, v: cplView },
   { id: 'pi', t: 'Indikator Kinerja (PI)', sub: 'Pemecah CPL untuk asesmen', ic: 'pulse', c: '#6366f1', sec: 'Penyusunan Kurikulum', prodi: true, v: piView },
@@ -252,7 +254,7 @@ const NAV = [
   ['Mulai', [
     { tabs: ['beranda'] },
     { tabs: ['rambu', 'bloom'], t: 'Rambu & Panduan', sub: 'Semester, level Bloom, kata kerja, RPS', lbl: ['Rambu pengisian', 'Taksonomi Bloom'] },
-    { tabs: ['asisten', 'generator'], sub: 'Pemandu, validasi, dan generator usulan', lbl: ['Pemandu dan validasi', 'Generator usulan'] }]],
+    { tabs: ['asisten', 'generator', 'impor'], sub: 'Pemandu, generator usulan, impor Excel', lbl: ['Pemandu dan validasi', 'Generator usulan', 'Impor dan ekspor'] }]],
   ['Pantau', [
     { tabs: ['pimpinan'] }, { tabs: ['mutu'] }, { tabs: ['akademik'] },
     { tabs: ['jadwal', 'pantau'], t: 'Jadwal & Pemantauan', sub: 'Tahapan, progres, dan aktivitas', lbl: ['Jadwal dan progres', 'Aktivitas pengguna'] },

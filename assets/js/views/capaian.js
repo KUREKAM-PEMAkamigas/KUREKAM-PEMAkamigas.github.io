@@ -21,6 +21,34 @@ export default function capaianView(el) {
   (tab === 'tl' ? tTl : tCapaian)(b, pid, p, ed);
 }
 
+/* ---------- matriks CPL × MK (dari hasil nilai per MK yang tersimpan; angka agregat) ---------- */
+function petaMk(pid, cpl) {
+  const rs = byProdi(S.capaian || [], pid).filter(r => r.mk && +r.n > 0), g = {}, mkIds = [];
+  rs.forEach(r => { const k = r.mk + '|' + r.cpl, x = g[k] || (g[k] = { n: 0, lulus: 0, jum: 0 }); x.n += +r.n; x.lulus += +r.lulus || 0; x.jum += (+r.rata || 0) * +r.n; if (!mkIds.includes(r.mk)) mkIds.push(r.mk); });
+  const mks = mkIds.map(id => S.mk.find(m => m.id === id)).filter(Boolean).sort((a, b) => (+a.smt || 0) - (+b.smt || 0) || String(a.kode).localeCompare(String(b.kode)));
+  return { g, mks, cplAda: cpl.filter(c => mks.some(m => g[m.id + '|' + c.id])) };
+}
+function matriksCard(pid, cpl, K) {
+  const M = petaMk(pid, cpl); if (!M.mks.length) return '';
+  const sel = (x) => !x ? '<td class="num muted">–</td>' : `<td class="num"><b style="color:${x.lulus / x.n * 100 >= K.krit ? '#0f8a5f' : '#b42335'}">${fmt(x.lulus / x.n * 100, 0)}%</b><div class="small muted">${x.lulus}/${x.n}</div></td>`;
+  return `<div class="card" style="margin-top:18px">${head('Matriks CPL × mata kuliah', 'Persen mahasiswa yang mencapai nilai batas pada tiap CPL di tiap MK (jumlah lintas kelas dan angkatan). Hijau = memenuhi kriteria.', 'link', '#6366f1', `<button class="btn sm" id="c-xlsx">${icon('download')} Unduh rekap Excel</button>`)}
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Mata kuliah</th>${M.cplAda.map(c => `<th class="num">${esc(c.kode)}</th>`).join('')}</tr></thead><tbody>
+    ${M.mks.map(m => `<tr style="cursor:default"><td><b>${esc(m.kode || m.id)}</b> <span class="small muted" style="white-space:normal">${esc(m.nama)}${m.smt ? ' · smt ' + esc(m.smt) : ''}</span></td>${M.cplAda.map(c => sel(M.g[m.id + '|' + c.id])).join('')}</tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+function unduhRekap(pid, p, cpl, K) {
+  loadXLSX().then(X => {
+    const M = petaMk(pid, cpl), wb = X.utils.book_new(), add = (aoa, n) => X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(aoa), n), pr = (x) => x && x.n ? +(x.lulus / x.n * 100).toFixed(1) : '';
+    add([['Rekap capaian CPL', p.nama || pid], ['Kriteria ketercapaian (%)', K.krit], ['Nilai batas', param(S).piMinNilai], [], ['CPL', 'Rumusan'].concat(K.angkatan.map(a => 'Angkatan ' + a), ['Status'])]
+      .concat(K.hasil.map(h => [h.c.kode, h.c.teks].concat(K.angkatan.map(a => { const x = h.per.find(q => q.angkatan === a); return x ? +x.persen.toFixed(1) : ''; }), [!h.terukur ? 'Belum diukur' : h.ok ? 'Memenuhi' : 'Di bawah kriteria']))), 'Ringkasan');
+    add([['Kode MK', 'Nama MK', 'Smt'].concat(M.cplAda.map(c => c.kode))].concat(M.mks.map(m => [m.kode || m.id, m.nama, m.smt || ''].concat(M.cplAda.map(c => pr(M.g[m.id + '|' + c.id]))))), 'CPL x MK');
+    const rs = byProdi(S.capaian || [], pid).filter(r => r.mk);
+    add([['Kode MK', 'Nama MK', 'Semester', 'Kelas', 'Angkatan', 'CPL', 'Mahasiswa', 'Mencapai', '% mencapai', 'Rata-rata']].concat(rs.map(r => { const m = S.mk.find(x => x.id === r.mk) || {}, c = cpl.find(x => x.id === r.cpl) || {}; return [m.kode || r.mk, m.nama || '', r.smt || '', r.kelas || '', r.angkatan, c.kode || r.cpl, r.n, r.lulus, r.n ? +(r.lulus / r.n * 100).toFixed(1) : '', r.rata == null ? '' : r.rata]; })), 'Per MK');
+    add([['Angkatan', 'CPL', 'Mahasiswa', 'Mencapai', '% mencapai']].concat(K.hasil.flatMap(h => h.per.map(x => [x.angkatan, h.c.kode, x.n, x.lulus, +x.persen.toFixed(1)]))), 'Per Angkatan');
+    unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), `Rekap_Capaian_CPL_${pid}.xlsx`);
+  }).catch(e => toast('Gagal membuat Excel: ' + (e.message || e)));
+}
+
 /* ---------- capaian ---------- */
 function tCapaian(el, pid, p, ed) {
   const K = capaianCpl(S, pid), cpl = byProdi(S.cpl, pid), pis = byProdi(S.pi || [], pid);
@@ -40,8 +68,10 @@ function tCapaian(el, pid, p, ed) {
         <td>${!h.terukur ? stTag('na', 'Belum diukur') : h.ok ? stTag('ok', 'Memenuhi') : stTag('bad', 'Di bawah kriteria')}</td></tr>`).join('')}
     </tbody></table></div>` : '<div class="empty">CPL prodi belum ada. Isi dulu di menu Capaian Pembelajaran Lulusan.</div>'}
   </div>
+  ${matriksCard(pid, cpl, K)}
   ${K.terukur.length ? `<div class="card" style="margin-top:18px">${head('Capaian angkatan terbaru terhadap kriteria', 'Garis putus-putus = kriteria ketercapaian', 'target', '#10b981')}<div class="chart" id="c-cap"></div></div>` : ''}`;
   animateCounts(el);
+  const bx = el.querySelector('#c-xlsx'); if (bx) bx.onclick = () => unduhRekap(pid, p, cpl, K);
   if (K.terukur.length) chart(el.querySelector('#c-cap'), { tooltip: { trigger: 'axis', valueFormatter: v => fmt(v, 1) + '%' }, grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: K.terukur.map(h => h.c.kode), ...AX }, yAxis: { type: 'value', max: 100, ...AX },
     series: [{ type: 'bar', barWidth: 22, data: K.terukur.map(h => ({ value: +h.akhir.persen.toFixed(1), itemStyle: { color: h.ok ? '#10b981' : '#f0616d', borderRadius: [6, 6, 0, 0] } })),

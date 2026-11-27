@@ -6,6 +6,7 @@ import { DB } from '../db.js';
 import { param, fmt } from '../rules.js';
 import { head, stTag, tanya, short, loadXLSX, unduh } from './ui.js';
 import { chart } from '../charts.js';
+import { komponenRps, petaDariRps, templatNilaiRps } from '../rpsnilai.js';
 import { predikat, rataSkor, narasi, lintasMk, htmlRapor, BATAS_KUAT } from '../rapor.js';
 import { SKPI_DEF } from '../skpilogic.js';
 import { berkasDocxSkpiWord } from '../skpiword.js';
@@ -43,6 +44,8 @@ export default function nilaiView(el) {
         <label class="small" style="min-width:0">Kelas bila Excel tak punya kolom Kelas<input class="inp" id="n-kelas" value="${esc(st.kelas)}" placeholder="A, B, C, atau kosong" style="width:100%;box-sizing:border-box"></label></div>
       ${st.tabel ? tampilTabel() : `<textarea class="inp" id="n-teks" rows="6" wrap="off" style="width:100%;max-width:100%;box-sizing:border-box;margin-top:10px;font-family:monospace;font-size:12px;overflow:auto" placeholder="Salin dari Excel/SIAKAD termasuk baris judul: No, NIM, Nama, komponen nilai ...">${esc(st.teks)}</textarea>`}
       <div class="drawer-act" style="margin-top:8px;flex-wrap:wrap">${st.tabel ? '' : `<button class="btn pri sm" id="n-baca" ${adaTeks() ? '' : 'disabled'}>${icon('check')} Baca nilai</button>`}<button class="btn sm" id="n-xl" ${st.membaca ? 'disabled' : ''}>${icon('upload')} ${st.membaca ? 'Membaca berkas…' : 'Buka berkas Excel'}</button><input type="file" id="n-file" accept=".xlsx,.xls,.csv" hidden>${st.teks || st.tabel ? `<button class="btn sm" id="n-kosong">Kosongkan dan mulai lagi</button>` : ''}</div>
+      ${st.mk && komponenRps(S, st.mk).length ? `<div class="small muted" style="margin-top:8px">Komponen penilaian di RPS: ${komponenRps(S, st.mk).map(c => esc(c.nama) + ' ' + c.bobot + '%').join(', ')}. <a href="#" id="n-tplrps">Unduh templat nilai dari RPS</a> (kolom dan pemetaan CPMK terisi otomatis).</div>` : ''}
+      ${st.dariRps && st.dariRps.length && st.tabel ? `<div class="ribbon info" style="margin-top:8px">${icon('info')} Pemetaan kolom <b>${st.dariRps.map(esc).join(', ')}</b> diambil dari RPS. Silakan periksa dan ubah bila perlu.</div>` : ''}
       ${st.galat ? `<div class="ribbon bad" style="margin-top:8px">${icon('alert')} ${esc(st.galat)}</div>` : ''}` : '<div class="empty small">Mata kuliah muncul di sini bila Bapak/Ibu ditugaskan sebagai pengampu, atau sebagai prodi yang kurikulumnya sudah memiliki CPMK.</div>'}
   </div>
   <div id="n-peta"></div><div id="n-hasil"></div>
@@ -231,11 +234,13 @@ export default function nilaiView(el) {
     const t = kenaliTabel(rows);
     if (t.galat) { st.galat = t.galat; st.tabel = null; return ulang(); }
     st.tabel = t; st.teks = '';
-    const simpanan = S.capaian.find(r => r.mk === st.mk && r.peta), tebak = tebakPeta(t.kolom, cpmkMk());
-    st.peta = {}; t.kolom.forEach(k => { const s = simpanan && simpanan.peta[k.nama.slice(0, 40)]; st.peta[k.nama] = s ? JSON.parse(JSON.stringify(s)) : tebak[k.nama]; });
+    const simpanan = S.capaian.find(r => r.mk === st.mk && r.peta), tebak = tebakPeta(t.kolom, cpmkMk()), dariRps = petaDariRps(S, st.mk, t.kolom);
+    st.dariRps = [];
+    st.peta = {}; t.kolom.forEach(k => { const s = simpanan && simpanan.peta[k.nama.slice(0, 40)]; if (s) st.peta[k.nama] = JSON.parse(JSON.stringify(s)); else if (dariRps[k.nama]) { st.peta[k.nama] = JSON.parse(JSON.stringify(dariRps[k.nama])); st.dariRps.push(k.nama); } else st.peta[k.nama] = tebak[k.nama]; });
     ulang();
   }
 
+  const tr = el.querySelector('#n-tplrps'); if (tr) tr.onclick = async (e) => { e.preventDefault(); try { await templatNilaiRps(S, S.mk.find(m => m.id === st.mk)); } catch (x) { toast(x.message || 'Templat gagal dibuat'); } };
   const sm = el.querySelector('#n-mk');
   if (sm) {
     sm.onchange = () => { st.mk = sm.value; st.tabel = null; st.hasil = null; st.peta = {}; ulang(); };

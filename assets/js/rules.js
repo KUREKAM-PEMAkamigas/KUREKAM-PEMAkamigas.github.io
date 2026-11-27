@@ -166,7 +166,7 @@ export function cekTrace(S, pid) {
 /* ---------- Batas CPMK dan keselarasan konstruktif (RPS) ---------- */
 export function telaahKeselarasan(S, pid) {
   const P = param(S), mk = byProdi(S.mk, pid).filter(m => !/magang|tugas akhir/i.test(m.kel || '')), cpmk = byProdi(S.cpmk, pid), sub = byProdi(S.sub, pid);
-  const cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 }, ip = P.indikatorPerSub || { min: 2, max: 4 };
+  const cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 }, ip = P.indikatorPerSub || { min: 3, max: 3 };
   const o = { indikatorLuar: [], cpmkLuar: [], subLuar: [], subTakTerjadwal: [], materiTanpaSub: [], tanpaUkur: [], cpmkTanpaBobot: [], bobotTotal: [] };
   mk.forEach(m => {
     const cs = cpmk.filter(c => c.mk === m.id);
@@ -192,7 +192,7 @@ export function telaahKeselarasan(S, pid) {
 }
 const cs0 = (cpmk, m) => cpmk.filter(c => c.mk === m.id);
 export function cekKeselarasan(S, pid) {
-  const t = telaahKeselarasan(S, pid), P = param(S), cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 }, ip = P.indikatorPerSub || { min: 2, max: 4 };
+  const t = telaahKeselarasan(S, pid), P = param(S), cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 }, ip = P.indikatorPerSub || { min: 3, max: 3 };
   const L = (a) => a.map(x => x.kode).slice(0, 6).join(', ') + (a.length > 6 ? ', …' : '');
   const row = (label, arr, acuan, k = 'near') => ({ grp: 'Keselarasan konstruktif', label, val: arr.length ? `${arr.length}: ${L(arr)}` : 'Tidak ada', target: '0', k: arr.length ? k : 'ok', acuan });
   return [

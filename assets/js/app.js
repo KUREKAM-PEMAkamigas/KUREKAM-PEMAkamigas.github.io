@@ -111,7 +111,7 @@ export function can(action, obj = {}) {
     }
     case 'real': {                                                                            // realisasi pembelajaran
       if (r === 'prodi') return (obj.prodi || ctx.prodi) === ctx.prodi;
-      if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen);
+      if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen) && gerbangTerbuka(S, obj.prodi || (S.mk.find(m => m.id === obj.mk) || {}).prodi);
       return false;
     }
     case 'riset': {                                                                           // daftar penelitian dan PKM dosen

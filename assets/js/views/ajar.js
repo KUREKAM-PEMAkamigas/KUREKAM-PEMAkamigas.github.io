@@ -55,6 +55,7 @@ export function cpmkView(el) {
     mkList(el.querySelector('#left'), draw, m => { const n = S.cpmk.filter(c => c.mk === m.id).length, s = S.sub.filter(c => c.mk === m.id).length; return `<span class="tag" style="--c:${n ? '#10b981' : '#f0616d'}">${n} CPMK · ${s} Sub</span>`; });
     const m = S.mk.find(x => x.id === sel); const R = el.querySelector('#right');
     if (!m) { R.innerHTML = '<div class="card empty">Pilih mata kuliah.</div>'; return; }
+    if (ctx.role === 'dosen' && !gerbangTerbuka(S, m.prodi)) { R.innerHTML = `<div class="card">${head(esc(m.nama), 'Belum dapat diisi', 'audit', '#10b981', ro())}<div class="ribbon bad">${icon('alert')} <b>Menunggu penetapan prodi.</b> ${PESAN_BELUM_TETAP}</div></div>`; return; }
     if (mkTanpaCpl(m)) { R.innerHTML = `<div class="card">${head(esc(m.nama), `Semester ${m.smt} · ${m.T}T + ${m.P}P · CPL dibebankan: belum ada`, 'spark', '#0ea5e9', ro())}<div class="ribbon bad">${icon('alert')} <b>Belum dapat diisi.</b> ${PESAN_KUNCI_CPL}</div></div>`; return; }
     const edS = can('rps', { prodi: m.prodi, mk: m.id }), edC = can('susun', m) || edS;
     const rr = rpsOf(S, m.id), bkl = rr ? (rr.bahanList && rr.bahanList.length ? rr.bahanList : pecahBahan(rr.bahan)) : [];
@@ -324,6 +325,7 @@ export function deskView(el) {
     mkList(el.querySelector('#left'), draw, m => { const r = rpsOf(S, m.id); return deskLengkap(r) ? '<span class="st ok">lengkap</span>' : '<span class="st near">belum</span>'; });
     const m = S.mk.find(x => x.id === sel), R = el.querySelector('#right');
     if (!m) { R.innerHTML = '<div class="card empty">Pilih mata kuliah.</div>'; return; }
+    if (ctx.role === 'dosen' && !gerbangTerbuka(S, m.prodi)) { R.innerHTML = `<div class="card">${head(esc(m.nama), 'Belum dapat diisi', 'audit', '#10b981', ro())}<div class="ribbon bad">${icon('alert')} <b>Menunggu penetapan prodi.</b> ${PESAN_BELUM_TETAP}</div></div>`; return; }
     if (mkTanpaCpl(m)) { R.innerHTML = `<div class="card">${head(esc(m.nama), 'Belum dapat diisi', 'audit', '#10b981', ro())}<div class="ribbon bad">${icon('alert')} <b>Terkunci.</b> ${PESAN_KUNCI_CPL}</div></div>`; return; }
     const r = rpsOf(S, m.id), ed = can('rps', { prodi: m.prodi, mk: m.id }) && (!r || r.status !== 'disahkan' || ctx.role === 'prodi' || ['admin', 'developer'].includes(ctx.role));
     const bg = bagianDesk(r), lengkap = bg.every(b => b[1]);

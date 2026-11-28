@@ -48,6 +48,12 @@ export function periksaView(el) {
     series: [['ok', 'Sesuai', '#10b981'], ['near', 'Perlu perhatian', '#f5a524'], ['bad', 'Belum sesuai', '#f0616d']].map(([k, nm, c]) => ({ name: nm, type: 'bar', stack: 'a', barWidth: 14, data: grp.map(g => ck.filter(x => x.grp === g && x.k === k).length), itemStyle: { color: c } })) });
 }
 
+/** Kelompokkan temuan Bloom per rumusan: satu CPMK yang dipakai banyak MK tampil sekali dengan daftar kode MK-nya. */
+function temuanBloom(issues) {
+  const mkBy = Object.fromEntries(byProdi(S.mk, ctx.prodi).map(m => [m.id, m.kode])), peta = new Map();
+  issues.forEach(i => { const key = i.obj + '|' + i.kode + '|' + i.msg; let g = peta.get(key); if (!g) { g = { ...i, mkKode: [], h: i.obj === 'CPL' ? '#cpl' : i.obj === 'CPMK' ? '#cpmkprodi' : '#cpmk' }; peta.set(key, g); } if (i.mk && mkBy[i.mk] && !g.mkKode.includes(mkBy[i.mk])) g.mkKode.push(mkBy[i.mk]); });
+  return [...peta.values()];
+}
 /* ================= Taksonomi Bloom ================= */
 export function bloomView(el) {
   const A = bloomAudit(S, ctx.prodi);
@@ -68,7 +74,7 @@ export function bloomView(el) {
   </div>
   <div class="card" style="margin-top:18px">${head('Temuan dan saran perbaikan', 'Acuan: Anderson & Krathwohl (2001) untuk kognitif, Dave (1970) untuk psikomotor, Krathwohl (1964) untuk afektif', 'alert', '#f5a524')}
     <div class="tbl-wrap" style="max-height:420px"><table class="tbl"><thead><tr><th>Objek</th><th>Rumusan</th><th>Level</th><th>Temuan</th></tr></thead><tbody>
-    ${A.issues.map(i => `<tr><td><span class="tag" style="--c:#8b5cf6">${i.obj}</span> <b>${i.kode}</b></td><td>${esc(short(i.teks, 130))}</td><td>${i.b ? badge(i.b.code) : badge(null)}</td><td><span class="st ${i.k}">${esc(i.msg)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Tidak ada temuan. Semua rumusan memakai KKO yang terukur dan berjenjang.</td></tr>'}
+    ${temuanBloom(A.issues).map(g => `<tr><td><span class="tag" style="--c:#8b5cf6">${g.obj}</span> <b>${esc(g.kode)}</b>${g.mkKode.length ? `<div class="small">${g.mkKode.length} MK: ${esc(g.mkKode.join(', '))}</div>` : ''}</td><td>${esc(g.teks)}</td><td>${g.b ? badge(g.b.code) : badge(null)}</td><td><span class="st ${g.k}">${esc(g.msg)}</span><div style="margin-top:4px"><a href="${g.h}">Buka dan perbaiki</a></div></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Tidak ada temuan. Semua rumusan memakai KKO yang terukur dan berjenjang.</td></tr>'}
     </tbody></table></div></div>
   <div class="card" style="margin-top:18px">${head('Daftar kata kerja operasional', 'Dipakai aplikasi untuk mendeteksi level saat CPL, CPMK, dan Sub-CPMK ditulis', 'book', '#14b8a6')}
     <div class="kko">${Object.entries(DOMAIN).map(([d, nm]) => `<div><h4>${nm}</h4>${Object.entries(LEVELS).filter(([, v]) => v.d === d).map(([k, v]) => `<div class="kko-r"><span class="tag bloom" style="--c:${v.c}">${k} ${v.nama}</span><span class="small">${KKO[k].join(', ')}</span></div>`).join('')}</div>`).join('')}</div></div>`;

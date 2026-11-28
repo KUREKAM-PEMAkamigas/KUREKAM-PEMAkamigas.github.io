@@ -250,17 +250,17 @@ export function bloomAudit(S, pid) {
   cpmk.forEach(c => {
     const m = mk.find(x => x.id === c.mk); const hint = m && (+m.P > +m.T) ? 'P' : 'C';
     const b = detect(c.teks, hint); cpmkLv[c.id] = b;
-    if (!b) { issues.push({ obj: 'CPMK', kode: c.kode, teks: c.teks, msg: 'Kata kerja operasional tidak dikenali', k: 'bad' }); return; }
-    if (b.kabur) issues.push({ obj: 'CPMK', kode: c.kode, teks: c.teks, msg: `"${b.verb}" tidak terukur, ganti dengan kata kerja operasional yang dapat diukur`, k: 'near', b });
+    if (!b) { issues.push({ mk: c.mk, obj: 'CPMK', kode: c.kode, teks: c.teks, msg: 'Kata kerja operasional tidak dikenali', k: 'bad' }); return; }
+    if (b.kabur) issues.push({ mk: c.mk, obj: 'CPMK', kode: c.kode, teks: c.teks, msg: `"${b.verb}" tidak terukur, ganti dengan kata kerja operasional yang dapat diukur`, k: 'near', b });
     const maxCpl = Math.max(0, ...(c.cpl || []).map(id => cplLv[id] && cplLv[id].d === b.d ? cplLv[id].n : 0));
-    if (maxCpl && b.n > maxCpl) issues.push({ obj: 'CPMK', kode: c.kode, teks: c.teks, msg: `Level ${b.code} melampaui level CPL yang didukung (${maxCpl})`, k: 'near', b });
-    if (m && b.d === 'C') { const r = ANJURAN_SMT[m.smt]; if (r && (b.n < r[0] - 1 || b.n > r[1] + 1)) issues.push({ obj: 'CPMK', kode: c.kode, teks: c.teks, msg: `Level ${b.code} di luar anjuran semester ${m.smt} (C${r[0]}–C${r[1]})`, k: 'near', b }); }
+    if (maxCpl && b.n > maxCpl) issues.push({ mk: c.mk, obj: 'CPMK', kode: c.kode, teks: c.teks, msg: `Level ${b.code} melampaui level CPL yang didukung (${maxCpl})`, k: 'near', b });
+    if (m && b.d === 'C') { const r = ANJURAN_SMT[m.smt]; if (r && (b.n < r[0] - 1 || b.n > r[1] + 1)) issues.push({ mk: c.mk, obj: 'CPMK', kode: c.kode, teks: c.teks, msg: `Level ${b.code} di luar anjuran semester ${m.smt} (C${r[0]}–C${r[1]})`, k: 'near', b }); }
   });
   sub.forEach(s => {
     const c = cpmk.find(x => x.id === s.cpmk); const b = detect(s.teks, 'C');
-    if (!b) { issues.push({ obj: 'Sub-CPMK', kode: s.kode, teks: s.teks, msg: 'Kata kerja operasional tidak dikenali', k: 'bad' }); return; }
+    if (!b) { issues.push({ mk: s.mk, obj: 'Sub-CPMK', kode: s.kode, teks: s.teks, msg: 'Kata kerja operasional tidak dikenali', k: 'bad' }); return; }
     const bc = c && cpmkLv[c.id];
-    if (bc && bc.d === b.d && b.n > bc.n) issues.push({ obj: 'Sub-CPMK', kode: s.kode, teks: s.teks, msg: `Level ${b.code} melampaui CPMK induknya (${bc.code})`, k: 'near', b });
+    if (bc && bc.d === b.d && b.n > bc.n) issues.push({ mk: s.mk, obj: 'Sub-CPMK', kode: s.kode, teks: s.teks, msg: `Level ${b.code} melampaui CPMK induknya (${bc.code})`, k: 'near', b });
   });
   /* distribusi level CPMK per semester */
   const dist = {};

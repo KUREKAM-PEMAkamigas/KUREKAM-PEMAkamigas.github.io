@@ -70,6 +70,7 @@ export async function imporSub(file, pid) {
     const m = kodeMk(mkPid, row[k.mk]); if (!m) { lewat.push(`baris ${no}: MK "${nz(row[k.mk])}" tidak ada di prodi ini`); continue; }
     if (mkTanpaCpl(m)) { lewat.push(`baris ${no} (${m.kode}): MK belum dibebani CPL, belum dapat diisi`); continue; }
     if (!bolehIds.has(m.id)) { lewat.push(`baris ${no} (${m.kode}): di luar MK yang boleh Anda isi`); continue; }
+    if (!kaprodi && S.sub.some(x => x.mk === m.id)) { lewat.push(`baris ${no} (${m.kode}): Sub-CPMK sudah dirancang prodi, dosen tidak mengubahnya (pemilihan Sub-CPMK per pertemuan lewat lembar RPS)`); continue; }
     mkDisebut.add(m.id);
     if (!teks) { lewat.push(`baris ${no} (${m.kode}): rumusan Sub-CPMK kosong`); continue; }
     const cps = S.cpmk.filter(c => c.mk === m.id), kc = k.cpmk >= 0 ? nz(row[k.cpmk]) : '';

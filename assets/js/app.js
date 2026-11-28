@@ -459,7 +459,14 @@ let pantau = false;
 export async function start() {
   await cekDeveloper();
   if (dalamSimulasi()) DB.useLocal();
-  let d = await DB.loadAll();
+  let d;
+  try { d = await DB.loadAll(); }
+  catch (e) {
+    /* Aturan Firestore belum mengizinkan koleksi kur23_: kembali ke Kurikulum 2027 agar aplikasi tetap bisa dipakai. */
+    if (DB.kurikulum === '2023' && /permission/i.test(String(e && e.message))) { DB.setKurikulum('2027'); try { localStorage.setItem('kurekam_k23_ditolak', '1'); } catch (x) { /* abaikan */ } location.reload(); return; }
+    throw e;
+  }
+  try { if (localStorage.getItem('kurekam_k23_ditolak')) { localStorage.removeItem('kurekam_k23_ditolak'); setTimeout(() => toast('Kurikulum 2023 belum bisa dibuka: aturan Firestore untuk koleksi kur23_ belum dipasang. Aplikasi kembali ke Kurikulum 2027.'), 800); } } catch (x) { /* abaikan */ }
   const st = d.settings && d.settings[0];
   /* Pengaman data: di Firebase, data contoh hanya boleh ditulis bila basis data benar-benar kosong.
      Data yang sudah diisi pengguna tidak pernah ditimpa otomatis, termasuk saat versi data contoh naik atau saat pemuatan sebagian gagal. */

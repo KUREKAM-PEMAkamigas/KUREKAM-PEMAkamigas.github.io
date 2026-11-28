@@ -1,4 +1,4 @@
-// USULAN aturan Firestore untuk koleksi KUREKAM (awalan kur_). Bukan berkas yang diterapkan otomatis.
+// USULAN aturan Firestore untuk koleksi KUREKAM (awalan kur_ dan kur23_ untuk Kurikulum 2023). Bukan berkas yang diterapkan otomatis.
 // Proyek Firebase simantap-pem dipakai bersama SIMANTAP, jadi JANGAN menimpa seluruh aturan yang ada:
 // salin hanya blok "KUREKAM" di bawah ke dalam `match /databases/{database}/documents { ... }` pada aturan yang sudah ada.
 // Ujilah dulu di Firebase Console > Firestore > Rules > Rules Playground (masuk sebagai akun admin, dosen, dan tanpa login),
@@ -24,18 +24,21 @@ match /kur_pengguna/{id} {
 }
 match /kur_pulih/{id}     { allow read, write: if pengelola(); }
 match /kur_pulihdata/{id} { allow read, write: if pengelola(); }
+match /kur23_pulih/{id}     { allow read, write: if pengelola(); }
+match /kur23_pulihdata/{id} { allow read, write: if pengelola(); }
 // nilai per mahasiswa (NIM, nama, nilai): hanya dosen, prodi, dan admin
 match /kur_nilai/{id}     { allow read, write: if superadmin() || kAny(['admin','developer','prodi','dosen']); }
+match /kur23_nilai/{id}   { allow read, write: if superadmin() || kAny(['admin','developer','prodi','dosen']); }
 match /kur_status/{id}    { allow read: if pengelola(); allow write: if punyaPeran(['admin', 'developer']); }
 
 // jejak dan sesi: setiap akun boleh menulis catatannya sendiri; membaca hanya pengelola dan pemantau
 match /kur_jejak/{id} { allow create: if sudahMasuk(); allow read: if pengelola() || punyaPeran(['spm', 'pimpinan']); allow update, delete: if pengelola(); }
 match /kur_sesi/{id}  { allow create, update: if sudahMasuk(); allow read: if pengelola() || punyaPeran(['spm', 'pimpinan']); allow delete: if pengelola(); }
 
-// data kurikulum (kur_prodi, kur_mk, kur_cpmk, kur_rps, dan seterusnya): terdaftar boleh membaca; menulis oleh peran yang bekerja di data tersebut.
+// data kurikulum (kur_prodi, kur23_mk, kur_mk, kur_cpmk, kur_rps, dan seterusnya): terdaftar boleh membaca; menulis oleh peran yang bekerja di data tersebut.
 // Pembatasan per prodi dan per mata kuliah tetap ditegakkan aplikasi; aturan ini adalah lapis pertama agar akun tak terdaftar tidak bisa menulis.
 match /{koleksi}/{id} {
-  allow read: if koleksi.matches('kur_.*') && terdaftar();
-  allow write: if koleksi.matches('kur_.*') && punyaPeran(['admin', 'developer', 'wadir', 'prodi', 'dosen', 'spm', 'akademik']);
+  allow read: if koleksi.matches('kur(23)?_.*') && terdaftar();
+  allow write: if koleksi.matches('kur(23)?_.*') && punyaPeran(['admin', 'developer', 'wadir', 'prodi', 'dosen', 'spm', 'akademik']);
 }
 // ---------- AKHIR BLOK KUREKAM ----------

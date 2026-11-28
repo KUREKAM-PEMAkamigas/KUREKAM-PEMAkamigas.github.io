@@ -324,7 +324,7 @@ function renderSide(cur) {
     });
   });
   h += `<div class="nav-sec">Aplikasi lain</div><a href="${APP_LAIN.simantap.url}" target="_blank" rel="noopener" style="--c:#8b5cf6"><span class="chip">${icon('medal')}</span><span>SIMANTAP 2.0<small class="nsub">Pemantauan mutu dan akreditasi</small></span></a>`;
-  h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
+  h += `</nav><div class="side-foot">${APP.institusi}<br>Kurikulum ${DB.kurikulum === '2023' ? '2023 (pendukung PA IABEE)' : APP.tahunKurikulum} · ${dalamSimulasi() ? 'Mode simulasi' : DB.mode === 'firebase' ? 'Firestore' : 'Mode lokal'}</div>`;
   $('#side').innerHTML = h;
   $$('#side a').forEach(a => a.addEventListener('click', () => tutupSide()));
 }
@@ -334,9 +334,10 @@ function renderTop(route) {
   const dosenOpts = S.dosen.map(d => `<option value="${d.id}" ${d.id === ctx.dosen ? 'selected' : ''}>${esc(d.nama)}</option>`).join('');
   $('#top').innerHTML = `
     <button class="btn ghost menu-btn" id="menuBtn" aria-label="Menu">${icon('menu')}</button>
-    <div><div class="crumb">${(navKe(route.id) || route).grup || route.sec}</div><h1>${(navKe(route.id) || route).t}</h1></div>
+    <div><div class="crumb">${(navKe(route.id) || route).grup || route.sec}</div><h1>${(navKe(route.id) || route).t}${DB.kurikulum === '2023' ? ' <span class="tag" style="--c:#f59e0b;vertical-align:middle">Kurikulum 2023</span>' : ''}</h1></div>
     <div class="sp"></div>
     ${ctx.kunci && ctx.role === 'prodi' && ctx.akun && ctx.akun.prodi ? `<span class="tag" style="--c:#10b981">Prodi ${esc(ctx.prodi)}</span>` : route.prodi || ctx.role === 'prodi' ? `<div class="role-box"><span class="rl muted small">Prodi</span><select class="inp" id="prodiSel" aria-label="Program studi">${prodiOpts}</select></div>` : ''}
+    ${ctx.role !== 'dosen' ? `<div class="role-box"><span class="rl muted small">Kurikulum</span><select class="inp" id="kurSel" aria-label="Kurikulum" title="Data Kurikulum 2023 dan 2027 terpisah; menu sama">${['2027', '2023'].map(k => `<option value="${k}" ${k === DB.kurikulum ? 'selected' : ''}>${k}${k === '2023' ? ' (pendukung PA)' : ''}</option>`).join('')}</select></div>` : ''}
     <div class="role-box">
       <span class="ico-badge" style="--c:${PERAN[ctx.role].c};width:32px;height:32px">${icon('user')}</span>
       <select class="inp" id="roleSel" aria-label="Peran">${peranAkun().map(k => `<option value="${k}" ${k === ctx.role ? 'selected' : ''}>${PERAN[k].nama}</option>`).join('')}</select>
@@ -346,6 +347,7 @@ function renderTop(route) {
     ${DB.user ? `<button class="btn" id="sandiBtn" title="${esc(DB.user.email)}">${icon('gear')} Kata sandi</button>` : ''}
     ${DB.user ? `<button class="btn" id="logoutBtn">${icon('logout')} Keluar</button>` : ''}`;
   $('#menuBtn').onclick = () => { if (lebar()) { const min = document.querySelector('.app').classList.contains('min'); try { localStorage.setItem(PREF_SIDE, min ? 'open' : 'min'); } catch (e) { /* abaikan */ } terapkanSide(route.id); tutupSide(); } else { const o = $('#side').classList.toggle('open'); document.body.classList.toggle('side-open', o); } };
+  const ks = $('#kurSel'); if (ks) ks.onchange = e => { DB.setKurikulum(e.target.value); location.reload(); };
   $('#roleSel').onchange = e => { ctx.role = e.target.value; ctx.pilihDev = ctx.role; saveCtx(); route_(); };
   const gs = $('#sandiBtn'); if (gs) gs.onclick = formSandi;
   const sm = $('#simBtn'); if (sm) sm.onclick = () => ubahSimulasi(!dalamSimulasi());
@@ -362,7 +364,7 @@ export function route_() {
   renderSide(r.id); renderTop(r); pasangSide(); terapkanSide(r.id);
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
-  view.innerHTML = APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Data contoh: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
+  view.innerHTML = DB.kurikulum === '2023' ? `<div class="ribbon">${icon('info')} Kurikulum 2023: data terpisah dari Kurikulum 2027 dan dimulai kosong. Isi dengan unggah Excel (templat Kurikulum 2023), lalu tata sesuai Pedoman sebagai bahan pendukung PA IABEE 2027. Data asli RPS dan nilai tidak diubah.</div>` : APP.dataContoh && S.settings.demo !== false ? `<div class="ribbon">${icon('info')} Data contoh: struktur semester, MK kunci, dan kelas mengikuti Buku Pedoman 2027 (draf). Nama MK ruang prodi, rumusan CPL/CPMK, RPS, dan nama dosen adalah data contoh sampai prodi mengisi atau mengimpor Excel matriks.</div>` : '';
   if (dalamSimulasi()) view.innerHTML = `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <b>MODE SIMULASI.</b> Data contoh hanya ada di peramban ini. Perubahan di sini tidak disimpan ke Firebase dan tidak terlihat pengguna lain. Klik Keluar simulasi untuk kembali ke data asli.</div>`;
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah) view.innerHTML += `<div class="ribbon info">${icon('info')} Anda masih memakai kata sandi awal dari admin. Demi keamanan, ganti lewat tombol Kata sandi di kanan atas.</div>`;
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
@@ -462,8 +464,11 @@ export async function start() {
   /* Pengaman data: di Firebase, data contoh hanya boleh ditulis bila basis data benar-benar kosong.
      Data yang sudah diisi pengguna tidak pernah ditimpa otomatis, termasuk saat versi data contoh naik atau saat pemuatan sebagian gagal. */
   const kosong = Object.keys(d).every(c => !(d[c] || []).length || c === 'pengguna' || c === 'log');
-  const bolehSeed = DB.mode !== 'firebase' ? (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) : kosong;
+  const k23 = DB.kurikulum === '2023';
+  const bolehSeed = k23 ? false : DB.mode !== 'firebase' ? (!d.mk.length || !st || (st.seedVersi || 0) < APP.seedVersi) : kosong;
   if (DB.mode === 'firebase' && !kosong && (!st || (st.seedVersi || 0) < APP.seedVersi)) console.warn('Versi data contoh lebih baru, tetapi data Firebase tidak ditimpa.');
+  /* Kurikulum 2023 dimulai kosong (tanpa data contoh); hanya koleksi bersama yang diisi bila belum ada sama sekali. */
+  if (k23 && DB.mode !== 'firebase' && !(d.prodi || []).length) { const b = buildSeed(); for (const c of ['prodi', 'dosen', 'riset']) { d[c] = b[c] || []; await DB.replaceAll(c, d[c]); } }
   if (bolehSeed) { const simpan = d.pengguna || []; d = buildSeed(); d.pengguna = simpan; for (const c of Object.keys(d)) { if (c !== 'pengguna') await DB.replaceAll(c, d[c]); } }
   /* kode prodi Logistik: LO diganti LG. Penggantian dilakukan di memori setiap kali muat; penulisan ke basis data hanya oleh admin. */
   const migLG = migrasiLG(d);

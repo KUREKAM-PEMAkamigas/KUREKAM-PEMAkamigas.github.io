@@ -9,6 +9,7 @@ import { daftarTarget, unduhRevisi } from './kesesuaian.js';
 import { head, formDrawer, prodiTag, ro, tanya, unduh, loadXLSX } from './ui.js';
 import { DATA_HEAD, JP_DEFAULT } from './bebanprodi.js';
 import { imporObe } from '../obeimpor.js';
+import { unduhTemplat2023 } from '../templat2023.js';
 import { templatPengguna, imporPengguna } from '../penggunaexcel.js';
 import { cocokkanDosen, bangunTemplatePenugasan } from '../tugasexcel.js';
 import { bokStandarProdi } from '../rules.js';
@@ -271,7 +272,7 @@ function tImpor(el, ed, adm) {
     <div class="card">${head('Impor Tabel OBE (Excel templat OBE)', `Berkas Tabel Kurikulum OBE PEM Akamigas yang sudah dimiliki prodi ${esc(ctx.prodi)}`, 'upload', '#f472b6')}
       <p class="small">Prodi tidak mengetik ulang. Lembar <b>1 sampai 18</b> dibaca apa adanya: profil lulusan, CPL dan kode unsur SN Dikti, bahan kajian, mata kuliah (kode asli, semester, SKS teori dan praktik), CPMK, Sub-CPMK, serta teknik dan bobot penilaian. Kode CPL01, BK01, MK01, dan CPMK01 <b>tidak diubah</b>. Bobot dan teknik penilaian menjadi kerangka RPS (draf) yang tinggal dilengkapi dosen. Bagian yang belum ada, misalnya PI, butir IABEE, dan bidang ilmu BK, dimunculkan oleh menu Tabel OBE dan Pemeriksa Kurikulum.</p>
       <p class="note">Data prodi ${esc(ctx.prodi)} (profil, CPL, BK, MK, CPMK, Sub-CPMK, RPS, penugasan, dan PI) diganti dengan isi berkas. Unduh cadangan lebih dulu.</p>
-      <div class="drawer-act"><button class="btn pri" id="i-obe" ${boleh ? '' : 'disabled'}>${icon('upload')} Pilih berkas OBE</button></div></div>
+      <div class="drawer-act">${DB.kurikulum === '2023' ? `<button class="btn" id="i-tpl23">${icon('download')} Templat Excel Kurikulum 2023</button>` : ''}<button class="btn pri" id="i-obe" ${boleh ? '' : 'disabled'}>${icon('upload')} Pilih berkas OBE</button></div></div>
     <div class="card">${head('Impor kurikulum berjalan (Excel)', 'Format lembar DATA dari dasbor beban prodi lama', 'upload', '#0ea5e9')}
       <p class="small">Kolom: ${DATA_HEAD.map(h => `<span class="tag">${h}</span>`).join(' ')}. Klasifikasi boleh MKWU, MKKK, MBE, MBS (lama) atau MKU, MKK, MBE, MBS. Data ini menjadi pembanding pada menu Beban Prodi & Kapasitas JP.</p>
       <div class="drawer-act"><button class="btn" id="i-tpl">${icon('download')} Templat kosong</button><button class="btn pri" id="i-lama" ${ed ? '' : 'disabled'}>${icon('upload')} Pilih berkas data</button></div></div>
@@ -293,6 +294,7 @@ function tImpor(el, ed, adm) {
   const pilih = (accept, fn) => { file.value = ''; file.accept = accept; file.onchange = async () => { const f = file.files[0]; if (!f) return; try { await fn(f); } catch (e) { console.error(e); hasil = `<b>Impor gagal.</b> ${esc(e.message)}`; } rerender(); }; file.click(); };
   const buku = async (f) => { const X = await loadXLSX(); return [X, X.read(await f.arrayBuffer(), { type: 'array' })]; };
   el.querySelector('#i-mx').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporMatriks(X, wb); });
+  const t23 = el.querySelector('#i-tpl23'); if (t23) t23.onclick = async () => { try { await unduhTemplat2023(ctx.prodi || 'TP'); } catch (e) { console.error(e); toast('Templat gagal dibuat: ' + (e.message || e)); } };
   el.querySelector('#i-obe').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporObeUI(X, wb); });
   el.querySelector('#i-lama').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporLama(X, wb); });
   el.querySelector('#i-dsn').onclick = () => pilih('.xlsx,.xls', async f => { const [X, wb] = await buku(f); hasil = await imporDosen(X, wb); });

@@ -3,6 +3,7 @@
    LAM Teknik, IABEE, dan Taksonomi Bloom. Hasilnya selalu berstatus usulan dan bisa diedit.
    Isi keilmuan (pokok bahasan, pustaka, penelitian) tetap berasal dari dosen dan prodi. */
 import { kartuPenetapan, pasangPenetapan } from '../penetapan.js';
+import { gerbangAktif, periksaTahap, kunciTahap } from '../gerbang.js';
 import { S, ctx, can, save, saveMany, addLog, esc, icon, toast, uid, openDrawer, closeDrawer, rerender } from '../app.js';
 import { KELOMPOK, APP } from '../config.js';
 import { kodeBaruMk, kodeBaku } from '../kode.js';
@@ -352,7 +353,17 @@ export default function asistenView(el) {
   const tombol = (id, teks, aktif = true) => ed ? `<button class="btn pri sm" data-gen="${id}" ${aktif ? '' : 'disabled'}>${icon('spark')} ${teks}</button>` : '';
   const langkah = (no, judul, status, isi, aksi, c) => `<div class="card" style="margin-top:14px"><div class="card-h"><span class="ico-badge" style="--c:${c}"><b>${no}</b></span><div><h3>${judul}</h3></div><div class="sp"></div>${status}</div><ul class="small" style="margin:8px 0 10px 18px;line-height:1.6">${isi}</ul><div class="filters">${aksi}</div></div>`;
 
+  const kartuGerbang = () => {
+    if (!gerbangAktif(S)) return '';
+    const hs = periksaTahap(S, pid), tujuan = { 1: '#visi', 2: '#mk', 3: '#cpmkprodi', 4: '#cpmk', 5: '#pi', 6: '#asisten' };
+    const ubin = hs.map(t => { const kn = t.no < 6 ? kunciTahap(S, pid, t.no) : (hs.slice(0, 5).some(x => !x.hijau) ? { merah: 1 } : null);
+      const c = t.no === 6 ? (t.terbuka ? '#10b981' : '#94a3b8') : t.merah ? '#b42335' : kn ? '#94a3b8' : '#10b981';
+      const ket = t.no === 6 ? (t.terbuka ? 'Siap ditetapkan' : 'Menunggu tahap 1 sampai 5') : t.merah ? `${t.merah} butir merah` : kn ? 'Terkunci' : `Sesuai${t.kuning ? `, ${t.kuning} peringatan` : ''}`;
+      return `<a href="${tujuan[t.no]}" style="display:block;color:inherit;text-decoration:none;border-left:4px solid ${c};padding:8px 10px;background:var(--bg2,#f6f7f9);border-radius:8px"><small>Tahap ${t.no}</small><div><b>${esc(t.nama)}</b></div><div class="small" style="color:${c}">${esc(ket)}</div></a>`; }).join('');
+    return `<div class="card" style="margin-top:14px">${head('Pintu tahap kurikulum', 'Kerjakan berurutan. Tahap berikutnya terbuka bila tahap sebelumnya tidak punya butir merah.', 'check', '#b42335', '')}<div class="grid g3 mini" style="gap:8px;margin-top:8px">${ubin}</div></div>`;
+  };
   el.innerHTML = `
+  ${kartuGerbang()}
   ${kartuPenetapan(pid)}
   <div class="card" style="margin-top:14px">${head('Asisten Kurikulum ' + esc(pid), esc(prodiName()) + ' · pemandu langkah demi langkah dan pembuat usulan otomatis', 'spark', '#f5a524', ed ? '' : ro())}
     <p class="small" style="margin:6px 0 10px">Ikuti tujuh langkah di bawah. Di tiap langkah prodi boleh mengisi sendiri lewat menunya, atau menekan tombol usulan otomatis lalu menyunting hasilnya. Usulan otomatis hanya menambah bagian yang masih kosong dan tidak pernah menimpa isian prodi. Rumusan mengikuti Buku Pedoman Kurikulum ${APP.tahunKurikulum}, SN Dikti, LAM Teknik, IABEE, dan Taksonomi Bloom.</p>

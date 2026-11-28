@@ -49,7 +49,7 @@ function engine(canvas, { cam = [0, 2, 10], fov = 40, onTick, build, interact = 
     running = false; cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', vis);
     host.removeEventListener('pointermove', onMove); host.removeEventListener('pointerdown', onDown); window.removeEventListener('pointerup', onUp);
     scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } });
-    renderer.dispose();
+    renderer.dispose(); try { renderer.forceContextLoss(); } catch (e) { /* abaikan */ }
   };
   stops.add(stop);
   return ctx;

@@ -707,3 +707,5 @@ export const ditetapkanProdi = (S, pid) => { const x = statusPenetapan(S, pid); 
 /** Gerbang aktif bila parameter penetapanWajib tidak dimatikan. Hasil true berarti pengisian dosen diperbolehkan. */
 export const gerbangTerbuka = (S, pid) => param(S).penetapanWajib === false || ditetapkanProdi(S, pid);
 export const PESAN_BELUM_TETAP = 'Rancangan kurikulum prodi ini belum ditetapkan, sehingga RPS belum dapat diisi dan mata kuliah belum dapat dibebankan ke dosen. Prodi menetapkannya di menu Asisten Kurikulum, kartu Penetapan kurikulum prodi.';
+/** Dosen yang semua MK-nya masih menunggu penetapan prodi: unggah dan templat RPS dinonaktifkan. */
+export const dosenTerkunci = (S, role, dosenId) => role === 'dosen' && !S.tugas.some(t => t.dosen === dosenId && gerbangTerbuka(S, (S.mk.find(m => m.id === t.mk) || {}).prodi));

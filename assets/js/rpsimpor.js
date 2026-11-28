@@ -2,7 +2,7 @@
    Berkas dibaca di peramban (tanpa pustaka luar, tanpa dikirim ke server), hasilnya ditampilkan sebagai draf untuk ditinjau. */
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, openDrawer, addLog } from './app.js';
 import { prodiTag } from './views/ui.js';
-import { mkTanpaCpl, kodeBerikut } from './rules.js';
+import { mkTanpaCpl, kodeBerikut, dosenTerkunci } from './rules.js';
 import { asesmenBersih } from './rubrik.js';
 import { pecahPustaka, gabungUtama, gabungPend, pecahBahan, gabungBahan } from './rpsisi.js';
 import { bacaRpsLama, terapkanPeta, BIDANG } from './rpslama.js';
@@ -153,6 +153,7 @@ export function tombolUnggahRps(el, draw) {
   const wadah = el.querySelector('#rps-unggah'); if (!wadah) return;
   wadah.innerHTML = `<button class="btn pri sm" id="rps-up">${icon('upload')} Unggah RPS (Word)</button><input type="file" id="rps-file" accept=".docx,.doc" multiple style="display:none"><span class="muted small">RPS format baku maupun RPS lama yang susunannya berbeda (.docx). Aplikasi mengenali tabel pertemuan dari judul kolomnya dan menampilkan hasilnya untuk Anda periksa dulu.</span>`;
   const f = wadah.querySelector('#rps-file'); wadah.querySelector('#rps-up').onclick = () => { f.value = ''; f.click(); };
+  if (dosenTerkunci(S, ctx.role, ctx.dosen)) { const u = wadah.querySelector('#rps-up'); u.disabled = true; u.title = 'Menunggu penetapan kurikulum oleh prodi'; u.onclick = null; }
   f.onchange = async () => {
     const hasil = [];
     for (const file of Array.from(f.files)) { try { const o = await bacaRpsLama(file); hasil.push({ o, ...cariMk(o) }); } catch (e) { console.error(e); hasil.push({ o: { file: file.name, peringatan: [e.message], cpl: [], cpmk: [], sub: [], minggu: [], ujian: [] }, mk: null, prodi: null, cara: '', gagal: true }); } }

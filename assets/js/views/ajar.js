@@ -15,7 +15,7 @@ import { alasanRps, usulanMk } from '../usulan.js';
 import { kartuVerif, ikatVerif, formVerif, verifOf } from './verifrps.js';
 import { bukaGeneratorDok, turunkanDok } from './dokgen.js';
 import { detect, badge, ANJURAN_SMT, selisihRentang, kkoSemester } from '../bloom.js';
-import { gerbangTerbuka, PESAN_BELUM_TETAP, kodeBerikut, cpmkProdi, mkTanpaCpl, PESAN_KUNCI_CPL, INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
+import { dosenTerkunci, gerbangTerbuka, PESAN_BELUM_TETAP, kodeBerikut, cpmkProdi, mkTanpaCpl, PESAN_KUNCI_CPL, INTEG, integrasiOf, byProdi, param, jpOf, sksOf, grupOf, warnaGrup, fmt, rpsOf, rpsLengkap, sapLengkap, durasi } from '../rules.js';
 import { TEKNIK, RUBRIK, teknikDari, kriteriaTeknik } from '../rubrik.js';
 import { pecahBahan, gabungBahan, pecahPustaka, gabungUtama, gabungPend, opsiPustaka, pecahMateri, gabungMateri, pecahBaris, pecahIndikator, pecahMetode, METODE_DEF, daringDef, tatapDef, jamDefault, kenaliSyarat } from '../rpsisi.js';
 import { unduh, tanya, head, formDrawer, ro, prodiName, short, statusTag, stTag, bar, pctColor, opts } from './ui.js';
@@ -135,6 +135,7 @@ function tombolExcelDok(wadah) {
   if (!wadah) return;
   const pid = ctx.prodi, kap = ['prodi', 'admin', 'developer'].includes(ctx.role);
   wadah.insertAdjacentHTML('beforeend', `<button class="btn sm" id="dx-mk">${icon('download')} Templat Excel MK ini</button><button class="btn sm" id="dx-semua">${icon('download')} ${kap ? 'Templat Excel prodi' : 'Templat Excel MK saya'}</button><button class="btn pri sm" id="dx-imp">${icon('upload')} Unggah Excel</button><input type="file" id="dx-file" accept=".xlsx,.xls" hidden>`);
+  if (dosenTerkunci(S, ctx.role, ctx.dosen)) { ['#dx-mk', '#dx-semua', '#dx-imp'].forEach(q => { const b = wadah.querySelector(q); if (b) { b.disabled = true; b.title = 'Menunggu penetapan kurikulum oleh prodi'; } }); wadah.insertAdjacentHTML('beforeend', '<span class="small" style="color:#b45309;flex-basis:100%">Unggah dan templat dibuka setelah prodi menetapkan kurikulum.</span>'); return; }
   const gagal = (e) => { console.error(e); toast('Gagal: ' + (e.message || e)); };
   wadah.querySelector('#dx-mk').onclick = () => { const m = S.mk.find(x => x.id === sel); if (!m) { toast('Pilih mata kuliah dulu.'); return; } if (!mkBolehDok(pid).some(x => x.id === m.id)) { toast('MK ini belum dapat diisi atau bukan MK yang Anda ampu.'); return; } templatDokMk(pid, [m.id], 'Template', m.kode).catch(gagal); };
   wadah.querySelector('#dx-semua').onclick = () => templatDokMk(pid, mkBolehDok(pid).map(m => m.id)).catch(gagal);

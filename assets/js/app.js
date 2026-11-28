@@ -330,10 +330,33 @@ function penandaKunci(e) {
 function bannerGerbang(id) {
   const n = TAHAP_MENU[id]; if (!n || dalamSimulasi() || !ctx.prodi || ctx.role === 'dosen' || !gerbangAktif(S)) return '';
   const pid = ctx.prodi, hasil = periksaTahap(S, pid), t = hasil[n - 1], k = kunciMenu(S, pid, id);
-  const daftar = t.butir.filter(b => b.k === 'bad').slice(0, 6).map(b => `<li>${esc(b.teks)} <a href="${b.h}">Perbaiki</a></li>`).join('');
+  const bolehKecuali = ['wadir', 'spm', 'admin', 'developer'].includes(ctx.role);
+  const daftar = t.butir.filter(b => b.k === 'bad').slice(0, 6).map(b => `<li>${esc(b.teks)} <a href="${b.h}">Perbaiki</a>${bolehKecuali ? ` · <a href="#" data-kecuali="${esc(b.key)}" data-teks="${esc(b.teks)}">Kecualikan</a>` : ''}</li>`).join('');
+  const dikecuali = t.butir.filter(b => b.dikecualikan);
+  const infoKecuali = dikecuali.length ? `<ul style="margin:6px 0 0 18px">${dikecuali.map(b => `<li class="small">${esc(b.teks)}${bolehKecuali ? ` · <a href="#" data-cabut="${esc(b.key)}">Cabut pengecualian</a>` : ''}</li>`).join('')}</ul>` : '';
   if (k) return `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <span><b>Menu ini terkunci.</b> ${esc(k.pesan)} <a href="${k.h}"><b>Buka tahap ${k.tahap}</b></a>. Isi masih bisa dilihat.</span></div>`;
-  if (t.merah) return `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <span><b>Tahap ${n}: ${t.merah} butir belum sesuai.</b> Perbaiki dahulu agar tahap berikutnya terbuka.<ul style="margin:6px 0 0 18px">${daftar}</ul></span></div>`;
-  return `<div class="ribbon" style="margin:0 0 12px;background:#ecfdf5;border-color:#10b981">${icon('check')} <span><b>Tahap ${n} sesuai Pedoman.</b>${t.kuning ? ` ${t.kuning} peringatan (boleh dilanjutkan).` : ''}</span></div>`;
+  if (t.merah) return `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <span><b>Tahap ${n}: ${t.merah} butir belum sesuai.</b> Perbaiki dahulu agar tahap berikutnya terbuka.<ul style="margin:6px 0 0 18px">${daftar}</ul>${infoKecuali}</span></div>`;
+  return `<div class="ribbon" style="margin:0 0 12px;background:#ecfdf5;border-color:#10b981">${icon('check')} <span><b>Tahap ${n} sesuai Pedoman.</b>${t.kuning ? ` ${t.kuning} peringatan (boleh dilanjutkan).` : ''}${infoKecuali}</span></div>`;
+}
+/** Pengecualian butir merah gerbang: hanya Wadir I, SPM, admin, developer; wajib alasan tertulis dan tercatat. */
+async function kecualikanButir(key, teks) {
+  const pid = ctx.prodi; if (!pid) return;
+  const alasan = await new Promise(res => {
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal card" role="dialog" aria-modal="true"><p><b>Kecualikan butir</b> (prodi ${esc(pid)})</p><p class="small">${esc(teks)}</p><textarea class="inp" rows="3" id="g-alasan" placeholder="Alasan tertulis (wajib, minimal 10 huruf)" style="width:100%"></textarea><div class="drawer-act"><div class="sp"></div><button class="btn ghost" data-n>Batal</button><button class="btn pri" data-y>Kecualikan</button></div></div>`;
+    const done = v => { bg.remove(); res(v); };
+    bg.querySelector('[data-n]').onclick = () => done(null);
+    bg.querySelector('[data-y]').onclick = () => { const v = bg.querySelector('#g-alasan').value.trim(); if (v.length < 10) { toast('Alasan wajib diisi, minimal 10 huruf.'); return; } done(v); };
+    document.body.appendChild(bg); bg.querySelector('#g-alasan').focus();
+  });
+  if (!alasan) return;
+  S.settings.gerbang = S.settings.gerbang || {}; const g = S.settings.gerbang[pid] = S.settings.gerbang[pid] || {}; g.pengecualian = g.pengecualian || {};
+  g.pengecualian[key] = { alasan, oleh: userName(), t: new Date().toISOString() };
+  await saveSettings(); addLog(`Kecualikan butir gerbang (${pid}): ${teks} | alasan: ${alasan}`); bersihkanGerbang(); route_();
+}
+async function cabutPengecualian(key) {
+  const pid = ctx.prodi, g = ((S.settings.gerbang || {})[pid] || {}).pengecualian; if (!g || !g[key]) return;
+  delete g[key]; await saveSettings(); addLog(`Cabut pengecualian butir gerbang (${pid}): ${key}`); bersihkanGerbang(); route_();
 }
 function renderSide(cur) {
   let sec = '', h = `<div class="brand-logos"><img src="assets/img/logo-pem-akamigas.png" alt="PEM Akamigas" class="lg-pem"><img src="assets/img/logo-esdm.png" alt="Kementerian ESDM" class="lg-esdm"></div>
@@ -393,6 +416,7 @@ export function route_() {
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
   if (r.id === 'beranda' || r.id === 'rps') view.insertAdjacentHTML('beforeend', bannerPengingat());
   { let g = ''; try { g = bannerGerbang(r.id); } catch (e) { console.warn('Gerbang:', e); } if (g) view.insertAdjacentHTML('beforeend', g); }
+  if (!view._gk) { view._gk = 1; view.addEventListener('click', e => { const k = e.target.closest('[data-kecuali]'), c = e.target.closest('[data-cabut]'); if (k) { e.preventDefault(); kecualikanButir(k.dataset.kecuali, k.dataset.teks); } else if (c) { e.preventDefault(); cabutPengecualian(c.dataset.cabut); } }); }
   const holder = document.createElement('div'); view.appendChild(holder);
   { const e = navKe(r.id), ok = e ? e.tabs.filter(bolehMenu) : [];
     if (e && ok.length > 1) { const bar = document.createElement('div'); bar.className = 'seg mtabs'; bar.setAttribute('role', 'tablist'); bar.innerHTML = ok.map(t => `<button role="tab" data-go="${t}" class="${t === r.id ? 'on' : ''}">${esc(e.lbl[e.tabs.indexOf(t)])}</button>`).join(''); bar.onclick = ev => { const b = ev.target.closest('button[data-go]'); if (b && b.dataset.go !== r.id) location.hash = '#' + b.dataset.go; }; view.insertBefore(bar, holder); } }

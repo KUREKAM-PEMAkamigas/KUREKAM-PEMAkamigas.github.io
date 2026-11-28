@@ -6,6 +6,7 @@ import { DB } from '../db.js';
 import { PARAM_DEFAULT } from '../config.js';
 import { struktur, param, fmt, jpRange, grupOf } from '../rules.js';
 import { chart, AX } from '../charts.js';
+import { kartuPenetapanSemua, pasangPenetapanSemua } from '../penetapan.js';
 import { bukaParameter } from './induk.js';
 import { head, prodiTag, stTag, tanya, unduh, loadXLSX } from './ui.js';
 
@@ -77,9 +78,10 @@ export default function kesesuaianView(el) {
     </tbody></table></div>
     <div class="chart" id="k-chart" style="height:280px;margin-top:10px"></div></div>
 
-  <div class="card" style="margin-top:14px" id="k-target">${head('Mengubah target Pedoman', 'Semua pengaturan ada di satu tempat: Data Induk > Parameter', 'settings', '#6366f1')}
+  ${kartuPenetapanSemua(prodi)}
+  <div class="card" style="margin-top:14px" id="k-target">${head('Mengubah target Pedoman', 'Semua pengaturan ada di satu tempat: Data Induk > Parameter', 'gear', '#6366f1')}
     <div class="small" style="white-space:normal;margin-bottom:8px">Nilai Pedoman di atas (SKS total minimal dan maksimal, SKS dan rentang tiap semester, jumlah MK, porsi praktik, dan lainnya) diatur di menu <b>Data Induk > Parameter</b>, bersama batas CPMK, Sub-CPMK, dan indikator RPS. Yang dapat mengubah: Wakil Direktur I, SPM, Admin, dan Developer. Setiap perubahan wajib beralasan dan tercatat di riwayat.</div>
-    <div class="drawer-act" style="flex-wrap:wrap">${boleh ? `<button class="btn pri" id="k-buka">${icon('settings')} Buka Parameter</button>` : ''}<button class="btn" id="k-xl">${icon('download')} Unduh usulan revisi Pedoman (Excel)</button></div></div>`;
+    <div class="drawer-act" style="flex-wrap:wrap">${boleh ? `<button class="btn pri" id="k-buka">${icon('gear')} Buka Parameter</button>` : ''}<button class="btn" id="k-xl">${icon('download')} Unduh usulan revisi Pedoman (Excel)</button></div></div>`;
 
   el.querySelectorAll('[data-go]').forEach(a => { if (!bolehMenu(a.dataset.go)) { a.classList.remove('click'); a.style.cursor = 'default'; return; } a.onclick = () => { if (a.dataset.p) { ctx.prodi = a.dataset.p; saveCtx(); } location.hash = '#' + a.dataset.go; }; });
 
@@ -87,6 +89,7 @@ export default function kesesuaianView(el) {
   if (c) chart(c, { tooltip: { trigger: 'axis' }, legend: { top: 0, data: ['SKS teori', 'SKS praktik', 'Target SKS'] }, grid: { left: 8, right: 16, top: 34, bottom: 8, containLabel: true }, xAxis: { type: 'category', data: B.map(r => 'Smt ' + r.s), ...AX }, yAxis: { type: 'value', ...AX },
     series: [{ name: 'SKS teori', type: 'bar', stack: 's', data: B.map(r => r.x.T), itemStyle: { color: '#0ea5e9' }, barWidth: 22 }, { name: 'SKS praktik', type: 'bar', stack: 's', data: B.map(r => r.x.P), itemStyle: { color: '#10b981', borderRadius: [6, 6, 0, 0] } }, { name: 'Target SKS', type: 'line', data: B.map(r => r.k[0]), symbolSize: 8, lineStyle: { type: 'dashed', color: '#f0616d' }, itemStyle: { color: '#f0616d' } }] });
 
+  pasangPenetapanSemua(el);
   const bx = el.querySelector('#k-xl'); if (bx) bx.onclick = () => unduhRevisi();
   const bk = el.querySelector('#k-buka'); if (bk) bk.onclick = () => { bukaParameter(); location.hash = '#induk'; };
 }

@@ -167,10 +167,11 @@ export function cekTrace(S, pid) {
 export function telaahKeselarasan(S, pid) {
   const P = param(S), mk = byProdi(S.mk, pid).filter(m => !/magang|tugas akhir/i.test(m.kel || '')), cpmk = byProdi(S.cpmk, pid), sub = byProdi(S.sub, pid);
   const cm = P.cpmkPerMk || { min: 2, max: 4 }, sc = P.subPerCpmk || { min: 2, max: 3 }, ip = P.indikatorPerSub || { min: 3, max: 3 };
-  const o = { indikatorLuar: [], cpmkLuar: [], subLuar: [], subTakTerjadwal: [], materiTanpaSub: [], tanpaUkur: [], cpmkTanpaBobot: [], bobotTotal: [] };
+  const o = { subTanpaAcuan: [], indikatorLuar: [], cpmkLuar: [], subLuar: [], subTakTerjadwal: [], materiTanpaSub: [], tanpaUkur: [], cpmkTanpaBobot: [], bobotTotal: [] };
   mk.forEach(m => {
     const cs = cpmk.filter(c => c.mk === m.id);
     if (cs.length && (cs.length < cm.min || cs.length > cm.max)) o.cpmkLuar.push({ ...m, n: cs.length });
+    { const ta = sub.filter(s => s.mk === m.id && !String(s.indikatorAcuan || '').trim()); if (ta.length) o.subTanpaAcuan.push({ ...m, n: ta.length, daftar: ta.map(s => s.kode) }); }
     cs.forEach(c => { const n = sub.filter(s => s.cpmk === c.id).length; if (n && (n < sc.min || n > sc.max)) o.subLuar.push({ ...c, kode: `${m.kode}/${c.kode}`, mk: m.id, n }); });
     const r = rpsOf(S, m.id); if (!r || !r.pertemuan || rpsLengkap(r) === 0) return;
     const reg = r.pertemuan.filter(p => !p.ujian), ss = sub.filter(s => s.mk === m.id);
@@ -613,7 +614,7 @@ export function kodeBerikut(S, jenis, pid, opsi = {}) {
   if (jenis === 'sub') {
     const aw = `${P.sub}${pad2(angkaKode(opsi.cpmk.kode))}`;
     [...S.sub.filter(s => s.prodi === pid).map(s => s.kode), ...ekstra].forEach(k => { const n = nomorDari(k, aw, 2); if (n) pakai.add(n); });
-    return `${aw}${pad2(nomorKosong(pakai))}`;
+    return `${aw}${pad2(ditetapkanProdi(S, pid) ? Math.max(0, ...pakai) + 1 : nomorKosong(pakai))}`;
   }
   const koleksi = { cpl: S.cpl, pl: S.pl, bok: S.bok, bk: S.bk, cpmk: S.cpmk }[jenis] || [], aw = P[jenis];
   [...koleksi.filter(x => x.prodi === pid).map(x => x.kode), ...ekstra].forEach(k => { const n = nomorDari(k, aw); if (n) pakai.add(n); });
@@ -623,7 +624,7 @@ export function kodeBerikut(S, jenis, pid, opsi = {}) {
     (S.pi || []).filter(p => p.prodi === pid).forEach(p => rujuk.add(p.cpl));
     rujuk.forEach(i => { if (!ada.has(i) && String(i).startsWith(pid + '-')) { const n = nomorDari(String(i).slice(pid.length + 1), aw); if (n) pakai.add(n); } });
   }
-  const n = nomorKosong(pakai);
+  const n = jenis === 'cpmk' && ditetapkanProdi(S, pid) ? Math.max(0, ...pakai) + 1 : nomorKosong(pakai);
   return `${aw}${jenis === 'cpl' || jenis === 'cpmk' ? pad2(n) : n}`;
 }
 /** Rencana penyelarasan kode lama dan urutan CPL (S, P, KU, KK) (S1, CPMK1, Sub-CPMK1.1) ke format baku. Hanya kode yang diganti; id dan keterkaitan tidak berubah. */
@@ -699,3 +700,10 @@ export function kedalamanBk(S, b) {
   const smt = Math.max(0, ...mkBk.map(m => +m.smt || 0)); if (smt && ANJURAN_SMT[smt]) n = Math.min(n, ANJURAN_SMT[smt][1]);
   return 'C' + Math.max(1, Math.min(6, n));
 }
+
+/* ---------- Penetapan kurikulum prodi: dosen baru dapat mengisi RPS dan dibebani MK setelah prodi menetapkan rancangannya ---------- */
+export const statusPenetapan = (S, pid) => ((S.settings || {}).penetapan || {})[pid] || null;
+export const ditetapkanProdi = (S, pid) => { const x = statusPenetapan(S, pid); return !!x && x.status === 'ditetapkan'; };
+/** Gerbang aktif bila parameter penetapanWajib tidak dimatikan. Hasil true berarti pengisian dosen diperbolehkan. */
+export const gerbangTerbuka = (S, pid) => param(S).penetapanWajib === false || ditetapkanProdi(S, pid);
+export const PESAN_BELUM_TETAP = 'Rancangan kurikulum prodi ini belum ditetapkan, sehingga RPS belum dapat diisi dan mata kuliah belum dapat dibebankan ke dosen. Prodi menetapkannya di menu Asisten Kurikulum, kartu Penetapan kurikulum prodi.';

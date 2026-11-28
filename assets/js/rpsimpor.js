@@ -2,7 +2,7 @@
    Berkas dibaca di peramban (tanpa pustaka luar, tanpa dikirim ke server), hasilnya ditampilkan sebagai draf untuk ditinjau. */
 import { S, ctx, can, save, saveMany, remove, rerender, esc, icon, toast, openDrawer, addLog } from './app.js';
 import { prodiTag } from './views/ui.js';
-import { mkTanpaCpl } from './rules.js';
+import { mkTanpaCpl, kodeBerikut } from './rules.js';
 import { asesmenBersih } from './rubrik.js';
 import { pecahPustaka, gabungUtama, gabungPend, pecahBahan, gabungBahan } from './rpsisi.js';
 import { bacaRpsLama, terapkanPeta, BIDANG } from './rpslama.js';
@@ -123,12 +123,12 @@ function susun(o, mk) {
   const petaCpl = (k) => { const n = parseInt(String(k).replace(/\D/g, ''), 10); const x = cplP.find(c => norm(c.kode) === norm(k)) || cplP[n - 1]; return x ? x.id : null; };
   const cplIds = Array.from(new Set(o.cpl.map(c => petaCpl(c.kode)).filter(Boolean)));
   o.cpl.forEach(c => { if (!petaCpl(c.kode)) pes.push(`${c.kode} tidak ditemukan pada CPL prodi ${mk.prodi}. Hubungkan manual di menu CPMK.`); });
-  const cpmk = (!penuh || !o.cpmk.length) ? ada : o.cpmk.map((c, i) => ({ id: `${mk.id}-C${i + 1}`, mk: mk.id, prodi: mk.prodi, kode: c.kode.replace(/^CPMK-?/, 'CPMK-'), teks: c.teks, cpl: cplIds }));
-  const noCp = (kodeSub) => { const k = o.korelasi.find(x => x.sub.includes(String(parseInt(kodeSub, 10)).padStart(2, '0')) || x.sub.includes(String(parseInt(kodeSub, 10)))); const c = k && cpmk.find(x => String(parseInt(x.kode.replace(/\D/g, ''), 10)) === String(parseInt(k.cpmk, 10))); return (c || cpmk[0] || {}).id; };
+  const cpmk = (!penuh || !o.cpmk.length) ? ada : (() => { const pk = []; return o.cpmk.map((c, i) => { const nt = (t) => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim(), ex = S.cpmk.find(x => x.prodi === mk.prodi && x.mk === mk.id && nt(x.teks) === nt(c.teks)); const kd = ex ? ex.kode : kodeBerikut(S, 'cpmk', mk.prodi, { pakai: pk }); pk.push(kd); return { id: `${mk.id}-C${i + 1}`, mk: mk.id, prodi: mk.prodi, kode: kd, _n: parseInt(String(c.kode).replace(/\D/g, ''), 10), teks: c.teks, cpl: cplIds }; }); })();
+  const noCp = (kodeSub) => { const k = o.korelasi.find(x => x.sub.includes(String(parseInt(kodeSub, 10)).padStart(2, '0')) || x.sub.includes(String(parseInt(kodeSub, 10)))); const c = k && cpmk.find(x => String(x._n != null ? x._n : parseInt(String(x.kode).replace(/\D/g, ''), 10)) === String(parseInt(k.cpmk, 10))); return (c || cpmk[0] || {}).id; };
   const tot = {}; o.minggu.forEach(w => { const n = parseInt(w.subKode, 10); tot[n] = (tot[n] || 0) + w.bobot; }); const jum = Object.values(tot).reduce((a, b) => a + b, 0) || 1;
   /* Sub-CPMK adalah rancangan prodi: bila sudah ada dan pengunggah dosen, tidak ditimpa; pertemuan RPS hanya dikaitkan ke Sub-CPMK yang ada menurut nomornya. */
   const exSub = S.sub.filter(x => x.mk === mk.id).sort((x, y) => String(x.kode).localeCompare(String(y.kode), 'id', { numeric: true })), tetap = !penuh && exSub.length > 0;
-  const sub = tetap ? [] : o.sub.map((s, i) => { const n = parseInt(s.kode.replace(/\D/g, ''), 10); return { id: `${mk.id}-S${i + 1}`, cpmk: noCp(s.kode.replace(/\D/g, '')), mk: mk.id, prodi: mk.prodi, kode: s.kode, teks: s.teks, bobot: Math.round((tot[n] || 0) / jum * 1000) / 10, _n: n }; });
+  const pakaiS = [], sub = tetap ? [] : o.sub.map((s, i) => { const n = parseInt(s.kode.replace(/\D/g, ''), 10), cid = noCp(s.kode.replace(/\D/g, '')), par = cpmk.find(x => x.id === cid); const nt = (t) => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim(), ex = S.sub.find(x => x.mk === mk.id && nt(x.teks) === nt(s.teks)); const kd = ex ? ex.kode : par ? kodeBerikut(S, 'sub', mk.prodi, { cpmk: par, pakai: pakaiS }) : s.kode; pakaiS.push(kd); return { id: `${mk.id}-S${i + 1}`, cpmk: cid, mk: mk.id, prodi: mk.prodi, kode: kd, teks: s.teks, bobot: Math.round((tot[n] || 0) / jum * 1000) / 10, _n: n }; });
   if (!penuh) pes.push(ada.length ? 'Peran Dosen: CPL, CPMK, dan Sub-CPMK rancangan prodi tidak diubah; yang diperbarui hanya isi RPS (pertemuan, deskripsi, pustaka). Bila Sub-CPMK belum dirancang prodi, Sub-CPMK dari file dipakai dan dikaitkan ke CPMK yang ada.' : 'MK ini belum punya CPMK. Minta Tim Kurikulum Prodi menyusun atau mengunggah RPS-nya terlebih dahulu.');
   else if (!cpmk.length) pes.push('CPMK tidak terbaca.');
   if (tetap) pes.push('Sub-CPMK sudah dirancang prodi dan tidak diubah. Pertemuan RPS dikaitkan ke Sub-CPMK prodi menurut urutan nomornya (Sub-CPMK 1 = Sub-CPMK pertama prodi).'); else if (!sub.length) pes.push('Sub-CPMK tidak terbaca.');
@@ -142,7 +142,7 @@ function susun(o, mk) {
   if (per.length && per.length !== 16) pes.push(`RPS memuat ${per.length} pertemuan (Pedoman umumnya 16 termasuk UTS dan UAS). Dibaca apa adanya.`);
   const bobotTot = per.reduce((a, p) => a + (+p.bobot || 0), 0); if (per.length && Math.abs(bobotTot - 100) > 0.5) pes.push(`Total bobot penilaian ${bobotTot}% (seharusnya 100%).`);
   if (o.T != null && (+o.T !== +mk.T || +o.P !== +mk.P)) pes.push(`Bobot SKS pada RPS ${o.T}T+${o.P}P berbeda dengan MK rancangan ${mk.T}T+${mk.P}P.`);
-  sub.forEach(s => delete s._n);
+  sub.forEach(s => delete s._n); cpmk.forEach(c => delete c._n);
   const pu = pecahPustaka(o.pustaka), bl = pecahBahan(o.bahan);
   const rps = { id: mk.id, mk: mk.id, prodi: mk.prodi, deskripsi: o.deskripsi, bahan: bl.length ? gabungBahan(bl) : o.bahan, bahanList: bl, pustaka: gabungUtama(pu.utama), pustakaPendukung: gabungPend(pu.pend), penelitian: '', pkm: '', pengampuRps: o.pengampu, syarat: o.syarat, pertemuan: per, status: 'draf', oleh: 'Impor RPS Word', tgl: new Date().toISOString().slice(0, 10), sumber: o.file };
   return { cpmk, sub, rps, cplIds, pes };

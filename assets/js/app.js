@@ -4,7 +4,7 @@ import { DB } from './db.js';
 import { kolomSandi, pasangMata } from './auth-ui.js';
 import { buildSeed } from './seed.js';
 import { migrasiLG, setKodeBaku } from './kode.js';
-import { param } from './rules.js';
+import { param, gerbangTerbuka } from './rules.js';
 import { jadwalkanUmpan } from './sinkron.js';
 import { icon } from './icons.js';
 import { disposeAll, tilt } from './charts.js';
@@ -106,7 +106,7 @@ export function can(action, obj = {}) {
     case 'susun': return r === 'prodi' && (obj.prodi || ctx.prodi) === ctx.prodi;          // visi s.d. CPMK, penugasan
     case 'rps': {                                                                             // Sub-CPMK, RPS, SAP
       if (r === 'prodi') return (obj.prodi || ctx.prodi) === ctx.prodi;
-      if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen);
+      if (r === 'dosen') return S.tugas.some(t => t.mk === obj.mk && t.dosen === ctx.dosen) && gerbangTerbuka(S, obj.prodi || (S.mk.find(m => m.id === obj.mk) || {}).prodi);
       return false;
     }
     case 'real': {                                                                            // realisasi pembelajaran

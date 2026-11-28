@@ -83,7 +83,7 @@ export const INDIKATOR_IABEE = [
 export const PARAM_DEFAULT = {
   menitTeori: 60,
   durasiPraktik: { MKU: 120, MBS: 120, MBE: 170, MKK: 170 },
-  totalSksMin: 144, totalSksMax: 156,
+  totalSksMin: 144, totalSksMax: 156, penetapanWajib: true,
   /* smt: [SKS target, T min, T maks, P min, P maks, MK min, MK maks] (smt 7-8 tanpa rentang T/P) */
   kerangka: {
     1: [20, 13, 15, 5, 7, 9, 12],

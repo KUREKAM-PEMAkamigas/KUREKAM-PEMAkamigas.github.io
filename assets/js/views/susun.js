@@ -8,7 +8,7 @@ import { KELOMPOK, KAT_IABEE, GRUP, BUTIR_IABEE } from '../config.js';
 import { chart, AX, PAL } from '../charts.js';
 import { detect, smtMinCpl, alasanOk } from '../bloom.js';
 import { badge } from '../bloom.js';
-import { kodeBerikut, tebakBok, kedalamanBk, bokStandarProdi, rencanaSelaras, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
+import { ditetapkanProdi, kodeBerikut, tebakBok, kedalamanBk, bokStandarProdi, rencanaSelaras, kelengkapanCpl, iabeeAnjuran, RANAH_CPL, cplTerlaluTinggi, iabeeOf, piOfCpl, byProdi, struktur, param, jpOf, sksOf, grupOf, warnaGrup, fmt, durasi, kelasOf } from '../rules.js';
 import { tanya, head, formDrawer, ro, kpi, animateCounts, opts, short, prodiName, bar, unduh } from './ui.js';
 
 const akadMkF = (m) => !/magang|tugas akhir/i.test(m.kel || '');
@@ -88,7 +88,7 @@ export function cplView(el) {
   const bT = el.querySelector('#cpl-tpl'), bI = el.querySelector('#cpl-imp'), fI = el.querySelector('#cpl-file');
   if (bT) { bT.onclick = () => templatCpl(ctx.prodi).catch(e => toast('Templat gagal: ' + e.message)); bI.onclick = () => { fI.value = ''; fI.click(); }; fI.onchange = () => { const f = fI.files[0]; if (f) imporCpl(f, ctx.prodi).catch(e => toast('Impor gagal: ' + e.message)); }; }
   /* kode CPL selalu berurutan menurut ranah: Sikap, Pengetahuan, Keterampilan umum, Keterampilan khusus */
-  const urutkanCpl = async () => { const r = rencanaSelaras(S, ctx.prodi); if (r.cpl.length) await saveMany('cpl', r.cpl, `Urutkan kode CPL menurut ranah (${ctx.prodi})`); if (r.pi.length) await saveMany('pi', r.pi); };
+  const urutkanCpl = async () => { if (ditetapkanProdi(S, ctx.prodi)) { toast('Kurikulum prodi sudah ditetapkan, nomor terkunci. Ajukan buka kembali bila perlu merapikan nomor.'); return; } const r = rencanaSelaras(S, ctx.prodi); if (r.cpl.length) await saveMany('cpl', r.cpl, `Urutkan kode CPL menurut ranah (${ctx.prodi})`); if (r.pi.length) await saveMany('pi', r.pi); };
   const form = (x = { ranah: 'KK', pl: [], iabee: [] }) => formDrawer({ title: x.id ? 'Ubah CPL ' + x.kode : 'CPL baru', sub: prodiName(), obj: { ...x, iabee: iabeeOf(x), sn: String(x.sn || '').split(/[,;\s]+/).map(t => t.trim().toUpperCase().replace(/^CPL-?/, '')).filter(Boolean) },
     onOpen: (dr) => {
       const rn = () => dr.querySelector('[name=ranah]').value;

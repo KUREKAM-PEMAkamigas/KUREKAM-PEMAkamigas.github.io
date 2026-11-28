@@ -2,6 +2,7 @@
    Generator berbasis aturan: menyusun kerangka dan rumusan awal sesuai Buku Pedoman, SN Dikti,
    LAM Teknik, IABEE, dan Taksonomi Bloom. Hasilnya selalu berstatus usulan dan bisa diedit.
    Isi keilmuan (pokok bahasan, pustaka, penelitian) tetap berasal dari dosen dan prodi. */
+import { kartuPenetapan, pasangPenetapan } from '../penetapan.js';
 import { S, ctx, can, save, saveMany, addLog, esc, icon, toast, uid, openDrawer, closeDrawer, rerender } from '../app.js';
 import { KELOMPOK, APP } from '../config.js';
 import { kodeBaruMk, kodeBaku } from '../kode.js';
@@ -352,7 +353,8 @@ export default function asistenView(el) {
   const langkah = (no, judul, status, isi, aksi, c) => `<div class="card" style="margin-top:14px"><div class="card-h"><span class="ico-badge" style="--c:${c}"><b>${no}</b></span><div><h3>${judul}</h3></div><div class="sp"></div>${status}</div><ul class="small" style="margin:8px 0 10px 18px;line-height:1.6">${isi}</ul><div class="filters">${aksi}</div></div>`;
 
   el.innerHTML = `
-  <div class="card">${head('Asisten Kurikulum ' + esc(pid), esc(prodiName()) + ' · pemandu langkah demi langkah dan pembuat usulan otomatis', 'spark', '#f5a524', ed ? '' : ro())}
+  ${kartuPenetapan(pid)}
+  <div class="card" style="margin-top:14px">${head('Asisten Kurikulum ' + esc(pid), esc(prodiName()) + ' · pemandu langkah demi langkah dan pembuat usulan otomatis', 'spark', '#f5a524', ed ? '' : ro())}
     <p class="small" style="margin:6px 0 10px">Ikuti tujuh langkah di bawah. Di tiap langkah prodi boleh mengisi sendiri lewat menunya, atau menekan tombol usulan otomatis lalu menyunting hasilnya. Usulan otomatis hanya menambah bagian yang masih kosong dan tidak pernah menimpa isian prodi. Rumusan mengikuti Buku Pedoman Kurikulum ${APP.tahunKurikulum}, SN Dikti, LAM Teknik, IABEE, dan Taksonomi Bloom.</p>
     <div class="grid g4 mini">${g.tahap.map((x, i) => { const a = aksiTahap[i]; return `<a class="tahap-k" href="${a.h}" data-tk="${i}" title="${esc(a.ket)}" style="display:block;color:inherit;text-decoration:none"><small>${x.n}</small><b>${x.v}%</b>${bar(x.v, pctColor(x.v))}<div class="small ${x.v >= 99 ? 'muted' : ''}" style="margin-top:4px;color:${x.v >= 99 ? '' : '#b42335'}">${x.v >= 99 ? 'Sudah lengkap' : esc(a.ket) + ' ›'}</div></a>`; }).join('')}</div>
     ${tindakan.length ? `<h4 style="margin:14px 0 6px">Perlu ditangani lebih dulu (${tindakan.length}${ck.length > tindakan.length ? ' teratas' : ''})</h4><div class="tbl-wrap"><table class="tbl"><tbody>${tindakan.map((c, i) => `<tr class="click" data-tn="${i}"><td>${kTag(c.k)}</td><td><b>${esc(c.label)}</b><div class="small muted" style="white-space:normal">${esc(c.val)} · seharusnya ${esc(c.target)}</div></td><td class="small muted">${esc(namaMenu(c.p.h))} ›</td></tr>`).join('')}</tbody></table></div><div class="small muted" style="margin-top:4px">Klik baris untuk menuju menunya. Penjelasan lengkap tiap butir ada di <a href="#periksa">Pemeriksa Kurikulum</a>.</div>` : ''}
@@ -398,6 +400,7 @@ export default function asistenView(el) {
     <div class="filters" style="margin-top:8px"><a class="btn sm" href="assets/templat/Templat_RPS_KUREKAM.docx" download>${icon('download')} Templat RPS (Word)</a><a class="btn sm" href="assets/templat/Templat_Matriks_Kurikulum_Prodi.xlsx" download>${icon('download')} Templat matriks kurikulum (Excel)</a><a class="btn sm ghost" href="#laporan">Cetak dokumen kurikulum prodi</a></div>
     <p class="small muted" style="margin-top:8px">Templat RPS yang sudah diisi bisa diunggah kembali lewat tombol Unggah RPS dari Word. Templat matriks yang sudah diisi diimpor admin atau Kasubbag AK di Data Induk.</p></div>`;
 
+  pasangPenetapan(el, pid);
   el.querySelectorAll('[data-uj]').forEach(b => b.onclick = async () => { const [k, id] = b.dataset.uj.split('|'); const it = usulanProdi(pid).find(x => x.k === k && x.o.id === id); if (!it) return; if (!bolehSetuju(it)) { toast('Ganti nama MK dulu di menu Mata Kuliah, lalu setujui.'); return; } await setujui([it]); rerender(); });
   const ujAll = el.querySelector('#uj-all'); if (ujAll) ujAll.onclick = async () => { const its = usulanProdi(pid).filter(bolehSetuju); if (!its.length) { toast('Tidak ada usulan yang dapat disetujui.'); return; } if (!(await tanya(`Saya sudah membaca dan memahami ${its.length} usulan ini, dan menyetujuinya sebagai isian resmi prodi. Usulan MK bernama sementara tidak ikut disetujui. Lanjutkan?`, 'Setujui semua'))) return; await setujui(its); toast(`${its.length} usulan disetujui.`); rerender(); };
   const ujHps = el.querySelector('#uj-hapus'); if (ujHps) ujHps.onclick = async () => { if (!(await tanya('Slot MK usulan yang belum dipakai (belum punya CPMK, penugasan, atau RPS) dihapus. Lanjutkan?', 'Hapus'))) return; const n = await hapusSlotKosong(pid); toast(n ? `${n} slot MK usulan dihapus.` : 'Tidak ada slot yang bisa dihapus.'); rerender(); };

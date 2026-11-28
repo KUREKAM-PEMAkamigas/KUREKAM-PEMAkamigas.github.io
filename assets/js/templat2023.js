@@ -1,10 +1,9 @@
 /* KUREKAM · Templat Excel Kurikulum 2023 (bahan pendukung PA IABEE 2027).
    Isinya sama dengan format Tabel OBE prodi (lembar 1 sampai 18, dibaca oleh Impor Tabel OBE),
    ditambah lembar "Pemetaan MK 2023 ke 2027" dan lembar "Petunjuk". Tidak memuat data apa pun. */
-import { tabelObe } from './obe.js';
+import { lembarImpor, KOLOM_PEMETAAN, JENIS_PADANAN } from './templatobe.js';
 import { loadXLSX, unduh } from './views/ui.js';
 
-export const JENIS_PADANAN = ['Sama', 'Diganti nama', 'Digabung', 'Dipecah', 'Dihapus', 'Baru di 2027'];
 
 const PETUNJUK = [
   ['Templat Kurikulum 2023 (bahan pendukung PA IABEE 2027)'],
@@ -21,14 +20,6 @@ const PETUNJUK = [
   [''],
   ['Jenis padanan yang dikenali: ' + JENIS_PADANAN.join(', ')],
 ];
-const KOLOM_PEMETAAN = ['Kode MK 2023', 'Nama MK 2023', 'SKS 2023', 'Semester 2023', 'Kode MK 2027', 'Nama MK 2027', 'Jenis padanan', 'Catatan'];
-
-function dataKosong() {
-  const S = {};
-  ['prodi', 'dosen', 'pl', 'cpl', 'pi', 'capaian', 'tl', 'capstone', 'lulusan', 'ab', 'real', 'bok', 'bk', 'mk', 'cpmk', 'sub', 'rps', 'tugas', 'revisi', 'lama', 'ajar', 'jadwal', 'riset', 'pengguna', 'log'].forEach(k => { S[k] = []; });
-  S.settings = { param: {} };
-  return S;
-}
 
 /** Membuat dan mengunduh templat Excel Kurikulum 2023 untuk satu prodi. */
 export async function unduhTemplat2023(pid) {
@@ -36,11 +27,11 @@ export async function unduhTemplat2023(pid) {
   const lembar = (nama, aoa, lebar) => { const ws = X.utils.aoa_to_sheet(aoa); if (lebar) ws['!cols'] = lebar.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, nama.slice(0, 31)); };
   lembar('Petunjuk', PETUNJUK, [120]);
   const dipakai = new Set(['Petunjuk']);
-  tabelObe(dataKosong(), pid).filter(t => /^\d+a?$/.test(t.no) && parseInt(t.no, 10) <= 18).forEach(t => {
+  lembarImpor({}).forEach(t => {
     let nama = String(t.sheet || t.no).replace(/[\\/?*[\]:]/g, ' ').slice(0, 31);
     while (dipakai.has(nama)) nama = nama.slice(0, 29) + '_' + dipakai.size;
     dipakai.add(nama);
-    lembar(nama, [[t.judul + ' (Kurikulum 2023)'], [`Program Studi ${pid}`], [], t.kolom], t.kolom.map((_, i) => (i === 0 ? 18 : 24)));
+    lembar(nama, [[t.judul + ' (Kurikulum 2023)'], [`Program Studi ${pid}`], [], t.kolom, ...(t.catatan || []).map(c => ['Catatan: ' + c])], t.kolom.map((_, i) => (i === 0 ? 18 : 24)));
   });
   lembar('Pemetaan MK 2023 ke 2027', [['Pemetaan Mata Kuliah Kurikulum 2023 ke Kurikulum 2027'], [`Program Studi ${pid}`], [], KOLOM_PEMETAAN], [16, 36, 10, 12, 16, 36, 18, 40]);
   unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `templat-kurikulum-2023-${pid}.xlsx`);

@@ -57,6 +57,8 @@ export function imporObe(X, wb, pid) {
   (l2 || []).forEach(r => {
     const a = s(r[0]), b = s(r[1]);
     if (/^sikap/i.test(a)) ranah = 'S'; else if (/^pengetahuan/i.test(a)) ranah = 'P'; else if (/^ket[a-z]*\s*umum/i.test(a)) ranah = 'KU'; else if (/^ket[a-z]*\s*khusus/i.test(a)) ranah = 'KK';
+    /* format keluaran KUREKAM (Ranah | Kode unsur SN Dikti | CPL | Rumusan) dikenali juga */
+    { const kk = s(r[2]).toUpperCase(), un = b.toUpperCase(); if (/^CPL\d+$/.test(kk) && /^(S|P|KU|KK)\d+$/.test(un) && cplBy[kk]) { const c = cplBy[kk]; if (!c.ranah) c.ranah = un.replace(/\d+$/, ''); c.sn = c.sn ? `${c.sn}, ${un}` : un; return; } }
     const k = a.toUpperCase();
     if (/^CPL\d+$/.test(k) && /^CPL-/i.test(b) && cplBy[k]) { const c = cplBy[k]; if (!c.ranah) c.ranah = ranah; const sn = b.toUpperCase(); c.sn = c.sn ? `${c.sn}, ${sn}` : sn; }
   });

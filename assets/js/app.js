@@ -266,10 +266,10 @@ const NAV = [
   ['A · Landasan', [
     { tabs: ['visi'], step: 1 }, { tabs: ['cpl'], step: 2 }, { tabs: ['advisory'], step: 3 }]],
   ['B · Rancangan kurikulum', [
-    { tabs: ['bk'], step: 4 }, { tabs: ['mk'], step: 5 }, { tabs: ['cpmkprodi'], step: 6 }, { tabs: ['pi'], step: 7 },
-    { tabs: ['beban', 'bebanprodi'], step: 8, t: 'Beban & Penugasan', sub: 'Dosen pengampu, beban, kapasitas JP', lbl: ['Penugasan dan beban dosen', 'Beban prodi dan kapasitas JP'] }]],
+    { tabs: ['bk'], step: 4 }, { tabs: ['mk'], step: 5 }, { tabs: ['cpmkprodi'], step: 6 }, { tabs: ['pi'], step: 7 }, { tabs: ['cpmk'], step: 8 },
+    { tabs: ['beban', 'bebanprodi'], step: 9, t: 'Beban & Penugasan', sub: 'Dosen pengampu, beban, kapasitas JP', lbl: ['Penugasan dan beban dosen', 'Beban prodi dan kapasitas JP'] }]],
   ['C · Penyusunan pembelajaran', [
-    { tabs: ['deskmk'], step: 9 }, { tabs: ['cpmk'], step: 10 }, { tabs: ['riset'], step: 11 }, { tabs: ['rps'], step: 12 }]],
+    { tabs: ['deskmk'], step: 10 }, { tabs: ['riset'], step: 11 }, { tabs: ['rps'], step: 12 }]],
   ['D · Pengendalian mutu', [
     { tabs: ['periksa'], step: 13 }, { tabs: ['revisi'], step: 14 }]],
   ['E · Realisasi dan capaian', [

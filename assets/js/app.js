@@ -267,21 +267,21 @@ const NAV = [
     { tabs: ['rambu', 'bloom'], t: 'Rambu & Panduan', sub: 'Semester, level Bloom, kata kerja, RPS', lbl: ['Rambu pengisian', 'Taksonomi Bloom'] },
     { tabs: ['asisten', 'generator', 'impor'], sub: 'Pemandu, generator usulan, impor Excel', lbl: ['Pemandu dan validasi', 'Generator usulan', 'Impor dan ekspor'] }]],
   ['Pantau', [
-    { tabs: ['kesesuaian'] }, { tabs: ['pimpinan'] }, { tabs: ['mutu'] }, { tabs: ['akademik'] },
+    { tabs: ['pimpinan'] }, { tabs: ['mutu'] }, { tabs: ['akademik'] },
     { tabs: ['jadwal', 'pantau'], t: 'Jadwal & Pemantauan', sub: 'Tahapan, progres, dan aktivitas', lbl: ['Jadwal dan progres', 'Aktivitas pengguna'] },
     { tabs: ['kinerja'] }]],
   ['A · Landasan', [
     { tabs: ['visi'], step: 1 }, { tabs: ['cpl'], step: 2 }, { tabs: ['advisory'], step: 3 }]],
   ['B · Rancangan kurikulum', [
-    { tabs: ['bk'], step: 4 }, { tabs: ['mk'], step: 5 }, { tabs: ['cpmkprodi'], step: 6 }, { tabs: ['pi'], step: 7 }, { tabs: ['cpmk'], step: 8 },
-    { tabs: ['beban', 'bebanprodi'], step: 9, t: 'Beban & Penugasan', sub: 'Dosen pengampu, beban, kapasitas JP', lbl: ['Penugasan dan beban dosen', 'Beban prodi dan kapasitas JP'] }]],
+    { tabs: ['bk'], step: 4 }, { tabs: ['mk'], step: 5 }, { tabs: ['cpmkprodi', 'cpmk'], step: 6, t: 'CPMK & Sub-CPMK', sub: 'CPMK prodi, lalu Sub-CPMK per mata kuliah', lbl: ['CPMK prodi', 'Sub-CPMK per mata kuliah'] }, { tabs: ['pi'], step: 7 },
+    { tabs: ['beban', 'bebanprodi'], step: 8, t: 'Beban & Penugasan', sub: 'Dosen pengampu, beban, kapasitas JP', lbl: ['Penugasan dan beban dosen', 'Beban prodi dan kapasitas JP'] }]],
   ['C · Penyusunan pembelajaran', [
-    { tabs: ['deskmk'], step: 10 }, { tabs: ['riset'], step: 11 }, { tabs: ['rps'], step: 12 }]],
+    { tabs: ['deskmk'], step: 9 }, { tabs: ['riset'], step: 10 }, { tabs: ['rps'], step: 11 }]],
   ['D · Pengendalian mutu', [
-    { tabs: ['periksa'], step: 13 }, { tabs: ['revisi'], step: 14 }]],
+    { tabs: ['periksa', 'kesesuaian'], step: 12, t: 'Pemeriksa & Kesesuaian', sub: 'Temuan per tahap, Bloom, dan kesesuaian Pedoman', lbl: ['Pemeriksa kurikulum', 'Kesesuaian Pedoman'] }, { tabs: ['revisi'], step: 13 }]],
   ['E · Realisasi dan capaian', [
-    { tabs: ['realisasi'], step: 15 }, { tabs: ['nilai', 'capaian'], step: 16, t: 'Capaian CPL & Tindak Lanjut', sub: 'Nilai per MK, rekap angkatan, tindak lanjut', lbl: ['Nilai per mata kuliah', 'Rekap dan tindak lanjut'] },
-    { tabs: ['lulusan', 'skpi'], step: 17, t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi dan SKPI', lbl: ['Capstone, lulusan, tracer', 'SKPI lulusan'] }]],
+    { tabs: ['realisasi'], step: 14 }, { tabs: ['nilai', 'capaian'], step: 15, t: 'Capaian CPL & Tindak Lanjut', sub: 'Nilai per MK, rekap angkatan, tindak lanjut', lbl: ['Nilai per mata kuliah', 'Rekap dan tindak lanjut'] },
+    { tabs: ['lulusan', 'skpi'], step: 16, t: 'Capstone, Lulusan & Tracer', sub: 'Data agregat prodi dan SKPI', lbl: ['Capstone, lulusan, tracer', 'SKPI lulusan'] }]],
   ['F · Peta dan luaran', [
     { tabs: ['peta', 'matriks', 'obe'], t: 'Peta Kurikulum', sub: 'Peta, keterlacakan, dan tabel OBE', lbl: ['Peta kurikulum', 'Matriks keterlacakan', 'Tabel OBE'] },
     { tabs: ['laporan'] }]],

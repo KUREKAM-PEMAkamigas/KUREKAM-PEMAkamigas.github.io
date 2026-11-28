@@ -55,12 +55,12 @@ function hitungTahap(S, pid) {
   if (tr.cpl.length) bila(1, 's1:butir', kl.butirKosong, 'near', 'butir IABEE belum tercakup CPL mana pun', (b) => '(' + b.k + ')');
 
   /* Tahap 2 */
-  bila(2, 's2:cplNoBk', tr.cplNoBk, 'bad', 'CPL belum dibentuk bahan kajian');
+  bila(2, 's2:cplNoBk', tr.cplNoBk, 'bad', 'CPL belum dibentuk bahan kajian', kd, '#bk');
   bila(2, 's2:cplNoMk', tr.cplNoMk, 'bad', 'CPL belum dimuat mata kuliah mana pun');
   bila(2, 's2:mkNoCpl', tr.mkNoCpl, 'bad', 'mata kuliah belum dibebani CPL (dosen tidak dapat mengisi RPS)');
   bila(2, 's2:bkNoMk', tr.bkNoMk, 'near', 'bahan kajian belum dimuat mata kuliah');
   bila(2, 's2:mkNoBk', tr.mkNoBk, 'near', 'mata kuliah belum terkait bahan kajian');
-  cekStruktur(S, pid).forEach(c => { if (c.k === 'ok') return; add(2, `s2:str:${c.grp}:${c.label}`, c.k === 'bad' ? 'bad' : 'near', `${c.label}: hasil ${c.val}, ketentuan ${c.target}`, '#mk'); });
+  cekStruktur(S, pid).forEach(c => { if (c.k === 'ok') return; add(2, `s2:str:${c.grp}:${c.label}`, c.k === 'bad' ? 'bad' : 'near', `${c.label}: hasil ${c.val}, ketentuan ${c.target}`, (/semester (\d)$/.exec(c.label) ? '#mk?smt=' + /semester (\d)$/.exec(c.label)[1] : '#mk')); });
 
   /* Tahap 3 */
   const cpmk = tr.cpmk;

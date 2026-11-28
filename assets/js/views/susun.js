@@ -170,7 +170,7 @@ export function bkView(el) {
 export function mkView(el) {
   const ed = can('susun'), P = param(S);
   const all = byProdi(S.mk, ctx.prodi), R = struktur(S, ctx.prodi);
-  const st = { smt: '', kel: '', q: '' };
+  const st = { smt: (/[?&]smt=([1-8])/.exec(location.hash) || [])[1] || '', kel: '', q: '' };
   el.innerHTML = `
   <div class="grid g4">
     ${kpi('Total SKS', R.total, `target minimal ${P.totalSksMin}`, R.total >= P.totalSksMin ? '#10b981' : '#f0616d', 'book')}
@@ -194,6 +194,7 @@ export function mkView(el) {
     if (ed) el.querySelectorAll('[data-inti]').forEach(i => { i.onclick = (e) => e.stopPropagation(); i.onchange = async () => { const m = S.mk.find(x => x.id === i.dataset.inti); const doc = { ...m, inti: i.checked }; await save('mk', doc, `${i.checked ? 'Tandai' : 'Lepas'} MK inti ${m.nama} (${ctx.prodi})`); Object.assign(m, doc); draw(); }; });
   };
   el.querySelector('#q').oninput = e => { st.q = e.target.value.toLowerCase(); draw(); };
+  if (st.smt) { el.querySelector('#f-smt').value = st.smt; setTimeout(() => { const t = el.querySelector('#t-mk'); if (t) t.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 150); }
   el.querySelector('#f-smt').onchange = e => { st.smt = e.target.value; draw(); };
   el.querySelector('#f-kel').onchange = e => { st.kel = e.target.value; draw(); };
   draw(); animateCounts(el);

@@ -83,7 +83,9 @@ export default function kesesuaianView(el) {
     <div class="small" style="white-space:normal;margin-bottom:8px">Nilai Pedoman di atas (SKS total minimal dan maksimal, SKS dan rentang tiap semester, jumlah MK, porsi praktik, dan lainnya) diatur di menu <b>Data Induk > Parameter</b>, bersama batas CPMK, Sub-CPMK, dan indikator RPS. Yang dapat mengubah: Wakil Direktur I, SPM, Admin, dan Developer. Setiap perubahan wajib beralasan dan tercatat di riwayat.</div>
     <div class="drawer-act" style="flex-wrap:wrap">${boleh ? `<button class="btn pri" id="k-buka">${icon('gear')} Buka Parameter</button>` : ''}<button class="btn" id="k-xl">${icon('download')} Unduh usulan revisi Pedoman (Excel)</button></div></div>`;
 
-  el.querySelectorAll('[data-go]').forEach(a => { if (!bolehMenu(a.dataset.go)) { a.classList.remove('click'); a.style.cursor = 'default'; return; } a.onclick = () => { if (a.dataset.p) { ctx.prodi = a.dataset.p; saveCtx(); } location.hash = '#' + a.dataset.go; }; });
+  el.querySelectorAll('[data-go]').forEach(a => { if (!bolehMenu(a.dataset.go)) { a.classList.remove('click'); a.style.cursor = 'default'; return; } const terkunci = ctx.kunci && ctx.role === 'prodi' && ctx.akun && ctx.akun.prodi;
+    if (terkunci && a.dataset.p && a.dataset.p !== ctx.prodi) { a.classList.remove('click'); a.style.cursor = 'default'; a.title = 'Hanya prodi ' + a.dataset.p + ' yang dapat membuka dan memperbaiki butir ini.'; return; }
+    a.onclick = () => { if (a.dataset.p && a.dataset.p !== ctx.prodi) { ctx.prodi = a.dataset.p; saveCtx(); toast('Beralih ke prodi ' + a.dataset.p + '. Untuk kembali, ganti pilihan Prodi di bilah atas.'); } location.hash = '#' + a.dataset.go; }; });
 
   const c = el.querySelector('#k-chart');
   if (c) chart(c, { tooltip: { trigger: 'axis' }, legend: { top: 0, data: ['SKS teori', 'SKS praktik', 'Target SKS'] }, grid: { left: 8, right: 16, top: 34, bottom: 8, containLabel: true }, xAxis: { type: 'category', data: B.map(r => 'Smt ' + r.s), ...AX }, yAxis: { type: 'value', ...AX },

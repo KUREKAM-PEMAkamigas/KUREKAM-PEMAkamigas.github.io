@@ -25,6 +25,7 @@ import nilaiView from './views/nilai.js';
 import bebanProdiView from './views/bebanprodi.js';
 import asistenView from './views/asisten.js';
 import imporView from './views/impor.js';
+import { kunciMenu, jagaSimpan, tandaiImpor, bersihkanGerbang, GerbangError, periksaTahap, tahapMerahPertama, gerbangAktif, TAHAP_MENU } from './gerbang.js';
 import { piView, kesiapanView } from './views/iabee.js';
 import generatorView from './views/generator.js';
 import capaianView from './views/capaian.js';
@@ -151,6 +152,8 @@ function kerjaSelesai(gagal) {
   }, 450);
 }
 export async function save(col, doc, aksi) {
+  if (!dalamSimulasi()) jagaSimpan(S, col, [doc]);
+  bersihkanGerbang();
   if (doc && doc.contoh) delete doc.contoh;
   const arr = S[col]; const i = arr.findIndex(x => x.id === doc.id);
   if (i >= 0) arr[i] = doc; else arr.push(doc);
@@ -159,6 +162,8 @@ export async function save(col, doc, aksi) {
   try { if (col !== 'log') jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(false); }
 }
 export async function saveMany(col, docs, aksi) {
+  if (!dalamSimulasi()) jagaSimpan(S, col, docs);
+  bersihkanGerbang();
   docs.forEach(x => { if (x && x.contoh) delete x.contoh; });
   docs.forEach(doc => { const i = S[col].findIndex(x => x.id === doc.id); if (i >= 0) S[col][i] = doc; else S[col].push(doc); });
   kerjaMulai('simpan'); let gagal = false;
@@ -166,6 +171,7 @@ export async function saveMany(col, docs, aksi) {
   try { jadwalkanUmpan(); if (aksi) await addLog(aksi); } finally { kerjaSelesai(gagal); }
 }
 export async function remove(col, id, aksi) {
+  bersihkanGerbang();
   S[col] = S[col].filter(x => x.id !== id);
   kerjaMulai('hapus'); let gagal = false;
   try { await DB.del(col, id, S[col]); } catch (e) { gagal = true; toast('Gagal menghapus: ' + e.message); }
@@ -179,7 +185,8 @@ export async function addLog(aksi, jenis = 'simpan') {
   try { await DB.put('log', doc, S.log); } catch (e) { /* abaikan */ }
 }
 export async function resetData() { const d = buildSeed(); for (const c of Object.keys(d)) await DB.replaceAll(c, d[c]); load(d); }
-export async function replaceData(d) { for (const c of Object.keys(d)) { if (S[c] !== undefined || c === 'settings') await DB.replaceAll(c, d[c]); } load(d); }
+export async function replaceData(d) {
+  bersihkanGerbang(); for (const c of Object.keys(d)) { if (S[c] !== undefined || c === 'settings') await DB.replaceAll(c, d[c]); } load(d); }
 function load(d) {
   Object.keys(S).forEach(k => { if (k === 'pengguna' && !d[k]) return; if (k !== 'settings') S[k] = d[k] || []; });
   S.settings = (d.settings && d.settings[0]) || { id: 'app', paritas: 'ganjil', param: {} };
@@ -312,6 +319,22 @@ function pasangSide() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') tutupSide(); });
   window.addEventListener('resize', () => { const h = (location.hash || '#beranda').slice(1).split('/')[0]; terapkanSide(h); if (lebar()) tutupSide(); });
 }
+/** Penanda merah pada menu yang terkunci oleh gerbang tahap. */
+function penandaKunci(e) {
+  if (dalamSimulasi() || !ctx.prodi || ctx.role === 'dosen') return '';
+  const m = e.tabs.find(t => TAHAP_MENU[t]); if (!m) return '';
+  const k = kunciMenu(S, ctx.prodi, m);
+  return k ? `<i class="stp" style="background:#b42335;color:#fff" title="${esc(k.pesan)}">Kunci</i>` : '';
+}
+/** Pita gerbang di atas menu tahap: terkunci, atau daftar butir merah pada tahap ini. */
+function bannerGerbang(id) {
+  const n = TAHAP_MENU[id]; if (!n || dalamSimulasi() || !ctx.prodi || ctx.role === 'dosen' || !gerbangAktif(S)) return '';
+  const pid = ctx.prodi, hasil = periksaTahap(S, pid), t = hasil[n - 1], k = kunciMenu(S, pid, id);
+  const daftar = t.butir.filter(b => b.k === 'bad').slice(0, 6).map(b => `<li>${esc(b.teks)} <a href="${b.h}">Perbaiki</a></li>`).join('');
+  if (k) return `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <span><b>Menu ini terkunci.</b> ${esc(k.pesan)} <a href="${k.h}"><b>Buka tahap ${k.tahap}</b></a>. Isi masih bisa dilihat.</span></div>`;
+  if (t.merah) return `<div class="ribbon bad" style="margin:0 0 12px">${icon('alert')} <span><b>Tahap ${n}: ${t.merah} butir belum sesuai.</b> Perbaiki dahulu agar tahap berikutnya terbuka.<ul style="margin:6px 0 0 18px">${daftar}</ul></span></div>`;
+  return `<div class="ribbon" style="margin:0 0 12px;background:#ecfdf5;border-color:#10b981">${icon('check')} <span><b>Tahap ${n} sesuai Pedoman.</b>${t.kuning ? ` ${t.kuning} peringatan (boleh dilanjutkan).` : ''}</span></div>`;
+}
 function renderSide(cur) {
   let sec = '', h = `<div class="brand-logos"><img src="assets/img/logo-pem-akamigas.png" alt="PEM Akamigas" class="lg-pem"><img src="assets/img/logo-esdm.png" alt="Kementerian ESDM" class="lg-esdm"></div>
     <div class="brand"><div class="brand-logo k">${icon('layers')}</div><div><b>${APP.nama}</b><small>${APP.panjang}</small></div></div><nav class="nav">`;
@@ -320,7 +343,7 @@ function renderSide(cur) {
     h += `<div class="nav-sec">${grup}</div>`;
     ada.forEach(e => {
       const awal = e.tabs.find(bolehMenu);
-      h += `<a href="#${awal}" class="${e.tabs.includes(cur) ? 'on' : ''}" style="--c:${e.c}"><span class="chip">${icon(e.ic)}</span><span>${e.t}${e.sub ? `<small class="nsub">${e.sub}</small>` : ''}</span>${e.step ? `<i class="stp">${e.step}</i>` : ''}</a>`;
+      h += `<a href="#${awal}" class="${e.tabs.includes(cur) ? 'on' : ''}" style="--c:${e.c}"><span class="chip">${icon(e.ic)}</span><span>${e.t}${e.sub ? `<small class="nsub">${e.sub}</small>` : ''}</span>${e.step ? `<i class="stp">${e.step}</i>` : ''}${penandaKunci(e)}</a>`;
     });
   });
   h += `<div class="nav-sec">Aplikasi lain</div><a href="${APP_LAIN.simantap.url}" target="_blank" rel="noopener" style="--c:#8b5cf6"><span class="chip">${icon('medal')}</span><span>SIMANTAP 2.0<small class="nsub">Pemantauan mutu dan akreditasi</small></span></a>`;
@@ -369,6 +392,7 @@ export function route_() {
   if (ctx.akun && ctx.akun.sandiAwal && !ctx.akun.sandiDiubah) view.innerHTML += `<div class="ribbon info">${icon('info')} Anda masih memakai kata sandi awal dari admin. Demi keamanan, ganti lewat tombol Kata sandi di kanan atas.</div>`;
   if (ctx.tanpaPeran) view.innerHTML += `<div class="ribbon bad">${icon('alert')} Akun ${esc(DB.user.email)} belum diberi peran di KUREKAM, sehingga hanya dapat melihat. Hubungi admin untuk didaftarkan di Data Induk, tab Pengguna dan peran.</div>`;
   if (r.id === 'beranda' || r.id === 'rps') view.insertAdjacentHTML('beforeend', bannerPengingat());
+  { let g = ''; try { g = bannerGerbang(r.id); } catch (e) { console.warn('Gerbang:', e); } if (g) view.insertAdjacentHTML('beforeend', g); }
   const holder = document.createElement('div'); view.appendChild(holder);
   { const e = navKe(r.id), ok = e ? e.tabs.filter(bolehMenu) : [];
     if (e && ok.length > 1) { const bar = document.createElement('div'); bar.className = 'seg mtabs'; bar.setAttribute('role', 'tablist'); bar.innerHTML = ok.map(t => `<button role="tab" data-go="${t}" class="${t === r.id ? 'on' : ''}">${esc(e.lbl[e.tabs.indexOf(t)])}</button>`).join(''); bar.onclick = ev => { const b = ev.target.closest('button[data-go]'); if (b && b.dataset.go !== r.id) location.hash = '#' + b.dataset.go; }; view.insertBefore(bar, holder); } }
@@ -456,6 +480,8 @@ function wajibGantiSandi() {
 
 /** Memuat data lalu menampilkan halaman. Dipanggil boot.js setelah pengguna masuk. */
 let pantau = false;
+document.addEventListener('change', (ev) => { if (ev.target && ev.target.type === 'file') tandaiImpor(); }, true);
+window.addEventListener('unhandledrejection', (ev) => { if (ev.reason instanceof GerbangError) { ev.preventDefault(); toast(ev.reason.message); } });
 export async function start() {
   await cekDeveloper();
   if (dalamSimulasi()) DB.useLocal();

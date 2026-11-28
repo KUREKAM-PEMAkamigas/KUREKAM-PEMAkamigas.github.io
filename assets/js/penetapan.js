@@ -3,6 +3,7 @@
    otomatis lalu dikunci, cadangan dibuat di basis data (titik pulih) dan diunduh ke komputer prodi (Excel OBE dan berkas cadangan).
    Sebelum ditetapkan, dosen tidak dapat mengisi RPS dan MK belum dapat dibebankan ke dosen. Membuka kembali: prodi mengajukan dengan alasan,
    Wakil Direktur I atau SPM menyetujui. Pemulihan hanya menyentuh rancangan prodi; RPS dan nilai dosen tidak ikut. */
+import { gerbangAktif, periksaTahap } from './gerbang.js';
 import { S, ctx, can, esc, icon, toast, saveMany, saveSettings, addLog, userName, replaceData, rerender } from './app.js';
 import { DB } from './db.js';
 import { param, byProdi, mkTanpaCpl, rencanaSelaras, struktur, statusPenetapan, ditetapkanProdi } from './rules.js';
@@ -30,6 +31,7 @@ export function syaratPenetapan(pid) {
   o.push({ k: ok ? 'ok' : 'bad', teks: `Total ${R.total} SKS (ketentuan ${mn} sampai ${mx})` });
   let merah = 0; try { merah = daftarTemuan(S, pid).filter(c => c.k === 'bad').length; } catch (e) { /* abaikan */ }
   o.push({ k: merah ? 'near' : 'ok', teks: merah ? `${merah} temuan merah di Pemeriksa Kurikulum (sebaiknya dibereskan; tidak menahan penetapan)` : 'Tidak ada temuan merah di Pemeriksa Kurikulum' });
+  if (gerbangAktif(S)) periksaTahap(S, pid).slice(0, 5).forEach(t => { o.push({ k: t.hijau ? 'ok' : 'bad', teks: t.hijau ? `Tahap ${t.no} (${t.nama}) sesuai Pedoman` : `Tahap ${t.no} (${t.nama}): ${t.merah} butir merah belum diperbaiki` }); });
   return o;
 }
 

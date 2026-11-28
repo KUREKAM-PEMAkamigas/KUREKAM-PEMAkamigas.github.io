@@ -34,5 +34,5 @@ export async function unduhTemplat2023(pid) {
     lembar(nama, [[t.judul + ' (Kurikulum 2023)'], [`Program Studi ${pid}`], [], t.kolom, ...(t.catatan || []).map(c => ['Catatan: ' + c])], t.kolom.map((_, i) => (i === 0 ? 18 : 24)));
   });
   lembar('Pemetaan MK 2023 ke 2027', [['Pemetaan Mata Kuliah Kurikulum 2023 ke Kurikulum 2027'], [`Program Studi ${pid}`], [], KOLOM_PEMETAAN], [16, 36, 10, 12, 16, 36, 18, 40]);
-  unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `templat-kurikulum-2023-${pid}.xlsx`);
+  unduh(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })]), `templat-kurikulum-kosong-${pid}.xlsx`);
 }

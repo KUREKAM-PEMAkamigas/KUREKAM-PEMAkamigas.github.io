@@ -360,7 +360,7 @@ async function imporMatriks(X, wb) {
   return `<b>Impor matriks selesai.</b>${cplBaru ? ` ${cplBaru} rumusan CPL diperbarui.` : ''}<br>` + out.map(esc).join('<br>') + '<br>Lanjutkan dengan menu Pemeriksa Kurikulum untuk melihat kesesuaian kerangka.';
 }
 
-async function imporObeUI(X, wb) {
+export async function imporObeUI(X, wb) {
   const pid = ctx.prodi; if (!pid || !S.prodi.find(x => x.id === pid)) throw new Error('Pilih prodi terlebih dahulu.');
   const h = imporObe(X, wb, pid), r = h.ringkas;
   if (!(await tanya(`Prodi ${pid} akan diganti dengan isi berkas: ${r.pl} profil, ${r.cpl} CPL, ${r.bk} BK, ${r.mk} MK (${r.sks} SKS), ${r.cpmk} CPMK, ${r.sub} Sub-CPMK, dan ${r.rps} kerangka RPS. PI, penugasan dosen, dan RPS lama prodi ini ikut dihapus. Lanjutkan?`, 'Ganti data'))) return '<b>Impor dibatalkan.</b>';

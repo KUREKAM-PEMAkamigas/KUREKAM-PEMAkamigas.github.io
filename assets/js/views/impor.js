@@ -7,7 +7,12 @@ import { templatBok, imporBok, templatBk, imporBk } from '../bokexcel.js';
 import { templatMk, imporMk, templatCpmk, imporCpmk } from '../mkexcel.js';
 import { templatSub, imporSub, mkBolehSub } from '../subexcel.js';
 import { LANGKAH_DOKMK } from '../dokmkexcel.js';
-import { head, stTag, ro, tanya } from './ui.js';
+import { head, stTag, ro, tanya, loadXLSX } from './ui.js';
+import { imporObeUI } from './induk.js';
+import { unduhTemplat2023 } from '../templat2023.js';
+import { DB } from '../db.js';
+
+let hasilObe = '';
 
 
 /** Rekaman contoh bawaan (bertanda contoh) milik satu prodi. */
@@ -53,6 +58,12 @@ export default function imporView(el) {
   const L = langkah(pid);
   el.innerHTML = `
   <div class="ribbon info">${icon('info')} <span>Isi kurikulum <b>bertahap sesuai urutan</b>. Tiap tahap punya templat Excel sendiri yang sudah memuat data yang ada, jadi siklusnya: unduh, lengkapi, unggah, periksa pratinjau, simpan. Tahap berikutnya terbuka setelah tahap yang dibutuhkannya terisi. Untuk penyusunan sekaligus dalam satu berkas, pakai <a href="#obe">Tabel OBE</a> (paket multi-lembar). Penugasan dosen ada di <a href="#induk">Data Induk</a>.</span></div>
+  <div class="card" style="margin-top:14px">${head('Impor kurikulum lengkap (Excel OBE)', 'Semua lembar sekaligus: profil, CPL, bahan kajian, MK, CPMK, Sub-CPMK, bobot', 'upload', '#f472b6', ed ? '' : ro())}
+    <p class="small" style="white-space:normal">Pakai berkas <b>Templat Excel + contoh isian</b> (lembar 1 sampai 18). Data prodi ${esc(pid)} pada ${DB.kurikulum === '2023' ? 'Kurikulum 2023' : 'Kurikulum 2027'} diganti isi berkas; aplikasi menampilkan ringkasan dan meminta konfirmasi lebih dulu, serta menyimpan titik pulih otomatis.</p>
+    <div class="filters" style="margin:6px 0"><a class="btn sm" href="assets/templat/Templat_dan_Contoh_Isian_Kurikulum.xlsx" download>${icon('download')} Templat Excel + contoh isian</a><a class="btn sm" href="assets/templat/Panduan_Pengisian_Templat_Kurikulum_2027.docx" download>${icon('download')} Panduan pengisian (Word)</a><button class="btn sm" id="ob-kosong">${icon('download')} Templat kosong</button></div>
+    <div class="drawer-act"><button class="btn pri" id="ob-imp" ${ed ? '' : 'disabled'}>${icon('upload')} Pilih berkas OBE lengkap</button></div>
+    <input type="file" id="ob-file" accept=".xlsx,.xls" hidden>
+    ${hasilObe ? `<div class="ribbon info" style="margin-top:10px">${hasilObe}</div>` : ''}</div>
   <div class="card" style="margin-top:14px">${head('Impor dan ekspor · ' + esc(pid), esc(p.nama) + ' · satu baris per tahap', 'upload', '#6366f1', ed ? '' : ro())}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tahap</th><th>Status</th><th>Terakhir diunggah</th><th></th></tr></thead><tbody>
     ${L.map(s => { const lg = terakhir(s.id, pid), kunci = !!s.syarat, adaDok = !!s.segera;
@@ -72,6 +83,15 @@ export default function imporView(el) {
   if (bb) bb.onclick = async () => {
     if (!(await tanya(`Hapus ${nCo} rekaman contoh milik ${pid}? Mata kuliah dan struktur semester tetap ada. Tindakan ini tidak bisa dibatalkan.`))) return;
     await bersihkanContoh(pid); toast('Data contoh dibersihkan.'); rerender();
+  };
+  el.querySelector('#ob-kosong').onclick = async () => { try { await unduhTemplat2023(pid); } catch (e) { console.error(e); toast('Templat gagal dibuat: ' + (e.message || e)); } };
+  const of = el.querySelector('#ob-file');
+  el.querySelector('#ob-imp').onclick = () => { of.value = ''; of.click(); };
+  of.onchange = async () => {
+    const f = of.files[0]; if (!f) return;
+    try { const X = await loadXLSX(), wb = X.read(await f.arrayBuffer(), { type: 'array' }); hasilObe = await imporObeUI(X, wb); }
+    catch (e) { console.error(e); hasilObe = `<b>Impor gagal.</b> ${esc(e.message || e)}`; }
+    rerender();
   };
   const fi = el.querySelector('#im-file'); let aktif = null;
   el.querySelectorAll('[data-tpl]').forEach(b => b.onclick = async () => { const s = L.find(x => x.id === b.dataset.tpl); try { await s.tpl(); } catch (e) { console.error(e); toast('Templat gagal dibuat: ' + (e.message || e)); } });
